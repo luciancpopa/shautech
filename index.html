@@ -221,111 +221,156 @@
   .reveal.in{opacity:1;transform:none}
 
   /* ─────────────────────────────────────────────
-     Mobile / tablet
+     Tablet (≤ 900px) — collapse multi-column grids
      ───────────────────────────────────────────── */
   @media (max-width: 900px){
-    /* Kill desktop-only decoration */
-    .halo{display:none}
-    .orbits{display:none}
-    .aurora .blob{filter:blur(80px);opacity:.4}
-    .b1{width:340px;height:340px}
-    .b2{width:300px;height:300px}
-    .b3{width:280px;height:280px;opacity:.3}
+    .halo, .orbits{display:none}
+    .aurora .blob{filter:blur(80px);opacity:.35}
+    .b1{width:300px;height:300px}
+    .b2{width:280px;height:280px}
+    .b3{width:240px;height:240px;opacity:.25}
 
-    /* Top bar — keep brand + CTA only, drop nav pills */
-    .top{padding:14px 18px;gap:10px}
-    .brand{font-size:16px}
+    /* Top bar */
+    .top{padding:12px 16px}
+    .brand{font-size:15px;gap:8px}
+    .brand .mark{width:22px;height:22px}
     .brand .beta{display:none}
     nav{display:none}
     .top-cta .pill-ghost{display:none}
     .pill-grad{padding:8px 14px;font-size:12px}
 
-    /* Hero */
-    .hero{padding:60px 20px 70px}
-    .badge{font-size:10px;padding:6px 11px;margin-bottom:24px}
-    .hero h1{font-size:clamp(40px,11vw,64px);line-height:.95;max-width:none}
-    .hero .lede{font-size:16px;margin:26px auto 30px}
-    .hero-actions{flex-direction:column;width:100%;gap:10px}
-    .hero-actions .btn-lg{width:100%;justify-content:center;font-size:14px;padding:14px 22px}
+    /* Hero — phone proportions */
+    .hero{padding:42px 18px 56px}
+    .badge{font-size:10px;padding:5px 10px;margin-bottom:18px;letter-spacing:.06em}
+    .hero h1{font-size:clamp(34px,9.5vw,52px);line-height:1.02;letter-spacing:-.03em;max-width:none;font-weight:500}
+    .hero h1 em{font-size:1em;letter-spacing:-.015em}
+    .hero .lede{font-size:15px;line-height:1.5;margin:20px auto 28px;max-width:38ch}
+    .hero-actions{flex-direction:column;width:100%;gap:10px;align-items:stretch}
+    .hero-actions .btn-lg{width:100%;justify-content:center;font-size:14px;padding:14px 20px;font-weight:500;box-shadow:0 8px 28px rgba(91,141,255,.18)}
 
-    /* Trust strip */
-    .trust{padding:0 20px 60px;gap:18px}
-    .trust-row{gap:8px}
-    .trust-row .chip{font-size:12px;padding:7px 12px}
+    /* Trust strip — single scrolling row instead of wrap */
+    .trust{padding:0 0 50px;gap:14px}
+    .trust-label{padding:0 18px}
+    .trust-row{flex-wrap:nowrap;overflow-x:auto;padding:4px 18px;gap:8px;max-width:none;width:100%;scrollbar-width:none}
+    .trust-row::-webkit-scrollbar{display:none}
+    .trust-row .chip{flex:0 0 auto;font-size:12px;padding:7px 12px;white-space:nowrap}
 
     /* Section spacing + headings */
-    .sec{padding:80px 20px}
-    .sec h2{font-size:clamp(32px,8vw,48px);max-width:none}
-    .sec .sub{font-size:15px}
-    .sec-eyebrow{font-size:10px;margin-bottom:18px}
+    .sec{padding:64px 18px}
+    .sec h2{font-size:clamp(28px,7vw,40px);line-height:1.05;letter-spacing:-.025em;max-width:none;margin-bottom:14px}
+    .sec .sub{font-size:14px;line-height:1.5;max-width:none}
+    .sec-eyebrow{font-size:10px;letter-spacing:.14em;margin-bottom:14px}
 
-    /* Bento → single column */
-    .bento{grid-template-columns:1fr;grid-auto-rows:auto;gap:12px;margin-top:40px}
-    .b-card{grid-column:auto !important;grid-row:auto !important;padding:24px;border-radius:18px}
-    .b-card h3{font-size:22px}
-    .b-azure h3{font-size:28px}
-    .b-azure p,.b-card p{font-size:14px;max-width:none}
-    .b-diagram{grid-template-columns:repeat(2,1fr);font-size:10px}
+    /* Bento → vertical stack of compact cards */
+    .bento{grid-template-columns:1fr;grid-auto-rows:auto;gap:10px;margin-top:34px}
+    .b-card{grid-column:auto !important;grid-row:auto !important;padding:22px;border-radius:18px;background:linear-gradient(160deg, rgba(255,255,255,.04), rgba(255,255,255,.01))}
+    .b-card::before{display:none}
+    .b-icon{width:34px;height:34px;border-radius:10px;margin-bottom:14px}
+    .b-icon svg{width:16px;height:16px}
+    .b-card h3{font-size:19px;line-height:1.15;margin-bottom:8px}
+    .b-card h3 em{font-size:1em}
+    .b-azure h3{font-size:22px}
+    .b-card p, .b-azure p{font-size:13.5px;line-height:1.5;max-width:none}
+    .b-diagram{display:none} /* desktop dataviz */
+    .b-card .tags{margin-top:14px;gap:5px}
+    .b-card .tag{font-size:9.5px;padding:3px 7px}
 
-    /* Numbers → 2 × 2 */
-    .nums{grid-template-columns:1fr 1fr;gap:10px;margin-top:40px}
-    .n{padding:22px;border-radius:16px}
-    .n b{font-size:48px}
-    .n p{font-size:12px}
+    /* Numbers → 2 × 2 compact */
+    .nums{grid-template-columns:1fr 1fr;gap:10px;margin-top:34px}
+    .n{padding:18px;border-radius:14px}
+    .n .label{font-size:10px;margin-bottom:10px;letter-spacing:.1em}
+    .n b{font-size:38px;line-height:1}
+    .n p{font-size:12px;margin-top:8px;max-width:none}
 
-    /* Case scroller — keep horizontal, narrower cards */
-    .scroller{gap:14px;margin-top:30px;padding:20px 0 40px;scroll-snap-type:x mandatory}
-    .ccard{flex:0 0 86vw;padding:22px;border-radius:20px;scroll-snap-align:start}
-    .ccard .visual{height:160px;margin-bottom:18px}
-    .ccard .visual .glyph{font-size:88px;bottom:-22px}
-    .ccard h3{font-size:22px}
-    .ccard p{font-size:13px}
-    .ccard .stat b{font-size:24px}
+    /* Case scroller — full-bleed snap */
+    .scroller{gap:12px;margin:22px -18px 0;padding:14px 18px 36px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+    .ccard{flex:0 0 84vw;padding:20px;border-radius:18px;scroll-snap-align:start}
+    .ccard .visual{height:130px;margin-bottom:16px;border-radius:12px}
+    .ccard .visual .glyph{font-size:76px;bottom:-18px;right:14px}
+    .ccard .visual .ribbon{font-size:10px;padding:4px 8px;top:12px;left:12px}
+    .ccard .meta{font-size:10px;margin-bottom:10px}
+    .ccard h3{font-size:19px;line-height:1.15;margin-bottom:6px}
+    .ccard p{font-size:13px;line-height:1.45}
+    .ccard .stat{margin-top:18px;padding-top:14px}
+    .ccard .stat b{font-size:22px}
+    .ccard .stat span{font-size:10px}
 
     /* Process → single column */
-    .proc{grid-template-columns:1fr;gap:10px;margin-top:32px}
-    .pcard{padding:22px;border-radius:16px}
-    .pcard .pn{margin-bottom:20px}
-    .pcard .pn b{font-size:34px}
-    .pcard h4{font-size:18px}
+    .proc{grid-template-columns:1fr;gap:8px;margin-top:26px}
+    .pcard{padding:20px;border-radius:14px}
+    .pcard .pn{margin-bottom:14px;font-size:10px}
+    .pcard .pn b{font-size:28px}
+    .pcard h4{font-size:17px;margin-bottom:6px}
+    .pcard p{font-size:13px;line-height:1.5}
 
-    /* Testimonial */
-    .testi{margin-top:50px;padding:34px 24px;border-radius:22px}
-    .testi::before{font-size:180px;top:-10px;right:20px}
-    .testi p{font-size:22px;line-height:1.3}
-    .testi .who{margin-top:22px}
-    .testi .av{width:40px;height:40px;font-size:13px}
+    /* Testimonial — shrink the decorative quote, tighten the card */
+    .testi{margin-top:40px;padding:28px 22px;border-radius:20px}
+    .testi::before{font-size:110px;top:-2px;right:14px}
+    .testi p{font-size:18px;line-height:1.35;max-width:none}
+    .testi .who{margin-top:18px;gap:11px}
+    .testi .av{width:38px;height:38px;font-size:12px}
+    .testi .who b{font-size:14px}
+    .testi .who span{font-size:11px}
 
     /* CTA */
-    .cta{padding:90px 20px}
-    .cta h2{font-size:clamp(40px,11vw,72px);max-width:none}
-    .cta .sub{font-size:15px;margin:22px auto 26px}
-    .cta-mailbox{flex-direction:column;padding:6px;gap:6px;border-radius:18px;background:rgba(255,255,255,.05)}
-    .cta-mailbox input{width:100%;padding:14px 16px;font-size:15px;text-align:center}
-    .cta-mailbox button{width:100%;padding:14px 16px;justify-content:center}
-    .cta-foot{margin-top:22px;font-size:11px;padding:0 8px;line-height:1.5}
+    .cta{padding:72px 18px}
+    .cta h2{font-size:clamp(34px,9vw,52px);line-height:1.02;letter-spacing:-.03em;max-width:none}
+    .cta .sub{font-size:14px;line-height:1.5;margin:18px auto 22px;max-width:38ch}
+    .cta-mailbox{flex-direction:column;padding:6px;gap:6px;border-radius:16px;background:rgba(255,255,255,.05);max-width:none}
+    .cta-mailbox input{width:100%;padding:13px 14px;font-size:14px;text-align:center}
+    .cta-mailbox button{width:100%;padding:13px 14px;justify-content:center;font-size:14px}
+    .cta-foot{margin-top:18px;font-size:11px;padding:0 8px;line-height:1.5}
 
     /* Footer */
-    footer{padding:60px 20px 26px}
-    .foot-grid{grid-template-columns:1fr 1fr;gap:32px;padding-bottom:36px}
+    footer{padding:50px 18px 24px}
+    .foot-grid{grid-template-columns:1fr 1fr;gap:26px;padding-bottom:28px}
     .foot-grid > div:first-child{grid-column:1 / -1}
-    .foot-grid .wm{font-size:34px}
-    .foot-grid p{font-size:13px}
-    .foot-grid a{font-size:13px}
-    .foot-bot{flex-direction:column;align-items:flex-start;gap:14px;font-size:11px;padding-top:24px}
+    .foot-grid h5{font-size:10px;margin-bottom:12px}
+    .foot-grid .wm{font-size:28px;margin-bottom:8px}
+    .foot-grid p{font-size:12.5px;max-width:none}
+    .foot-grid a{font-size:12.5px}
+    .foot-grid ul{gap:7px}
+    .foot-bot{flex-direction:column;align-items:flex-start;gap:10px;font-size:10.5px;padding-top:20px}
   }
 
-  /* Phone tightening */
+  /* ─────────────────────────────────────────────
+     Phone (≤ 480px) — final tightening
+     ───────────────────────────────────────────── */
   @media (max-width: 480px){
-    .top{padding:12px 16px}
-    .brand{gap:8px;font-size:15px}
+    .top{padding:11px 14px}
+    .brand{font-size:14px}
     .brand .mark{width:20px;height:20px;border-radius:6px}
-    .pill-grad{font-size:11px;padding:7px 12px;gap:6px}
-    .hero h1{font-size:clamp(36px,11vw,52px)}
-    .nums{grid-template-columns:1fr}
-    .trust-row .chip{font-size:11px}
-    .ccard{flex:0 0 90vw}
-    .foot-grid{grid-template-columns:1fr}
+    .pill-grad{font-size:11px;padding:7px 11px;gap:6px}
+
+    .hero{padding:34px 16px 48px}
+    .hero h1{font-size:34px;line-height:1.03}
+    .hero .lede{font-size:14.5px;margin:18px auto 24px}
+
+    .sec{padding:54px 16px}
+    .sec h2{font-size:28px}
+
+    .b-card{padding:20px;border-radius:16px}
+    .b-card h3{font-size:18px}
+    .b-azure h3{font-size:20px}
+
+    .nums{grid-template-columns:1fr;gap:8px}
+    .n{padding:18px 20px;display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:baseline}
+    .n .label{grid-column:1 / -1;margin-bottom:4px}
+    .n b{font-size:34px}
+    .n p{margin-top:0;font-size:12px}
+
+    .ccard{flex:0 0 88vw}
+    .ccard .visual{height:120px}
+
+    .testi{padding:24px 18px}
+    .testi p{font-size:16.5px}
+    .testi::before{font-size:90px;right:10px}
+
+    .cta{padding:60px 16px}
+    .cta h2{font-size:34px}
+
+    footer{padding:42px 16px 22px}
+    .foot-grid{grid-template-columns:1fr;gap:22px}
     .foot-grid > div:first-child{grid-column:auto}
   }
 </style>
