@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ShauTech — Microsoft cloud, built bold.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0612;
+    --bg-2:#120a22;
+    --ink:#ffffff;
+    --muted:#9b94b3;
+    --line:rgba(255,255,255,.10);
+    --line-2:rgba(255,255,255,.18);
+    --accent:#5b8dff;
+    --violet:#a86bff;
+    --pink:#ff6bc4;
+    --lime:#cdff5b;
+    --serif:"Instrument Serif", "Newsreader", Georgia, serif;
+    --sans:"Geist", system-ui, sans-serif;
+    --mono:"Geist Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  body{overflow-x:hidden;position:relative}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:var(--violet);color:var(--bg)}
+
+  /* Aurora background */
+  .aurora{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+  .blob{position:absolute;border-radius:50%;filter:blur(120px);opacity:.55;mix-blend-mode:screen;will-change:transform}
+  .b1{width:560px;height:560px;background:#5b8dff;top:-12%;left:-8%;animation:drift1 20s ease-in-out infinite}
+  .b2{width:480px;height:480px;background:#a86bff;top:30%;right:-10%;animation:drift2 24s ease-in-out infinite}
+  .b3{width:420px;height:420px;background:#ff6bc4;top:65%;left:18%;animation:drift3 28s ease-in-out infinite;opacity:.4}
+  @keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,80px)}}
+  @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-80px,60px)}}
+  @keyframes drift3{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,-50px)}}
+
+  .noise{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.04;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' /></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+
+  main, header, footer{position:relative;z-index:2}
+
+  /* Magnetic cursor halo */
+  .halo{position:fixed;top:0;left:0;width:520px;height:520px;border-radius:50%;background:radial-gradient(closest-side, rgba(91,141,255,.18), transparent 70%);pointer-events:none;z-index:1;transform:translate(-50%,-50%);transition:width .35s,height .35s,background .35s}
+  .halo.alt{background:radial-gradient(closest-side, rgba(168,107,255,.22), transparent 70%)}
+
+  /* Top bar */
+  .top{display:flex;align-items:center;justify-content:space-between;padding:22px 36px;position:sticky;top:0;z-index:50;backdrop-filter:blur(14px) saturate(120%);background:rgba(10,6,18,.55);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--sans);font-weight:600;font-size:18px;letter-spacing:-.02em}
+  .brand .mark{width:24px;height:24px;border-radius:7px;background:conic-gradient(from 200deg, var(--accent), var(--violet), var(--pink), var(--accent));position:relative}
+  .brand .mark::after{content:"";position:absolute;inset:5px;background:var(--bg);border-radius:3px}
+  .brand span.beta{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.1em;border:1px solid var(--line-2);padding:3px 6px;border-radius:4px;text-transform:uppercase;margin-left:6px}
+  nav ul{display:flex;list-style:none;gap:6px;background:rgba(255,255,255,.04);padding:5px;border-radius:999px;border:1px solid var(--line)}
+  nav a{padding:8px 16px;font-size:13px;color:var(--muted);font-weight:500;border-radius:999px;transition:background .25s, color .25s}
+  nav a:hover{color:var(--ink);background:rgba(255,255,255,.07)}
+  .top-cta{display:flex;align-items:center;gap:12px}
+  .pill-ghost{font-size:13px;color:var(--muted);font-weight:500;padding:9px 16px;border-radius:999px;border:1px solid var(--line-2);transition:color .25s,border-color .25s}
+  .pill-ghost:hover{color:var(--ink);border-color:var(--ink)}
+  .pill-grad{font-size:13px;font-weight:600;color:var(--bg);padding:9px 16px;border-radius:999px;background:linear-gradient(120deg, var(--accent), var(--violet) 60%, var(--pink));position:relative;transition:transform .25s,filter .25s;display:inline-flex;align-items:center;gap:8px}
+  .pill-grad:hover{transform:translateY(-1px);filter:brightness(1.1)}
+  .pill-grad i{display:inline-block;width:6px;height:6px;background:var(--bg);border-radius:50%}
+
+  /* Hero */
+  .hero{padding:120px 36px 120px;text-align:center;position:relative;overflow:hidden}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line);padding:7px 13px;border-radius:999px;margin-bottom:34px;letter-spacing:.04em}
+  .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .hero h1{font-family:var(--sans);font-weight:500;font-size:clamp(60px,10vw,156px);line-height:.92;letter-spacing:-.045em;max-width:14ch;margin:0 auto}
+  .hero h1 em{font-family:var(--serif);font-style:italic;font-weight:400;background:linear-gradient(120deg, var(--accent), var(--violet) 50%, var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.05em;letter-spacing:-.02em}
+  .hero .lede{font-size:20px;line-height:1.45;color:var(--muted);max-width:58ch;margin:38px auto 44px;font-weight:400}
+  .hero .lede b{color:var(--ink);font-weight:500}
+  .hero-actions{display:inline-flex;gap:14px}
+  .btn-lg{font-size:15px;font-weight:600;padding:16px 28px;border-radius:999px;display:inline-flex;align-items:center;gap:12px;transition:transform .25s, box-shadow .25s}
+  .btn-grad{background:linear-gradient(120deg, var(--accent), var(--violet) 60%, var(--pink));color:var(--bg);box-shadow:0 12px 40px rgba(91,141,255,.25)}
+  .btn-grad:hover{transform:translateY(-2px);box-shadow:0 20px 60px rgba(168,107,255,.4)}
+  .btn-glass{background:rgba(255,255,255,.06);color:var(--ink);border:1px solid var(--line-2);backdrop-filter:blur(8px)}
+  .btn-glass:hover{background:rgba(255,255,255,.10);transform:translateY(-2px)}
+
+  /* Floating logo orbits */
+  .orbits{position:absolute;inset:0;pointer-events:none}
+  .orb{position:absolute;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);backdrop-filter:blur(10px);border:1px solid var(--line-2);padding:8px 14px;border-radius:999px;font-family:var(--mono);font-size:11px;color:var(--ink);letter-spacing:.02em;white-space:nowrap;animation:float 6s ease-in-out infinite}
+  .orb b{color:var(--accent);font-weight:500}
+  .orb i{display:inline-block;width:6px;height:6px;background:var(--lime);border-radius:50%;box-shadow:0 0 8px var(--lime);font-style:normal}
+  .orb.o1{top:14%;left:6%;animation-delay:0s}
+  .orb.o2{top:22%;right:8%;animation-delay:1s}
+  .orb.o3{top:55%;left:4%;animation-delay:2s}
+  .orb.o4{top:62%;right:6%;animation-delay:3s}
+  .orb.o5{top:38%;left:10%;animation-delay:1.5s}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+  /* Trust strip */
+  .trust{padding:0 36px 80px;display:flex;flex-direction:column;align-items:center;gap:24px}
+  .trust-label{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase}
+  .trust-row{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:920px}
+  .trust-row .chip{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--line);font-size:13px;color:#cfc7e0;transition:transform .2s, background .2s}
+  .trust-row .chip:hover{background:rgba(255,255,255,.07);transform:translateY(-2px)}
+  .trust-row .chip .sq{width:14px;height:14px;display:inline-grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px}
+  .trust-row .chip .sq i{display:block}
+  .trust-row .chip .sq i:nth-child(1){background:#f25022}
+  .trust-row .chip .sq i:nth-child(2){background:#7fba00}
+  .trust-row .chip .sq i:nth-child(3){background:#00a4ef}
+  .trust-row .chip .sq i:nth-child(4){background:#ffb900}
+
+  /* Section common */
+  .sec{padding:140px 36px;position:relative}
+  .sec-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:10px;margin-bottom:24px}
+  .sec-eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .sec h2{font-family:var(--sans);font-weight:500;font-size:clamp(44px,6vw,88px);line-height:1.0;letter-spacing:-.035em;max-width:18ch;margin-bottom:24px}
+  .sec h2 em{font-family:var(--serif);font-style:italic;font-weight:400;background:linear-gradient(120deg, var(--accent), var(--violet) 60%, var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .sec .sub{font-size:18px;color:var(--muted);max-width:60ch;line-height:1.5}
+
+  /* Services bento */
+  .bento{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:minmax(220px,auto);gap:14px;margin-top:70px}
+  .b-card{position:relative;border:1px solid var(--line);border-radius:24px;padding:30px;overflow:hidden;background:linear-gradient(160deg, rgba(255,255,255,.04), rgba(255,255,255,.01));transition:transform .35s, border-color .35s, background .35s;cursor:pointer}
+  .b-card:hover{transform:translateY(-4px);border-color:var(--line-2);background:linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02))}
+  .b-card::before{content:"";position:absolute;inset:-1px;border-radius:24px;padding:1px;background:linear-gradient(160deg, transparent, rgba(255,255,255,.18), transparent);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .35s;pointer-events:none}
+  .b-card:hover::before{opacity:1}
+  .b-card h3{font-family:var(--sans);font-weight:500;font-size:26px;line-height:1.1;letter-spacing:-.02em;margin-bottom:12px}
+  .b-card h3 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent)}
+  .b-card p{font-size:14px;line-height:1.5;color:var(--muted);max-width:36ch}
+  .b-icon{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;margin-bottom:18px;transition:background .35s, transform .35s}
+  .b-card:hover .b-icon{background:linear-gradient(135deg, var(--accent), var(--violet));border-color:transparent;transform:rotate(-6deg) scale(1.05)}
+  .b-icon svg{width:20px;height:20px;stroke:var(--ink);fill:none;stroke-width:1.6}
+  .b-card .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:18px}
+  .b-card .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:4px 8px;border:1px solid var(--line);border-radius:6px}
+
+  .b-azure{grid-column:span 4;grid-row:span 2;background:linear-gradient(160deg, rgba(91,141,255,.14), rgba(91,141,255,.02))}
+  .b-azure h3{font-size:42px}
+  .b-azure p{font-size:16px;max-width:50ch}
+  .b-m365{grid-column:span 2}
+  .b-data{grid-column:span 2}
+  .b-power{grid-column:span 2;background:linear-gradient(160deg, rgba(168,107,255,.14), rgba(168,107,255,.02))}
+  .b-d365{grid-column:span 3}
+  .b-sec{grid-column:span 3;background:linear-gradient(160deg, rgba(255,107,196,.14), rgba(255,107,196,.02))}
+
+  /* Architecture diagram (visual) */
+  .b-diagram{margin-top:30px;padding:22px;border:1px dashed var(--line-2);border-radius:14px;font-family:var(--mono);font-size:11px;color:var(--muted);display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .b-diagram div{padding:8px;background:rgba(255,255,255,.04);border-radius:7px;text-align:center;color:var(--ink);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+  .b-diagram div:nth-child(1){background:linear-gradient(135deg,var(--accent),#3a6dd6);color:#fff}
+
+  /* Numbers */
+  .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:70px}
+  .n{padding:30px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.03);position:relative;overflow:hidden}
+  .n .label{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+  .n b{font-family:var(--sans);font-weight:500;font-size:72px;line-height:.95;letter-spacing:-.04em;display:block}
+  .n b em{font-family:var(--serif);font-style:italic;font-weight:400;background:linear-gradient(120deg, var(--accent), var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .n p{margin-top:12px;font-size:13px;color:var(--muted);line-height:1.5;max-width:30ch}
+
+  /* Case studies — horizontal scroller */
+  .scroller{display:flex;gap:18px;overflow-x:auto;padding:30px 0 50px;margin-top:50px;scrollbar-width:none}
+  .scroller::-webkit-scrollbar{display:none}
+  .ccard{flex:0 0 460px;border:1px solid var(--line);border-radius:24px;padding:30px;background:linear-gradient(160deg, rgba(255,255,255,.04), rgba(255,255,255,.01));transition:transform .35s, border-color .35s;cursor:pointer;position:relative;overflow:hidden}
+  .ccard:hover{transform:translateY(-6px);border-color:var(--line-2)}
+  .ccard .visual{height:200px;border-radius:14px;margin-bottom:24px;background:linear-gradient(135deg, var(--accent), var(--violet));position:relative;overflow:hidden}
+  .ccard .visual::after{content:"";position:absolute;inset:0;background:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,.4), transparent 30%),
+    radial-gradient(circle at 80% 70%, rgba(255,255,255,.2), transparent 40%)}
+  .ccard.v2 .visual{background:linear-gradient(135deg, var(--violet), var(--pink))}
+  .ccard.v3 .visual{background:linear-gradient(135deg, #1e88ff, var(--accent))}
+  .ccard.v4 .visual{background:linear-gradient(135deg, var(--lime), var(--accent))}
+  .ccard.v5 .visual{background:linear-gradient(135deg, var(--pink), #ff8a4c)}
+  .ccard .visual .glyph{position:absolute;font-family:var(--serif);font-style:italic;font-weight:400;font-size:120px;color:rgba(255,255,255,.85);bottom:-30px;right:20px;line-height:1;letter-spacing:-.04em}
+  .ccard .visual .ribbon{position:absolute;top:18px;left:18px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.85);background:rgba(0,0,0,.25);padding:5px 10px;border-radius:6px;backdrop-filter:blur(4px)}
+  .ccard .meta{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+  .ccard h3{font-family:var(--sans);font-weight:500;font-size:28px;letter-spacing:-.02em;margin-bottom:10px}
+  .ccard h3 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent)}
+  .ccard p{font-size:14px;color:var(--muted);line-height:1.5}
+  .ccard .stat{display:flex;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+  .ccard .stat b{font-family:var(--sans);font-weight:500;font-size:32px;letter-spacing:-.02em}
+  .ccard .stat span{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;align-self:end;text-align:right;line-height:1.4}
+
+  /* Process timeline */
+  .proc{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:60px}
+  .pcard{padding:28px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.03);position:relative;transition:transform .35s, background .35s}
+  .pcard:hover{transform:translateY(-4px);background:rgba(255,255,255,.05)}
+  .pcard .pn{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:50px;display:flex;justify-content:space-between}
+  .pcard .pn b{font-family:var(--sans);font-weight:500;font-size:48px;letter-spacing:-.03em;color:var(--ink);line-height:.9;text-transform:none}
+  .pcard h4{font-family:var(--sans);font-weight:500;font-size:22px;letter-spacing:-.015em;margin-bottom:10px}
+  .pcard h4 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent)}
+  .pcard p{font-size:13px;color:var(--muted);line-height:1.55}
+
+  /* Testimonial */
+  .testi{margin-top:80px;padding:60px;border:1px solid var(--line);border-radius:32px;background:linear-gradient(160deg, rgba(168,107,255,.10), rgba(91,141,255,.04));position:relative;overflow:hidden}
+  .testi::before{content:"\201C";position:absolute;top:-20px;right:40px;font-family:var(--serif);font-style:italic;font-size:300px;line-height:1;color:rgba(255,255,255,.05)}
+  .testi p{font-family:var(--serif);font-style:italic;font-weight:400;font-size:34px;line-height:1.3;letter-spacing:-.01em;max-width:42ch;color:#e9e3ff;position:relative}
+  .testi .who{display:flex;align-items:center;gap:14px;margin-top:34px;font-family:var(--sans);position:relative}
+  .testi .av{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg, var(--accent), var(--violet));display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;color:var(--bg)}
+  .testi .who b{display:block;font-weight:500;font-size:15px}
+  .testi .who span{display:block;font-size:13px;color:var(--muted);font-family:var(--mono);letter-spacing:.04em}
+
+  /* CTA */
+  .cta{padding:160px 36px;text-align:center;position:relative}
+  .cta h2{font-size:clamp(56px,9vw,140px);line-height:.92;letter-spacing:-.04em;font-weight:500;max-width:18ch;margin:0 auto}
+  .cta h2 em{font-family:var(--serif);font-style:italic;font-weight:400;background:linear-gradient(120deg, var(--accent), var(--violet) 50%, var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .cta .sub{margin:30px auto 40px;color:var(--muted);font-size:18px;max-width:54ch;line-height:1.5}
+  .cta-mailbox{display:inline-flex;align-items:center;gap:6px;padding:6px 6px 6px 22px;border-radius:999px;border:1px solid var(--line-2);background:rgba(255,255,255,.04);backdrop-filter:blur(8px);max-width:520px;width:100%}
+  .cta-mailbox input{flex:1;background:transparent;border:none;outline:none;color:var(--ink);font-family:var(--sans);font-size:15px;padding:12px 4px}
+  .cta-mailbox input::placeholder{color:var(--muted)}
+  .cta-mailbox button{font-size:14px;font-weight:600;color:var(--bg);padding:12px 22px;border-radius:999px;border:none;cursor:pointer;background:linear-gradient(120deg, var(--accent), var(--violet) 60%, var(--pink));display:inline-flex;align-items:center;gap:8px;transition:transform .25s,filter .25s}
+  .cta-mailbox button:hover{transform:translateY(-1px);filter:brightness(1.1)}
+  .cta-foot{margin-top:30px;font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+
+  /* Footer */
+  footer{padding:90px 36px 36px;border-top:1px solid var(--line);background:rgba(0,0,0,.3)}
+  .foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:50px;padding-bottom:50px}
+  .foot-grid h5{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;font-weight:500}
+  .foot-grid ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+  .foot-grid a{font-size:14px;color:#cfc7e0;transition:color .25s}
+  .foot-grid a:hover{color:var(--ink)}
+  .foot-grid .wm{font-family:var(--sans);font-weight:500;font-size:42px;letter-spacing:-.03em;line-height:1;margin-bottom:12px}
+  .foot-grid .wm em{font-family:var(--serif);font-style:italic;font-weight:400;background:linear-gradient(120deg, var(--accent), var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .foot-grid p{font-size:14px;color:var(--muted);line-height:1.5;max-width:34ch}
+  .foot-bot{display:flex;justify-content:space-between;align-items:center;padding-top:30px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+  .foot-bot .langs{display:flex;gap:18px}
+
+  /* Reveals */
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+  <div class="aurora">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+  </div>
+  <div class="noise"></div>
+  <div class="halo" id="halo"></div>
+
+  <header class="top">
+    <div class="brand"><span class="mark"></span>ShauTech<span class="beta">v.26</span></div>
+    <nav><ul>
+      <li><a href="#services">Services</a></li>
+      <li><a href="#work">Work</a></li>
+      <li><a href="#process">Process</a></li>
+      <li><a href="#about">Studio</a></li>
+      <li><a href="#journal">Journal</a></li>
+    </ul></nav>
+    <div class="top-cta">
+      <a class="pill-ghost" href="#">Sign in</a>
+      <a class="pill-grad" href="#contact"><i></i>Start a project</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="orbits">
+      <div class="orb o1">azure landing zone <i>●</i> <b>shipping</b></div>
+      <div class="orb o2">m365 cutover · 38k seats <i>●</i> <b>live</b></div>
+      <div class="orb o3">copilot agent <i>●</i> <b>grounded</b></div>
+      <div class="orb o4">power platform CoE <i>●</i> <b>governed</b></div>
+      <div class="orb o5">fabric medallion <i>●</i> <b>flowing</b></div>
+    </div>
+    <span class="badge"><span class="dot"></span>Microsoft Solutions Partner · Azure Expert MSP</span>
+    <h1>Microsoft cloud,<br>built <em>boldly.</em></h1>
+    <p class="lede">ShauTech is a Microsoft-only consulting practice. We <b>architect, implement, and operate</b> the platforms your business will depend on for the next decade — Azure, M365, Dynamics 365, Power Platform, Fabric, and the Copilot layer above all of it.</p>
+    <div class="hero-actions">
+      <a class="btn-lg btn-grad" href="#contact">Book a working session<span>→</span></a>
+      <a class="btn-lg btn-glass" href="#work"><span>▷</span>See selected work</a>
+    </div>
+  </section>
+
+  <section class="trust">
+    <div class="trust-label">Trusted by teams running on Microsoft</div>
+    <div class="trust-row">
+      <span class="chip"><span class="sq"><i></i><i></i><i></i><i></i></span>Continental Bank</span>
+      <span class="chip"><span class="sq"><i></i><i></i><i></i><i></i></span>Halden Energy</span>
+      <span class="chip"><span class="sq"><i></i><i></i><i></i><i></i></span>Meridian Health</span>
+      <span class="chip"><span class="sq"><i></i><i></i><i></i><i></i></span>Northwind Public</span>
+      <span class="chip"><span class="sq"><i></i><i></i><i></i><i></i></span>Lyra Logistics</span>
+      <span class="chip"><span class="sq"><i></i><i></i><i></i><i></i></span>Aster Capital</span>
+      <span class="chip"><span class="sq"><i></i><i></i><i></i><i></i></span>Quill &amp; Co.</span>
+      <span class="chip"><span class="sq"><i></i><i></i><i></i><i></i></span>Sigma Foods</span>
+    </div>
+  </section>
+
+  <section class="sec" id="services">
+    <span class="sec-eyebrow reveal">What we ship</span>
+    <h2 class="reveal">Six practice areas. <em>One</em> opinionated way of building.</h2>
+    <p class="sub reveal">A senior team that has shipped each of these enough times to know what to skip — and what's worth fighting for in the steering committee.</p>
+
+    <div class="bento">
+      <div class="b-card b-azure reveal">
+        <div class="b-icon"><svg viewBox="0 0 24 24"><path d="M3 18l6-12 5 9-3 3H3z"/><path d="M14 6l7 12H10"/></svg></div>
+        <h3>Azure platform &amp; <em>landing zones</em></h3>
+        <p>Enterprise-scale CAF foundations: hub-and-spoke networking, Entra-led identity, policy-bound subscriptions, and observability wired in from the first commit. Your platform team inherits a tarmac, not a runway being paved.</p>
+        <div class="b-diagram">
+          <div>tenant root</div>
+          <div>platform hub</div>
+          <div>spoke / corp</div>
+          <div>spoke / data</div>
+        </div>
+        <div class="tags"><span class="tag">CAF</span><span class="tag">Bicep</span><span class="tag">Front Door</span><span class="tag">Sentinel</span></div>
+      </div>
+
+      <div class="b-card b-m365 reveal">
+        <div class="b-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg></div>
+        <h3>Microsoft 365 modern work</h3>
+        <p>Tenant migrations, Teams Phone, governance that survives reorgs.</p>
+        <div class="tags"><span class="tag">Exchange</span><span class="tag">SharePoint</span><span class="tag">Teams</span></div>
+      </div>
+
+      <div class="b-card b-data reveal">
+        <div class="b-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></div>
+        <h3>Data, AI &amp; <em>Fabric</em></h3>
+        <p>Medallion lakes, Purview governance, grounded Copilot agents.</p>
+        <div class="tags"><span class="tag">Fabric</span><span class="tag">Synapse</span><span class="tag">AI Foundry</span></div>
+      </div>
+
+      <div class="b-card b-power reveal">
+        <div class="b-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 11-12h-7l1-8z"/></svg></div>
+        <h3>Power Platform CoE</h3>
+        <p>Citizen development with guard rails — ALM, DLP, monitoring, the works.</p>
+        <div class="tags"><span class="tag">Power Apps</span><span class="tag">Automate</span><span class="tag">Dataverse</span></div>
+      </div>
+
+      <div class="b-card b-d365 reveal">
+        <div class="b-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16v6H4z"/><path d="M4 14h16v6H4z"/><circle cx="8" cy="7" r="1.2" fill="currentColor"/><circle cx="8" cy="17" r="1.2" fill="currentColor"/></svg></div>
+        <h3>Dynamics 365 implementation</h3>
+        <p>Sales, Customer Service, Field Service, Finance &amp; Operations — implemented by people who have lived through three of these and know what to skip.</p>
+        <div class="tags"><span class="tag">Sales</span><span class="tag">Customer Service</span><span class="tag">F&amp;O</span><span class="tag">Customer Insights</span></div>
+      </div>
+
+      <div class="b-card b-sec reveal">
+        <div class="b-icon"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v6c0 5-4 8-8 9-4-1-8-4-8-9V7z"/></svg></div>
+        <h3>Identity &amp; <em>Zero Trust</em></h3>
+        <p>Entra ID identity reset, Conditional Access modeled to actual risk, Defender XDR &amp; Sentinel sequenced as a programme — not a checklist.</p>
+        <div class="tags"><span class="tag">Entra ID</span><span class="tag">Defender XDR</span><span class="tag">Sentinel</span><span class="tag">Intune</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" style="padding-top:60px">
+    <div class="nums">
+      <div class="n reveal"><div class="label">Engagements</div><b>180<em>+</em></b><p>Shipped across FSI, public sector, energy, healthcare, and logistics.</p></div>
+      <div class="n reveal"><div class="label">Practice age</div><b>14<em>yr</em></b><p>Microsoft-only since day one. No reseller revenue. No platform drift.</p></div>
+      <div class="n reveal"><div class="label">Re-engagement</div><b>96<em>%</em></b><p>Of clients return for a second engagement within 18 months.</p></div>
+      <div class="n reveal"><div class="label">Practitioners</div><b>72</b><p>Senior-only. Average 11 years on the Microsoft stack before they join.</p></div>
+    </div>
+  </section>
+
+  <section class="sec" id="work">
+    <span class="sec-eyebrow reveal">Selected work</span>
+    <h2 class="reveal">A decade of <em>quietly</em> consequential migrations.</h2>
+    <p class="sub reveal">Five we can talk about in public. Many more under NDA — a partner will walk you through the relevant ones in a working session.</p>
+
+    <div class="scroller">
+      <article class="ccard reveal">
+        <div class="visual"><span class="ribbon">2025 · FSI</span><span class="glyph">CB</span></div>
+        <div class="meta"><span>Continental Bank</span><span>11 mo · 38k seats</span></div>
+        <h3>An identity-first <em>migration</em>, in production.</h3>
+        <p>M365 cutover across 14 jurisdictions with an Entra-led identity reset and FSI-grade Conditional Access. Six-month parallel run; zero unplanned outages.</p>
+        <div class="stat"><b>0</b><span>audit findings<br>at year-end</span></div>
+      </article>
+      <article class="ccard v2 reveal">
+        <div class="visual"><span class="ribbon">2024 · Energy</span><span class="glyph">HE</span></div>
+        <div class="meta"><span>Halden Energy</span><span>9 sites · OT-adjacent</span></div>
+        <h3>An Azure platform that <em>understands</em> the plant.</h3>
+        <p>Isolated OT data plane on a sovereign-by-design landing zone, Fabric-based reporting, and a supervisory Copilot built for plant operators.</p>
+        <div class="stat"><b>62%</b><span>faster<br>shift reporting</span></div>
+      </article>
+      <article class="ccard v3 reveal">
+        <div class="visual"><span class="ribbon">2024 · Healthcare</span><span class="glyph">MH</span></div>
+        <div class="meta"><span>Meridian Health</span><span>22k staff · 4→1</span></div>
+        <h3>One Dynamics estate, <em>not</em> four.</h3>
+        <p>D365 Customer Service replacing four legacy ITSM systems. A Power Platform CoE governing 240 citizen apps across the network.</p>
+        <div class="stat"><b>4→1</b><span>service<br>systems</span></div>
+      </article>
+      <article class="ccard v4 reveal">
+        <div class="visual"><span class="ribbon">2023 · Public sector</span><span class="glyph">NP</span></div>
+        <div class="meta"><span>Northwind Public</span><span>Sovereign · classified</span></div>
+        <h3>A regulator's cloud, audit-ready by <em>design</em>.</h3>
+        <p>Sovereign landing zone for a national regulator: classified data ingress, isolated workloads, Sentinel detections aligned to mandate.</p>
+        <div class="stat"><b>0</b><span>findings<br>across two audits</span></div>
+      </article>
+      <article class="ccard v5 reveal">
+        <div class="visual"><span class="ribbon">2023 · Logistics</span><span class="glyph">LL</span></div>
+        <div class="meta"><span>Lyra Logistics</span><span>4,300 vehicles · IoT</span></div>
+        <h3>Reading 4,300 vehicles as <em>one</em> map.</h3>
+        <p>Azure IoT &amp; Fabric for real-time fleet telemetry; a Copilot dispatcher that turns ten dashboards into a sentence the operator can act on.</p>
+        <div class="stat"><b>$8.4M</b><span>annualised<br>savings</span></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec" id="process">
+    <span class="sec-eyebrow reveal">How we work</span>
+    <h2 class="reveal">A <em>four-phase</em> engagement, defended on a single page.</h2>
+    <p class="sub reveal">Every project starts with a brief and ends with a handover. No surprises in the steering committee, no managed-service shaped exit.</p>
+
+    <div class="proc">
+      <div class="pcard reveal">
+        <div class="pn"><span>Phase</span><b>01</b></div>
+        <h4>The <em>brief</em></h4>
+        <p>Two weeks. We sit with operators, read the audit reports, and write down what's true. You receive a current-state architecture and a position paper, in plain English.</p>
+      </div>
+      <div class="pcard reveal">
+        <div class="pn"><span>Phase</span><b>02</b></div>
+        <h4>The <em>blueprint</em></h4>
+        <p>Target architecture, sequencing, risk register, fixed-fee delivery plan. Reviewed by a partner. Defendable to your board on a single page.</p>
+      </div>
+      <div class="pcard reveal">
+        <div class="pn"><span>Phase</span><b>03</b></div>
+        <h4>The <em>build</em></h4>
+        <p>Senior engineers embedded with your team. Everything as code. Weekly demos, monthly stage gates — your CFO sees what they paid for.</p>
+      </div>
+      <div class="pcard reveal">
+        <div class="pn"><span>Phase</span><b>04</b></div>
+        <h4>The <em>handover</em></h4>
+        <p>Runbooks, training, an honest exit plan. We don't reappear on Monday as a managed service line item — we're proud when you don't need us.</p>
+      </div>
+    </div>
+
+    <div class="testi reveal">
+      <p>ShauTech is what an engagement <em>should</em> feel like — a small, senior team that arrived already knowing what was wrong, and left us better at running the platform than they were.</p>
+      <div class="who">
+        <div class="av">ME</div>
+        <div><b>Marta Eriksen</b><span>Group CIO · Halden Energy</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="contact">
+    <h2>Let's <em>build</em> the<br>next one together.</h2>
+    <p class="sub">Send a paragraph about what's hard. A partner reads every inbound and replies inside two business days — with a real answer or an honest pass.</p>
+    <form class="cta-mailbox" onsubmit="event.preventDefault();this.querySelector('button').textContent='Sent ✓'">
+      <input type="email" placeholder="you@company.com" required />
+      <button type="submit">Start a project<span>→</span></button>
+    </form>
+    <div class="cta-foot">or write directly to brief@shautech.com · Toronto · London · Singapore</div>
+  </section>
+
+  <footer>
+    <div class="foot-grid">
+      <div>
+        <div class="wm">Shau<em>Tech</em></div>
+        <p>An independent Microsoft consultancy. Architecture, implementation, and the unglamorous work of running well.</p>
+      </div>
+      <div>
+        <h5>Practice</h5>
+        <ul><li><a href="#">Azure</a></li><li><a href="#">Microsoft 365</a></li><li><a href="#">Dynamics 365</a></li><li><a href="#">Power Platform</a></li><li><a href="#">Data &amp; AI</a></li><li><a href="#">Security</a></li></ul>
+      </div>
+      <div>
+        <h5>Studio</h5>
+        <ul><li><a href="#">About</a></li><li><a href="#">Manifesto</a></li><li><a href="#">Careers</a></li><li><a href="#">Press</a></li></ul>
+      </div>
+      <div>
+        <h5>Resources</h5>
+        <ul><li><a href="#">Journal</a></li><li><a href="#">Reference architectures</a></li><li><a href="#">Brief template</a></li><li><a href="#">Open source</a></li></ul>
+      </div>
+      <div>
+        <h5>Contact</h5>
+        <ul><li><a href="mailto:brief@shautech.com">brief@shautech.com</a></li><li><a href="#">+1 (416) 555 0148</a></li><li><a href="#">LinkedIn</a></li><li><a href="#">GitHub</a></li></ul>
+      </div>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 ShauTech Limited · Microsoft Solutions Partner</span>
+      <div class="langs"><span>EN</span><span>FR</span><span>DE</span><span>JP</span></div>
+    </div>
+  </footer>
+
+<script>
+  // Magnetic halo
+  const halo=document.getElementById('halo');
+  let mx=window.innerWidth/2,my=window.innerHeight/2,hx=mx,hy=my;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+  function tick(){
+    hx+=(mx-hx)*.10;hy+=(my-hy)*.10;
+    halo.style.transform=`translate(${hx}px,${hy}px) translate(-50%,-50%)`;
+    requestAnimationFrame(tick);
+  }tick();
+
+  // Halo color shift over violet sections
+  const altSecs=document.querySelectorAll('.testi, .cta, .b-power, .b-sec');
+  document.addEventListener('mousemove',e=>{
+    let alt=false;
+    altSecs.forEach(s=>{const r=s.getBoundingClientRect();if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom)alt=true});
+    halo.classList.toggle('alt',alt);
+  });
+
+  // Magnetic buttons
+  document.querySelectorAll('.btn-lg, .pill-grad, .ccard, .b-card').forEach(el=>{
+    el.addEventListener('mousemove',e=>{
+      const r=el.getBoundingClientRect();
+      const x=e.clientX-r.left-r.width/2;
+      const y=e.clientY-r.top-r.height/2;
+      el.style.transform=`translate(${x*.06}px,${y*.06}px) translateY(-2px)`;
+    });
+    el.addEventListener('mouseleave',()=>{el.style.transform=''});
+  });
+
+  // Reveal
+  const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.10});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
