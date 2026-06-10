@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>shautech — Modernise without the chaos.</title>
-<meta name="description" content="shautech is a boutique IT consultancy and MSP. Hands-on specialists for Microsoft 365, Azure, infrastructure, security, and automation — built for small and mid-sized businesses that can't afford downtime." />
+<meta name="description" content="shautech — IT consultancy &amp; managed services, built in Romania, delivered across Europe. Hands-on specialists for Microsoft 365, Azure, infrastructure, security, and automation — for small and mid-sized businesses that can't afford downtime." />
 <meta name="theme-color" content="#0A0B0D" />
 <link rel="canonical" href="https://www.shautech.com/" />
 
@@ -15,7 +15,7 @@
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
 <meta property="og:title" content="shautech — Modernise without the chaos." />
-<meta property="og:description" content="Boutique IT consultancy and managed services. Hands-on specialists who upgrade your systems without the downtime — not a call-centre MSP." />
+<meta property="og:description" content="IT consultancy &amp; managed services, built in Romania, delivered across Europe. Hands-on specialists who upgrade your systems without the downtime — not a call-centre MSP." />
 <meta property="og:url" content="https://www.shautech.com/" />
 <meta property="og:site_name" content="shautech" />
 <meta property="og:locale" content="en_GB" />
@@ -23,7 +23,7 @@
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="shautech — Modernise without the chaos." />
-<meta name="twitter:description" content="Boutique IT consultancy and managed services. Hands-on specialists who upgrade your systems without the downtime — not a call-centre MSP." />
+<meta name="twitter:description" content="IT consultancy &amp; managed services, built in Romania, delivered across Europe. Hands-on specialists who upgrade your systems without the downtime — not a call-centre MSP." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -78,6 +78,82 @@
     background:radial-gradient(circle,var(--glow) 0%,transparent 60%);
     filter:blur(40px);opacity:.6;
   }
+  /* ============ comet thread ============ */
+  .scroll-thread{
+    position:absolute;top:0;left:0;width:100%;
+    z-index:0;pointer-events:none;overflow:visible;
+    opacity:0;transition:opacity .8s var(--ease);
+  }
+  /* head layer rides behind content during the journey, then lifts to land ON the CTA */
+  .scroll-thread-head{
+    position:absolute;top:0;left:0;width:100%;
+    z-index:0;pointer-events:none;overflow:visible;
+    opacity:0;transition:opacity .8s var(--ease);
+  }
+  .scroll-thread-head.landed{z-index:5}
+  .scroll-thread.lit,.scroll-thread-head.lit{opacity:1}
+  /* faint always-on "wire" the comet rides */
+  #threadTrack{
+    fill:none;stroke:rgba(255,255,255,.045);
+    stroke-width:1px;stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:2 6;
+  }
+  /* ambient halo behind the wake */
+  #threadEcho{
+    fill:none;stroke:rgba(77,159,255,.32);
+    stroke-width:18px;stroke-linecap:round;stroke-linejoin:round;
+    filter:blur(14px);
+  }
+  /* persistent wake — gradient fades from start of path to the head */
+  #threadWake{
+    fill:none;
+    stroke-width:1.6px;stroke-linecap:round;stroke-linejoin:round;
+  }
+  /* bright comet tail (last ~360px before head), gradient from cyan→white */
+  #threadTail{
+    fill:none;
+    stroke-width:2.8px;stroke-linecap:round;stroke-linejoin:round;
+    filter:drop-shadow(0 0 6px rgba(124,187,255,.95)) drop-shadow(0 0 16px rgba(77,159,255,.6));
+  }
+  /* hot white core inside the tail (shorter window) */
+  #threadCore{
+    fill:none;stroke:#F4FAFF;
+    stroke-width:1.1px;stroke-linecap:round;stroke-linejoin:round;
+    filter:drop-shadow(0 0 3px rgba(255,255,255,.95));
+  }
+  /* layered head — outer bloom, mid halo, hot pinpoint */
+  #threadHaloOuter{
+    opacity:0;
+    animation:haloPulse 2.6s ease-in-out infinite;
+  }
+  #threadHaloMid{
+    fill:#9EC9FF;opacity:0;
+    filter:blur(2.4px);
+    animation:haloPulseMid 2.6s ease-in-out infinite;
+  }
+  #threadHead{
+    fill:#FFFFFF;opacity:0;
+    filter:drop-shadow(0 0 4px rgba(255,255,255,1))
+           drop-shadow(0 0 10px rgba(174,213,255,.95))
+           drop-shadow(0 0 24px rgba(77,159,255,.7));
+  }
+  .scroll-thread-head.lit #threadHead,
+  .scroll-thread-head.lit #threadHaloMid,
+  .scroll-thread-head.lit #threadHaloOuter{opacity:1}
+  @keyframes haloPulse{
+    0%,100%{opacity:.55}
+    50%{opacity:.95}
+  }
+  @keyframes haloPulseMid{
+    0%,100%{opacity:.55}
+    50%{opacity:.85}
+  }
+  @media(max-width:720px){
+    #threadEcho{stroke-width:12px;filter:blur(9px)}
+    #threadWake{stroke-width:1.3px}
+    #threadTail{stroke-width:2.1px}
+    #threadCore{stroke-width:.9px}
+  }
   .wrap{max-width:var(--maxw);margin:0 auto;padding-inline:var(--pad);position:relative;z-index:1}
   a{color:inherit;text-decoration:none}
   ::selection{background:var(--accent);color:var(--accent-ink)}
@@ -105,6 +181,24 @@
   .btn-primary:hover .arr{transform:translateX(4px)}
   .btn-ghost{background:transparent;color:var(--text);border-color:var(--line-2)}
   .btn-ghost:hover{border-color:var(--accent);color:var(--accent-soft);transform:translateY(-2px)}
+  /* comet-landed state — pulses the button when the comet head arrives */
+  .btn-primary.comet-landed{animation:cometBtnPulse 2.2s ease-in-out infinite}
+  @keyframes cometBtnPulse{
+    0%,100%{
+      box-shadow:
+        0 0 0 0 rgba(77,159,255,.55),
+        0 0 22px 2px rgba(77,159,255,.5),
+        0 14px 36px -10px var(--glow),
+        0 0 0 1px var(--accent-soft);
+    }
+    50%{
+      box-shadow:
+        0 0 0 14px rgba(77,159,255,0),
+        0 0 44px 10px rgba(77,159,255,.85),
+        0 14px 36px -10px var(--glow),
+        0 0 0 1px var(--accent-soft);
+    }
+  }
 
   /* ============ logo ============ */
   .logo{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:1.15rem;letter-spacing:-.01em;display:inline-flex;align-items:center;gap:.05em}
@@ -217,6 +311,60 @@
   .svc-go{width:46px;height:46px;border-radius:50%;border:1px solid var(--line-2);display:grid;place-items:center;color:var(--muted);transition:.3s var(--ease);flex-shrink:0}
   .svc-row:hover .svc-go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);transform:rotate(-45deg)}
 
+  /* ============ team / who we are ============ */
+  .team-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,2.5vw,32px)}
+  .founder-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--r);
+    padding:clamp(1.8rem,2.8vw,2.4rem);
+    display:flex;flex-direction:column;
+    position:relative;overflow:hidden;
+    transition:border-color .3s var(--ease),transform .3s var(--ease),background .3s;
+  }
+  .founder-card:hover{border-color:var(--line-2);transform:translateY(-2px);background:var(--panel-2)}
+  .founder-card-head{display:flex;align-items:center;gap:1.2rem;margin-bottom:1.4rem}
+  .founder-pic{
+    width:84px;height:84px;border-radius:14px;flex-shrink:0;
+    background:linear-gradient(135deg,var(--panel-2),var(--bg-2));
+    border:1px solid var(--line-2);
+    display:grid;place-items:center;
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:1.7rem;
+    color:var(--accent-soft);letter-spacing:.02em;
+    position:relative;overflow:hidden;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .founder-pic::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle at 28% 22%,rgba(77,159,255,.20),transparent 65%);
+  }
+  .founder-pic > *{position:relative;z-index:1}
+  .founder-pic img{width:100%;height:100%;object-fit:cover;display:block}
+  .founder-card-meta h3{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:1.4rem;letter-spacing:-.02em;line-height:1.1;margin:0}
+  .founder-role{font-family:"JetBrains Mono",monospace;font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;margin-top:.45rem}
+  .founder-bio{color:var(--muted);max-width:46ch;text-wrap:pretty}
+  .founder-bio .mono{color:var(--accent-soft)}
+  .founder-tags{list-style:none;margin:1.3rem 0 0;display:flex;flex-wrap:wrap;gap:.5rem}
+  .founder-tags li{
+    font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--muted);
+    border:1px solid var(--line);border-radius:6px;padding:.34em .72em;
+    transition:border-color .25s var(--ease);
+  }
+  .founder-card:hover .founder-tags li{border-color:var(--line-2)}
+  .founder-link{
+    margin-top:1.8rem;align-self:flex-start;
+    display:inline-flex;align-items:center;gap:.7em;
+    font-family:"JetBrains Mono",monospace;font-size:.86rem;
+    color:var(--muted);
+    border:1px solid var(--line);border-radius:9px;
+    padding:.72em 1em;
+    transition:.25s var(--ease);
+  }
+  .founder-link:hover{color:var(--text);border-color:var(--accent);background:rgba(77,159,255,.06)}
+  .founder-link .li-icon{width:16px;height:16px;color:var(--accent-soft);flex-shrink:0}
+  .founder-link .arr{transition:transform .25s var(--ease);color:var(--muted-2)}
+  .founder-link:hover .arr{transform:translateX(4px);color:var(--accent-soft)}
+
   /* ============ process pipeline ============ */
   .pipe{position:relative}
   .pipe-track{position:absolute;left:0;right:0;top:31px;height:2px;background:var(--line)}
@@ -290,6 +438,7 @@
     .hero-grid{grid-template-columns:1fr}
     .hero-vis{order:-1}
     .trust-grid{grid-template-columns:1fr}
+    .team-grid{grid-template-columns:1fr}
     .bento{grid-template-columns:repeat(2,1fr)}
     .cell.feat{grid-column:span 2;grid-row:auto}
     .cell.wide{grid-column:span 2}
@@ -321,10 +470,46 @@
     *{animation-duration:.001ms!important;transition-duration:.001ms!important}
     .reveal{opacity:1;transform:none}
     .console-body .ln{opacity:1;transform:none}
+    .scroll-thread{display:none}
   }
 </style>
 </head>
 <body>
+
+<!-- comet thread, drawn by scroll -->
+<svg class="scroll-thread" id="scrollThread" aria-hidden="true">
+  <defs>
+    <linearGradient id="threadWakeGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="0">
+      <stop offset="0%"   stop-color="#4D9FFF" stop-opacity="0"/>
+      <stop offset="55%"  stop-color="#7CBBFF" stop-opacity=".42"/>
+      <stop offset="100%" stop-color="#B8E0FF" stop-opacity=".88"/>
+    </linearGradient>
+    <linearGradient id="threadTailGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="0">
+      <stop offset="0%"   stop-color="#4D9FFF" stop-opacity="0"/>
+      <stop offset="55%"  stop-color="#B8E0FF" stop-opacity=".9"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <path id="threadTrack"/>
+  <path id="threadEcho"/>
+  <path id="threadWake" stroke="url(#threadWakeGrad)"/>
+  <path id="threadTail" stroke="url(#threadTailGrad)"/>
+  <path id="threadCore"/>
+</svg>
+
+<!-- comet head — separate SVG above content so the head lands ON the CTA button, not behind it -->
+<svg class="scroll-thread-head" id="scrollThreadHead" aria-hidden="true">
+  <defs>
+    <radialGradient id="threadHaloGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity=".95"/>
+      <stop offset="35%"  stop-color="#9EC9FF" stop-opacity=".7"/>
+      <stop offset="100%" stop-color="#4D9FFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle id="threadHaloOuter" r="26" cx="-200" cy="-200" fill="url(#threadHaloGrad)"/>
+  <circle id="threadHaloMid"   r="8"  cx="-200" cy="-200"/>
+  <circle id="threadHead"      r="3"  cx="-200" cy="-200"/>
+</svg>
 
 <header id="top">
   <div class="wrap nav">
@@ -333,6 +518,7 @@
     </a>
     <nav class="nav-links" aria-label="Primary">
       <a href="#services">Services</a>
+      <a href="#team">Team</a>
       <a href="#process">Process</a>
       <a href="#why">Why us</a>
       <a href="#contact">Contact</a>
@@ -350,6 +536,7 @@
 <div class="mobile-menu" id="mobileMenu">
   <button class="mobile-close" id="mobileClose" aria-label="Close menu">✕</button>
   <a href="#services">Services</a>
+  <a href="#team">Team</a>
   <a href="#process">Process</a>
   <a href="#why">Why us</a>
   <a href="#contact">Contact</a>
@@ -361,7 +548,7 @@
   <section class="hero">
     <div class="wrap hero-grid">
       <div class="hero-copy">
-        <span class="kicker"><span class="tick">//</span> Boutique IT consultancy &amp; managed services</span>
+        <span class="kicker"><span class="tick">//</span> IT consultancy &amp; managed services · built in Romania · delivered across Europe</span>
         <h1 class="hero-title">Modernise without the <span class="hl">chaos</span>.</h1>
         <p class="hero-sub">shautech helps small and mid-sized businesses run IT that just works. Hands-on specialists who upgrade your systems without the downtime — not a call-centre MSP.</p>
         <div class="hero-cta">
@@ -454,6 +641,64 @@
           </div>
           <span class="svc-go" aria-hidden="true">→</span>
         </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHO WE ARE ============ -->
+  <section id="team">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2 class="sec-title">Who <em>we</em> are.</h2>
+        <p class="sec-lead">Two operators, one team. The people you book are the people who show up.</p>
+      </div>
+
+      <div class="team-grid">
+        <article class="founder-card reveal">
+          <div class="founder-card-head">
+            <div class="founder-pic"><img src="team/lucian.jpeg" alt="Lucian Popa" width="84" height="84" loading="lazy" decoding="async"/></div>
+            <div class="founder-card-meta">
+              <h3>Lucian Popa</h3>
+              <span class="founder-role">Co-founder · Cloud &amp; identity</span>
+            </div>
+          </div>
+          <p class="founder-bio">Microsoft 365, Entra and Azure are home. Nearly 15 years across enterprise tenants — migrations, identity, and the security baselines auditors actually like. Based in Bucharest, works wherever there's a working VPN.</p>
+          <ul class="founder-tags">
+            <li>Microsoft 365 / Entra ID</li>
+            <li>Azure tenants &amp; migrations</li>
+            <li>Identity &amp; security baselines</li>
+          </ul>
+          <a class="founder-link" href="https://www.linkedin.com/in/lucian-popa-69ba078b" target="_blank" rel="noopener noreferrer">
+            <svg class="li-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.05-1.86-3.05-1.86 0-2.14 1.45-2.14 2.95v5.67H9.34V9h3.41v1.56h.05a3.74 3.74 0 013.37-1.85c3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 11-.01-4.12 2.06 2.06 0 01.01 4.12zM3.56 20.45h3.56V9H3.56v11.45zM22.22 0H1.77C.79 0 0 .78 0 1.74v20.52C0 23.22.79 24 1.77 24h20.45c.98 0 1.78-.78 1.78-1.74V1.74C24 .78 23.2 0 22.22 0z"/>
+            </svg>
+            <span>Connect on LinkedIn</span>
+            <span class="arr" aria-hidden="true">→</span>
+          </a>
+        </article>
+
+        <article class="founder-card reveal">
+          <div class="founder-card-head">
+            <div class="founder-pic"><img src="team/andrei.jpeg" alt="Andrei Luca" width="84" height="84" loading="lazy" decoding="async"/></div>
+            <div class="founder-card-meta">
+              <h3>Andrei Luca</h3>
+              <span class="founder-role">Co-founder · Endpoints &amp; security ops</span>
+            </div>
+          </div>
+          <p class="founder-bio">Four years steering Microsoft endpoint management at enterprise scale — SCCM, Intune and the co-management plumbing for <span class="mono">40,000+</span> endpoints across 24 countries. Defender baselines, hybrid AD, and the patch orchestration nobody else wants to own.</p>
+          <ul class="founder-tags">
+            <li>SCCM, Intune &amp; co-management</li>
+            <li>Defender / Purview / DLP</li>
+            <li>Hybrid AD &amp; on-prem infra</li>
+          </ul>
+          <a class="founder-link" href="https://www.linkedin.com/in/andrewluk10/" target="_blank" rel="noopener noreferrer">
+            <svg class="li-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.05-1.86-3.05-1.86 0-2.14 1.45-2.14 2.95v5.67H9.34V9h3.41v1.56h.05a3.74 3.74 0 013.37-1.85c3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 11-.01-4.12 2.06 2.06 0 01.01 4.12zM3.56 20.45h3.56V9H3.56v11.45zM22.22 0H1.77C.79 0 0 .78 0 1.74v20.52C0 23.22.79 24 1.77 24h20.45c.98 0 1.78-.78 1.78-1.74V1.74C24 .78 23.2 0 22.22 0z"/>
+            </svg>
+            <span>Connect on LinkedIn</span>
+            <span class="arr" aria-hidden="true">→</span>
+          </a>
+        </article>
       </div>
     </div>
   </section>
@@ -579,7 +824,7 @@
       <p class="reveal">Book a free 30-minute call and we'll tell you exactly what we'd fix first. If we're not the right fit, we'll say so.</p>
       <div class="hero-cta reveal">
         <a href="mailto:hello@shautech.co" class="btn btn-primary">Book a free call <span class="arr">→</span></a>
-        <a href="mailto:hello@shautech.co" class="btn btn-ghost">hello@shautech.co</a>
+        <a href="#contact" class="btn btn-ghost" aria-disabled="true">WIP SOON</a>
       </div>
     </div>
   </section>
@@ -593,7 +838,7 @@
         <a href="#top" class="logo" aria-label="shautech home">
           <span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span>
         </a>
-        <p>Boutique IT consultancy &amp; managed services for businesses that can't afford downtime.</p>
+        <p>IT consultancy &amp; managed services — built in Romania, delivered across Europe. For businesses that can't afford downtime.</p>
       </div>
       <div class="foot-col">
         <h4>Services</h4>
@@ -611,7 +856,7 @@
       </div>
       <div class="foot-col">
         <h4>Contact</h4>
-        <a href="mailto:hello@shautech.co">hello@shautech.co</a>
+        <a href="#contact" aria-disabled="true">WIP SOON</a>
         <a href="tel:+440000000000">+44 (0) 000 000 000</a>
         <a href="#contact">Remote &amp; on-site</a>
       </div>
@@ -734,6 +979,249 @@
       setTimeout(next, delay);
     })();
   }
+  /* ---- comet thread, drawn by scroll ---- */
+  (function(){
+    var svg     = document.getElementById('scrollThread');
+    var svgHead = document.getElementById('scrollThreadHead');
+    if(!svg || !svgHead || reduce) return;
+    var pTrack = document.getElementById('threadTrack');
+    var pEcho  = document.getElementById('threadEcho');
+    var pWake  = document.getElementById('threadWake');
+    var pTail  = document.getElementById('threadTail');
+    var pCore  = document.getElementById('threadCore');
+    var haloO  = document.getElementById('threadHaloOuter');
+    var haloM  = document.getElementById('threadHaloMid');
+    var head   = document.getElementById('threadHead');
+    var gWake  = document.getElementById('threadWakeGrad');
+    var gTail  = document.getElementById('threadTailGrad');
+    var ctaBtn = document.querySelector('#contact .btn-primary');
+    if(!pTrack || !pWake || !pTail || !head) return;
+
+    var totalLen = 0;
+    var samples = [];          // sorted {y, len} for fast Y → length lookup
+    var startPt = {x:0, y:0};  // path start point — cached, never changes per scroll
+
+    // designer-placed *intermediate* waypoints — yPct of (logo → CTA span), xPct of viewport width.
+    // the comet's actual endpoints are anchored to DOM (the shautech logo and the contact CTA).
+    var BLUEPRINT_MID = [
+      [ 0.04, 0.70],   // arc up-right from the logo
+      [ 0.12, 0.32],   // sweep across to the left
+      [ 0.21, 0.66],   // S back to the right
+      [ 0.31, 0.30],   // far left
+      [ 0.41, 0.60],   // center-right
+      [ 0.51, 0.32],   // left of center
+      [ 0.61, 0.64],   // right
+      [ 0.71, 0.36],   // left
+      [ 0.81, 0.60],   // right
+      [ 0.91, 0.46]    // settle toward CTA
+    ];
+
+    function docCenter(el){
+      // sum offsetTop up the offsetParent chain — gives the element's *layout* position,
+      // immune to position:sticky / scroll state.
+      var top = 0, left = 0, node = el;
+      while(node){
+        top += node.offsetTop;
+        left += node.offsetLeft;
+        node = node.offsetParent;
+      }
+      return { x: left + el.offsetWidth / 2, y: top + el.offsetHeight / 2 };
+    }
+    function getEndpoints(){
+      var logo = document.querySelector('header .logo');
+      var cta  = document.querySelector('#contact .btn-primary');
+      if(!logo || !cta) return null;
+      return { start: docCenter(logo), end: docCenter(cta) };
+    }
+
+    function buildPath(){
+      // zero both SVGs before measuring so their own height never feeds back into docH
+      svg.style.height = '0px';
+      svgHead.style.height = '0px';
+      var doc = document.documentElement;
+      var docH = Math.max(doc.scrollHeight, document.body.scrollHeight, window.innerHeight + 1);
+      var w = window.innerWidth;
+      var isMobile = w < 720;
+      var ampScale = isMobile ? 0.78 : 1;   // tighter sway on phones
+
+      [svg, svgHead].forEach(function(s){
+        s.setAttribute('viewBox', '0 0 ' + w + ' ' + docH);
+        s.setAttribute('width', w);
+        s.setAttribute('height', docH);
+        s.style.height = docH + 'px';
+        s.style.width = w + 'px';
+      });
+
+      // anchor endpoints to the DOM (shautech logo → contact CTA).
+      // fall back to top-left → bottom-center if those elements aren't found.
+      var eps = getEndpoints();
+      var startX = eps ? eps.start.x : 60;
+      var startY = eps ? eps.start.y : 60;
+      var endX   = eps ? eps.end.x   : w * 0.5;
+      var endY   = eps ? eps.end.y   : docH - 120;
+      var spanY  = Math.max(600, endY - startY);
+
+      var pts = [{ x: startX, y: startY }];
+      BLUEPRINT_MID.forEach(function(wp){
+        var xCentered = (wp[1] - 0.5) * w * ampScale + w * 0.5;
+        pts.push({
+          x: Math.max(36, Math.min(w - 36, xCentered)),
+          y: startY + wp[0] * spanY
+        });
+      });
+      pts.push({ x: endX, y: endY });
+
+      // Catmull-Rom → cubic Bezier (tension 1/6 = classic smooth)
+      var t = 1/6;
+      var d = 'M ' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1);
+      for(var i = 0; i < pts.length - 1; i++){
+        var p0 = pts[i > 0 ? i - 1 : 0];
+        var p1 = pts[i];
+        var p2 = pts[i + 1];
+        var p3 = pts[i + 2 < pts.length ? i + 2 : pts.length - 1];
+        var c1x = p1.x + (p2.x - p0.x) * t;
+        var c1y = p1.y + (p2.y - p0.y) * t;
+        var c2x = p2.x - (p3.x - p1.x) * t;
+        var c2y = p2.y - (p3.y - p1.y) * t;
+        d += ' C ' + c1x.toFixed(1) + ',' + c1y.toFixed(1)
+                + ' ' + c2x.toFixed(1) + ',' + c2y.toFixed(1)
+                + ' ' + p2.x.toFixed(1) + ',' + p2.y.toFixed(1);
+      }
+
+      [pTrack, pEcho, pWake, pTail, pCore].forEach(function(p){ p.setAttribute('d', d); });
+
+      totalLen = pWake.getTotalLength();
+
+      // wake & echo: progressive 0 → drawnLen reveal
+      [pEcho, pWake].forEach(function(p){
+        p.style.strokeDasharray = totalLen;
+        p.style.strokeDashoffset = totalLen;
+      });
+      // tail & core start hidden — populated by update()
+      pTail.style.strokeDasharray = '0 ' + (totalLen + 10);
+      pCore.style.strokeDasharray = '0 ' + (totalLen + 10);
+
+      // sample (y, len) so any scroll-Y maps to a path length in O(log n)
+      samples.length = 0;
+      var stepLen = Math.max(4, totalLen / 1200);
+      for(var l = 0; l <= totalLen; l += stepLen){
+        var sp = pWake.getPointAtLength(l);
+        samples.push({y: sp.y, len: l});
+      }
+      var endPt = pWake.getPointAtLength(totalLen);
+      samples.push({y: endPt.y, len: totalLen});
+
+      startPt = pWake.getPointAtLength(0);
+
+      svg.classList.add('lit');
+      svgHead.classList.add('lit');
+    }
+
+    function lengthForY(y){
+      if(!samples.length) return 0;
+      if(y <= samples[0].y) return 0;
+      if(y >= samples[samples.length - 1].y) return totalLen;
+      var lo = 0, hi = samples.length - 1;
+      while(lo < hi - 1){
+        var mid = (lo + hi) >> 1;
+        if(samples[mid].y < y) lo = mid;
+        else hi = mid;
+      }
+      var s1 = samples[lo], s2 = samples[hi];
+      var f = (y - s1.y) / Math.max(0.01, s2.y - s1.y);
+      return s1.len + f * (s2.len - s1.len);
+    }
+
+    function setWindow(path, drawnLen, tailLen){
+      var clamped = Math.min(tailLen, drawnLen);
+      if(clamped <= 0){
+        path.style.strokeDasharray = '0 ' + (totalLen + 10);
+        return;
+      }
+      var start = drawnLen - clamped;
+      var gap = totalLen + 10;
+      var period = clamped + gap;
+      // align pattern so the dash begins exactly at `start`
+      var off = ((period - start) % period + period) % period;
+      path.style.strokeDasharray = clamped.toFixed(1) + ' ' + gap.toFixed(1);
+      path.style.strokeDashoffset = off.toFixed(1);
+    }
+
+    function update(){
+      if(!totalLen) return;
+      var w = window.innerWidth;
+      var isMobile = w < 720;
+      var TAIL_OUTER = isMobile ? 240 : 360;
+      var TAIL_CORE  = isMobile ? 120 : 180;
+
+      var scrollY = window.scrollY || window.pageYOffset || 0;
+      var vh = window.innerHeight;
+      // the head leads the natural reading line — ~58% down the viewport
+      var headY = scrollY + vh * 0.58;
+      var drawnLen = lengthForY(headY);
+
+      // wake (full drawn portion) and its blurred halo echo
+      var off = (totalLen - drawnLen).toFixed(1);
+      pEcho.style.strokeDashoffset = off;
+      pWake.style.strokeDashoffset = off;
+
+      // bright comet tail windows
+      setWindow(pTail, drawnLen, TAIL_OUTER);
+      setWindow(pCore, drawnLen, TAIL_CORE);
+
+      // head + halos
+      var hp = pWake.getPointAtLength(drawnLen);
+      head.setAttribute('cx', hp.x.toFixed(1));
+      head.setAttribute('cy', hp.y.toFixed(1));
+      haloM.setAttribute('cx', hp.x.toFixed(1));
+      haloM.setAttribute('cy', hp.y.toFixed(1));
+      haloO.setAttribute('cx', hp.x.toFixed(1));
+      haloO.setAttribute('cy', hp.y.toFixed(1));
+
+      // gradients track the path geometrically — wake fades from path start, tail fades from tail-start, both pointing at the head
+      gWake.setAttribute('x1', startPt.x.toFixed(1));
+      gWake.setAttribute('y1', startPt.y.toFixed(1));
+      gWake.setAttribute('x2', hp.x.toFixed(1));
+      gWake.setAttribute('y2', hp.y.toFixed(1));
+
+      var tStartLen = Math.max(0, drawnLen - TAIL_OUTER);
+      var tp = pWake.getPointAtLength(tStartLen);
+      gTail.setAttribute('x1', tp.x.toFixed(1));
+      gTail.setAttribute('y1', tp.y.toFixed(1));
+      gTail.setAttribute('x2', hp.x.toFixed(1));
+      gTail.setAttribute('y2', hp.y.toFixed(1));
+
+      // landed state — only at the very end: lift the head above content and pulse the button.
+      var landed = drawnLen >= totalLen - 4;
+      svgHead.classList.toggle('landed', landed);
+      if(ctaBtn) ctaBtn.classList.toggle('comet-landed', landed);
+    }
+
+    var rafPending = false;
+    function onScroll(){
+      if(rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(function(){ update(); rafPending = false; });
+    }
+
+    var resizeT;
+    function onResize(){
+      clearTimeout(resizeT);
+      resizeT = setTimeout(function(){ buildPath(); update(); }, 160);
+    }
+
+    buildPath();
+    update();
+    window.addEventListener('scroll', onScroll, {passive:true});
+    window.addEventListener('resize', onResize);
+    window.addEventListener('load', function(){ buildPath(); update(); });
+
+    if('ResizeObserver' in window){
+      var ro = new ResizeObserver(onResize);
+      ro.observe(document.body);
+    }
+  })();
+
   /* kick everything off + handle deep-link / reload scroll positions */
   check();
   window.addEventListener('load', check);
