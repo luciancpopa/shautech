@@ -112,14 +112,33 @@
   /* bright comet tail (last ~360px before head), gradient from cyan→white */
   #threadTail{
     fill:none;
-    stroke-width:2.8px;stroke-linecap:round;stroke-linejoin:round;
-    filter:drop-shadow(0 0 6px rgba(124,187,255,.95)) drop-shadow(0 0 16px rgba(77,159,255,.6));
+    stroke-width:4.2px;stroke-linecap:round;stroke-linejoin:round;
+    filter:drop-shadow(0 0 8px rgba(124,187,255,.95)) drop-shadow(0 0 22px rgba(77,159,255,.6));
   }
   /* hot white core inside the tail (shorter window) */
   #threadCore{
     fill:none;stroke:#F4FAFF;
-    stroke-width:1.1px;stroke-linecap:round;stroke-linejoin:round;
-    filter:drop-shadow(0 0 3px rgba(255,255,255,.95));
+    stroke-width:1.7px;stroke-linecap:round;stroke-linejoin:round;
+    filter:drop-shadow(0 0 4px rgba(255,255,255,.95));
+  }
+  /* "light leak" ghost — sits ABOVE content with screen blend so the tail
+     still shows as a faint glow when it passes behind cards/sections */
+  .scroll-thread-ghost{
+    position:absolute;top:0;left:0;width:100%;
+    z-index:4;pointer-events:none;overflow:visible;
+    opacity:0;transition:opacity .8s var(--ease);
+    mix-blend-mode:screen;
+  }
+  .scroll-thread-ghost.lit{opacity:.42}
+  #threadTailGhost{
+    fill:none;
+    stroke-width:7px;stroke-linecap:round;stroke-linejoin:round;
+    filter:blur(5px);
+  }
+  #threadCoreGhost{
+    fill:none;stroke:rgba(220,236,255,.9);
+    stroke-width:2px;stroke-linecap:round;stroke-linejoin:round;
+    filter:blur(1.5px);
   }
   /* layered head — outer bloom, mid halo, hot pinpoint */
   #threadHaloOuter{
@@ -151,8 +170,10 @@
   @media(max-width:720px){
     #threadEcho{stroke-width:12px;filter:blur(9px)}
     #threadWake{stroke-width:1.3px}
-    #threadTail{stroke-width:2.1px}
-    #threadCore{stroke-width:.9px}
+    #threadTail{stroke-width:3.2px}
+    #threadCore{stroke-width:1.3px}
+    #threadTailGhost{stroke-width:5px;filter:blur(4px)}
+    #threadCoreGhost{stroke-width:1.6px}
   }
   .wrap{max-width:var(--maxw);margin:0 auto;padding-inline:var(--pad);position:relative;z-index:1}
   a{color:inherit;text-decoration:none}
@@ -280,6 +301,29 @@
 
   /* ============ section frame ============ */
   section{position:relative;z-index:1;padding-block:clamp(60px,9vw,130px)}
+  /* low-key seam between consecutive sections — hairline that fades at the edges,
+     with a faint blue glow above/below. reads like a panel join, not a divider. */
+  section + section::before{
+    content:"";
+    position:absolute;top:0;left:8%;right:8%;height:1px;
+    background:linear-gradient(90deg,
+      transparent 0%,
+      rgba(77,159,255,0) 6%,
+      rgba(77,159,255,.22) 50%,
+      rgba(77,159,255,0) 94%,
+      transparent 100%);
+    pointer-events:none;
+  }
+  section + section::after{
+    content:"";
+    position:absolute;top:-14px;left:18%;right:18%;height:28px;
+    background:radial-gradient(ellipse at center,
+      rgba(77,159,255,.10) 0%,
+      rgba(77,159,255,.03) 45%,
+      transparent 75%);
+    filter:blur(6px);
+    pointer-events:none;
+  }
   .sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:2rem;flex-wrap:wrap;margin-bottom:clamp(34px,5vw,64px)}
   .sec-title{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(2rem,4.6vw,3.6rem);line-height:1.02;letter-spacing:-.03em;max-width:18ch;text-wrap:balance}
   .sec-title em{font-style:normal;color:var(--accent)}
@@ -497,6 +541,13 @@
   <path id="threadCore"/>
 </svg>
 
+<!-- "light leak" ghost — sits above content, mirrors the bright tail with screen blend
+     so a faint trace shows through cards/sections the comet passes behind -->
+<svg class="scroll-thread-ghost" id="scrollThreadGhost" aria-hidden="true">
+  <path id="threadTailGhost" stroke="url(#threadTailGrad)"/>
+  <path id="threadCoreGhost"/>
+</svg>
+
 <!-- comet head — separate SVG above content so the head lands ON the CTA button, not behind it -->
 <svg class="scroll-thread-head" id="scrollThreadHead" aria-hidden="true">
   <defs>
@@ -650,7 +701,7 @@
     <div class="wrap">
       <div class="sec-head reveal">
         <h2 class="sec-title">Who <em>we</em> are.</h2>
-        <p class="sec-lead">Two operators, one team. The people you book are the people who show up.</p>
+        <p class="sec-lead">Two operators, one team. The people you book are the people who show up. With almost 20 years across enterprise tenants and on-prem environments.</p>
       </div>
 
       <div class="team-grid">
@@ -662,10 +713,11 @@
               <span class="founder-role">Co-founder · Cloud &amp; identity</span>
             </div>
           </div>
-          <p class="founder-bio">Microsoft 365, Entra and Azure are home. Nearly 15 years across enterprise tenants — migrations, identity, and the security baselines auditors actually like. Based in Bucharest, works wherever there's a working VPN.</p>
+          <p class="founder-bio">Microsoft 365, Entra and Azure are home. Nearly 15 years across enterprise tenants — Exchange migrations, identity, and the security baselines auditors actually like. Based in Bucharest, works wherever there's a working VPN.</p>
           <ul class="founder-tags">
             <li>Microsoft 365 / Entra ID</li>
             <li>Azure tenants &amp; migrations</li>
+            <li>Exchange Online &amp; hybrid</li>
             <li>Identity &amp; security baselines</li>
           </ul>
           <a class="founder-link" href="https://www.linkedin.com/in/lucian-popa-69ba078b" target="_blank" rel="noopener noreferrer">
@@ -690,6 +742,7 @@
             <li>SCCM, Intune &amp; co-management</li>
             <li>Defender / Purview / DLP</li>
             <li>Hybrid AD &amp; on-prem infra</li>
+            <li>Patch orchestration at scale</li>
           </ul>
           <a class="founder-link" href="https://www.linkedin.com/in/andrewluk10/" target="_blank" rel="noopener noreferrer">
             <svg class="li-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -981,14 +1034,17 @@
   }
   /* ---- comet thread, drawn by scroll ---- */
   (function(){
-    var svg     = document.getElementById('scrollThread');
-    var svgHead = document.getElementById('scrollThreadHead');
+    var svg      = document.getElementById('scrollThread');
+    var svgHead  = document.getElementById('scrollThreadHead');
+    var svgGhost = document.getElementById('scrollThreadGhost');
     if(!svg || !svgHead || reduce) return;
     var pTrack = document.getElementById('threadTrack');
     var pEcho  = document.getElementById('threadEcho');
     var pWake  = document.getElementById('threadWake');
     var pTail  = document.getElementById('threadTail');
     var pCore  = document.getElementById('threadCore');
+    var pTailGhost = document.getElementById('threadTailGhost');
+    var pCoreGhost = document.getElementById('threadCoreGhost');
     var haloO  = document.getElementById('threadHaloOuter');
     var haloM  = document.getElementById('threadHaloMid');
     var head   = document.getElementById('threadHead');
@@ -1035,16 +1091,17 @@
     }
 
     function buildPath(){
-      // zero both SVGs before measuring so their own height never feeds back into docH
+      // zero all SVGs before measuring so their own height never feeds back into docH
       svg.style.height = '0px';
       svgHead.style.height = '0px';
+      if(svgGhost) svgGhost.style.height = '0px';
       var doc = document.documentElement;
       var docH = Math.max(doc.scrollHeight, document.body.scrollHeight, window.innerHeight + 1);
       var w = window.innerWidth;
       var isMobile = w < 720;
       var ampScale = isMobile ? 0.78 : 1;   // tighter sway on phones
 
-      [svg, svgHead].forEach(function(s){
+      [svg, svgHead, svgGhost].filter(Boolean).forEach(function(s){
         s.setAttribute('viewBox', '0 0 ' + w + ' ' + docH);
         s.setAttribute('width', w);
         s.setAttribute('height', docH);
@@ -1088,7 +1145,7 @@
                 + ' ' + p2.x.toFixed(1) + ',' + p2.y.toFixed(1);
       }
 
-      [pTrack, pEcho, pWake, pTail, pCore].forEach(function(p){ p.setAttribute('d', d); });
+      [pTrack, pEcho, pWake, pTail, pCore, pTailGhost, pCoreGhost].filter(Boolean).forEach(function(p){ p.setAttribute('d', d); });
 
       totalLen = pWake.getTotalLength();
 
@@ -1097,9 +1154,10 @@
         p.style.strokeDasharray = totalLen;
         p.style.strokeDashoffset = totalLen;
       });
-      // tail & core start hidden — populated by update()
-      pTail.style.strokeDasharray = '0 ' + (totalLen + 10);
-      pCore.style.strokeDasharray = '0 ' + (totalLen + 10);
+      // tail, core, ghost overlays start hidden — populated by update()
+      [pTail, pCore, pTailGhost, pCoreGhost].filter(Boolean).forEach(function(p){
+        p.style.strokeDasharray = '0 ' + (totalLen + 10);
+      });
 
       // sample (y, len) so any scroll-Y maps to a path length in O(log n)
       samples.length = 0;
@@ -1115,6 +1173,7 @@
 
       svg.classList.add('lit');
       svgHead.classList.add('lit');
+      if(svgGhost) svgGhost.classList.add('lit');
     }
 
     function lengthForY(y){
@@ -1168,6 +1227,9 @@
       // bright comet tail windows
       setWindow(pTail, drawnLen, TAIL_OUTER);
       setWindow(pCore, drawnLen, TAIL_CORE);
+      // ghost overlays — same windows, just rendered above content with screen blend
+      if(pTailGhost) setWindow(pTailGhost, drawnLen, TAIL_OUTER);
+      if(pCoreGhost) setWindow(pCoreGhost, drawnLen, TAIL_CORE);
 
       // head + halos
       var hp = pWake.getPointAtLength(drawnLen);
