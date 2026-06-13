@@ -867,11 +867,15 @@
         </div>
         <div class="res">
           <span class="r-tag">result · endpoints</span>
-          <p>In-place upgraded <b>200 endpoints to Windows 11 25H2</b> during business hours — zero downtime, every app and file intact.</p>
+          <p>In-place upgraded <b>over 1,000 endpoints to Windows 11 25H2</b> during business hours — zero downtime, every app and file intact.</p>
         </div>
         <div class="res">
           <span class="r-tag">result · security</span>
           <p>Hardened <b>500+ devices with BitLocker and LAPS</b> — full-disk encryption and rotated local-admin passwords, zero user disruption.</p>
+        </div>
+        <div class="res">
+          <span class="r-tag">result · automation</span>
+          <p>Shipped a <b>custom AD password-expiry automation</b> for the whole org — PowerShell reads <span class="mono">pwdLastSet</span> on every account and emails users before expiry. No native AD feature for it — so we built one. Lockouts gone.</p>
         </div>
       </div>
     </div>
@@ -1019,6 +1023,8 @@
     {html:'  <span class="ok">✓</span> <span class="lbl">patching</span>    automated', d:90},
     {html:'<span class="pr">›</span> run cleanup.ps1 <span class="dim">--reclaim</span>', d:260},
     {html:'  <span class="ok">✓</span> done — <span class="ok">6 hrs/week</span> reclaimed', d:120},
+    {html:'<span class="pr">›</span> run notify-AD_expiry.ps1 <span class="dim">--attr pwdLastSet</span>', d:260},
+    {html:'  <span class="ok">✓</span> 1,240 accounts scanned — <span class="ok">38 expiry alerts</span> sent', d:120},
     {html:'<span class="lbl">status:</span> all systems nominal <span class="cursor"></span>', d:60}
   ];
   function typeLines(){
