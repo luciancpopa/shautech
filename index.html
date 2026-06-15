@@ -1303,5 +1303,14 @@
   requestAnimationFrame(check);
 })();
 </script>
+<script>
+  /* logo → scroll to very top (header is position:sticky, so #top alone won't move) */
+  document.querySelectorAll('a.logo[href="#top"]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+</script>
 </body>
 </html>
