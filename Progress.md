@@ -7,6 +7,19 @@ Repo: <https://github.com/luciancpopa/shautech> · Live: <https://www.shautech.c
 
 ---
 
+## 2026-07-05 — Lucian Popa
+
+Focus: platform section, product rename to **shautech pulse**, CIS compliance mapping, header badge fix.
+
+| # | Change | Where | Commit |
+|---|--------|-------|--------|
+| 1 | Added the **platform section**: our in-house audit engine with mock report console (score 82/100, findings, monthly re-scan), "Compliance isn't a one-off" grid, and matching service card `05 · IT audit & compliance report`; refreshed Results and founder bio | Platform + Services + Results + Team | `3953310` |
+| 2 | Renamed the audit engine from `shaudit` to **shautech pulse** everywhere (service card, platform section, report console, "Why shautech", terminal command now `shautech-pulse --full`) | Site-wide | `39fc743` |
+| 3 | Added **CIS Microsoft 365 Benchmark / Microsoft baseline mapping**: platform lead paragraph, new "Framework-mapped" bullet (insurers & auditors angle), `CIS M365 benchmark` in the report footer, `CIS benchmark` service-card tag | Platform + Services | `39fc743` |
+| 4 | Fixed the stale **"Booking June '26"** header badge — now computed in JS as always next month (e.g. "Booking August '26"), with a "Booking now" no-JS fallback | Header | `39fc743` |
+
+---
+
 ## 2026-06-15 — Andrei Luca (`luk`)
 
 Focus: hero/CTA copy, demo cleanup, navigation fix, team intro.
@@ -60,4 +73,4 @@ Baseline site created and rebranded by Lucian. Listed here for context.
 
 ---
 
-_Last updated: 2026-06-15_
+_Last updated: 2026-07-05_
