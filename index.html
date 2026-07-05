@@ -44,6 +44,8 @@
     --accent-ink:#04132B;
     --glow:rgba(77,159,255,0.30);
     --ok:#4D9FFF;
+    --crit:#FF7A7A;
+    --warn:#FFB65C;
     --pad:clamp(20px,5vw,80px);
     --maxw:1240px;
     --r:14px;
@@ -290,6 +292,7 @@
   .console-body .ok{color:var(--accent-soft)}
   .console-body .dim{color:var(--muted-2)}
   .console-body .lbl{color:var(--muted)}
+  .console-body .crit{color:var(--crit)}
   .cursor{display:inline-block;width:.55em;height:1.05em;background:var(--accent);transform:translateY(.15em);animation:blink 1.1s steps(1) infinite}
   .gauges{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}
   .gauge{background:var(--panel);padding:.95rem 1rem}
@@ -352,8 +355,63 @@
   .svc-tags{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
   .svc-tags span{font-family:"JetBrains Mono",monospace;font-size:.7rem;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:.3em .7em;transition:.25s}
   .svc-row:hover .svc-tags span{border-color:var(--line-2)}
+  .svc-tags span.pow{color:var(--accent-soft);border-color:rgba(77,159,255,.4);background:rgba(77,159,255,.06)}
+  .svc-row:hover .svc-tags span.pow{border-color:rgba(77,159,255,.55)}
   .svc-go{width:46px;height:46px;border-radius:50%;border:1px solid var(--line-2);display:grid;place-items:center;color:var(--muted);transition:.3s var(--ease);flex-shrink:0}
   .svc-row:hover .svc-go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);transform:rotate(-45deg)}
+
+  /* ============ platform / shaudit ============ */
+  .plat-grid{display:grid;grid-template-columns:1fr 1.05fr;gap:clamp(32px,5vw,72px);align-items:center}
+  .plat-copy .sec-title{margin-top:1.1rem}
+  .plat-lead{color:var(--muted);margin-top:1.3rem;max-width:46ch;text-wrap:pretty}
+  .plat-lead .mono{color:var(--accent-soft)}
+  .plat-points{list-style:none;margin-top:1.8rem;border-top:1px solid var(--line)}
+  .plat-points li{display:grid;grid-template-columns:auto 1fr;column-gap:.8em;row-gap:.4rem;padding:.85rem 0;border-bottom:1px solid var(--line);align-items:baseline}
+  .plat-points li::before{content:"✓";color:var(--accent);font-weight:700;font-family:"JetBrains Mono",monospace;font-size:.8rem}
+  .plat-points li b{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--text)}
+  .plat-points li span{grid-column:2;color:var(--muted)}
+  .plat-cta{display:flex;flex-wrap:wrap;align-items:center;gap:1rem 1.4rem;margin-top:2.2rem}
+  .plat-cta .note{font-family:"JetBrains Mono",monospace;font-size:.8rem;color:var(--muted-2)}
+  .report-body{padding:1.5rem 1.4rem 1.5rem;display:flex;flex-direction:column;gap:1.35rem}
+  .score-row{display:flex;align-items:center;gap:1.4rem;flex-wrap:wrap}
+  .score-num{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:3rem;line-height:1;letter-spacing:-.02em;display:flex;align-items:baseline;gap:.12em}
+  .score-num small{font-size:.38em;color:var(--muted);font-weight:500}
+  .score-meta{flex:1;min-width:180px}
+  .score-lbl{font-family:"JetBrains Mono",monospace;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2)}
+  .score-bar{height:6px;border-radius:4px;background:var(--line-2);margin-top:.55rem;overflow:hidden}
+  .score-bar i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent-soft));box-shadow:0 0 12px var(--glow);transition:width 1.4s var(--ease)}
+  .score-counts{display:flex;gap:1.2rem;margin-top:.6rem;font-family:"JetBrains Mono",monospace;font-size:.74rem}
+  .score-counts b{font-weight:600}
+  .cnt-crit{color:var(--crit)}
+  .cnt-warn{color:var(--warn)}
+  .cnt-pass{color:var(--accent-soft)}
+  .findings{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+  .finding{display:flex;align-items:center;gap:.9rem;padding:.78rem 0;border-bottom:1px solid var(--line);font-family:"JetBrains Mono",monospace;font-size:.8rem}
+  .finding:last-child{border-bottom:none}
+  .sev{font-size:.62rem;font-weight:700;letter-spacing:.12em;border-radius:5px;padding:.22em .6em;flex-shrink:0;min-width:4.4em;text-align:center}
+  .sev-crit{color:var(--crit);border:1px solid rgba(255,122,122,.4);background:rgba(255,122,122,.08)}
+  .sev-warn{color:var(--warn);border:1px solid rgba(255,182,92,.35);background:rgba(255,182,92,.07)}
+  .sev-pass{color:var(--accent-soft);border:1px solid rgba(124,187,255,.3);background:rgba(77,159,255,.07)}
+  .finding p{color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .finding p b{color:var(--text);font-weight:500}
+  .report-foot{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;font-size:.7rem;color:var(--muted-2);border-top:1px solid var(--line);padding-top:.9rem}
+  .report-foot b{color:var(--accent-soft);font-weight:500}
+  .plat-cont{margin-top:clamp(48px,7vw,88px)}
+  .cont-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1.5rem 2rem;flex-wrap:wrap;margin-bottom:clamp(20px,3vw,32px)}
+  .cont-head h3{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:clamp(1.5rem,2.6vw,2.1rem);letter-spacing:-.02em;line-height:1.05}
+  .cont-head h3 em{font-style:normal;color:var(--accent)}
+  .cont-head p{color:var(--muted);max-width:48ch}
+  .cont-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .cont-cell{background:var(--panel);padding:clamp(1.4rem,2.2vw,1.9rem);transition:background .3s}
+  .cont-cell:hover{background:var(--panel-2)}
+  .cont-cell .c-lbl{font-family:"JetBrains Mono",monospace;font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted-2);display:flex;align-items:center;gap:.5em}
+  .cont-cell .c-lbl::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .cont-cell h4{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:1.15rem;letter-spacing:-.01em;margin:.8rem 0 .4rem}
+  .cont-cell p{color:var(--muted);font-size:.92rem}
+  .trend{display:flex;align-items:flex-end;gap:.5rem;margin-top:1rem;height:44px}
+  .trend i{flex:1;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--accent-soft),rgba(77,159,255,.25));opacity:.55}
+  .trend i:last-child{opacity:1;box-shadow:0 0 14px var(--glow)}
+  .trend-lbl{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:.64rem;color:var(--muted-2);margin-top:.4rem}
 
   /* ============ team / who we are ============ */
   .team-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,2.5vw,32px)}
@@ -438,6 +496,9 @@
   .cell.wide{grid-column:span 2}
   .cell .icon{width:34px;height:34px;color:var(--accent)}
   .cell.feat .feat-cta{margin-top:1.8rem}
+  .cell.glow{background:linear-gradient(180deg,rgba(77,159,255,.05),transparent 60%),var(--panel)}
+  .cell.glow:hover{background:linear-gradient(180deg,rgba(77,159,255,.07),transparent 60%),var(--panel-2)}
+  .cell.glow .c-num{color:var(--accent-soft)}
 
   /* ============ trust ============ */
   .trust-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:clamp(28px,4vw,56px);align-items:stretch}
@@ -483,6 +544,8 @@
     .hero-vis{order:-1}
     .trust-grid{grid-template-columns:1fr}
     .team-grid{grid-template-columns:1fr}
+    .plat-grid{grid-template-columns:1fr}
+    .cont-grid{grid-template-columns:1fr}
     .bento{grid-template-columns:repeat(2,1fr)}
     .cell.feat{grid-column:span 2;grid-row:auto}
     .cell.wide{grid-column:span 2}
@@ -509,6 +572,8 @@
     .sec-head{flex-direction:column;align-items:flex-start}
     .svc-go{display:none}
     .svc-row{grid-template-columns:auto 1fr}
+    .finding p{white-space:normal}
+    .score-num{font-size:2.4rem}
   }
   @media(prefers-reduced-motion:reduce){
     *{animation-duration:.001ms!important;transition-duration:.001ms!important}
@@ -569,6 +634,7 @@
     </a>
     <nav class="nav-links" aria-label="Primary">
       <a href="#services">Services</a>
+      <a href="#platform">Platform</a>
       <a href="#team">Team</a>
       <a href="#process">Process</a>
       <a href="#why">Why us</a>
@@ -587,6 +653,7 @@
 <div class="mobile-menu" id="mobileMenu">
   <button class="mobile-close" id="mobileClose" aria-label="Close menu">✕</button>
   <a href="#services">Services</a>
+  <a href="#platform">Platform</a>
   <a href="#team">Team</a>
   <a href="#process">Process</a>
   <a href="#why">Why us</a>
@@ -692,6 +759,99 @@
           </div>
           <span class="svc-go" aria-hidden="true">→</span>
         </a>
+        <a class="svc-row reveal" href="#platform">
+          <span class="svc-idx">05</span>
+          <div class="svc-main">
+            <span class="svc-code">SCAN · SCORE · FIX</span>
+            <h3 class="svc-name">IT audit &amp; compliance report</h3>
+            <p class="svc-desc">We scan your tenant with shaudit, our in-house engine — 200+ automated checks across identity, mail, endpoints and data. You get a scored, prioritised report in days, not weeks, and a clear quote for every fix on the list.</p>
+            <div class="svc-tags"><span class="pow">› powered by shaudit</span><span>200+ checks</span><span>Scored report</span><span>Re-run anytime</span></div>
+          </div>
+          <span class="svc-go" aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PLATFORM / SHAUDIT ============ -->
+  <section id="platform">
+    <div class="wrap">
+      <div class="plat-grid">
+        <div class="plat-copy reveal">
+          <span class="kicker"><span class="tick">//</span> shaudit · our engine · built in-house</span>
+          <h2 class="sec-title">Our audits run on our <em>own engine</em>.</h2>
+          <p class="plat-lead">Most providers assemble audit reports by hand — a consultant, a checklist, a Word doc. We built <span class="mono">shaudit</span> instead: our in-house platform that runs 200+ automated checks across identity, mail, endpoints and data. Nothing gets missed, and nothing depends on who had coffee that morning.</p>
+          <ul class="plat-points">
+            <li><b>Consistent</b><span>Same checks, every tenant, every time.</span></li>
+            <li><b>Evidence-backed</b><span>Every finding links to the exact setting we saw.</span></li>
+            <li><b>Re-runnable</b><span>Scan again next quarter and watch the score climb.</span></li>
+          </ul>
+          <div class="plat-cta">
+            <a href="#contact" class="btn btn-primary">Get your tenant scored <span class="arr">→</span></a>
+            <span class="note">first scan free with the discovery call</span>
+          </div>
+        </div>
+
+        <div class="console reveal">
+          <div class="console-bar">
+            <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+            <span class="name">shaudit · report — <b>client.onmicrosoft.com</b></span>
+            <span class="live"><span class="dot"></span>scan complete</span>
+          </div>
+          <div class="report-body" role="img" aria-label="Sample shaudit compliance report: score 82 out of 100, 3 critical findings, 11 warnings, 200 checks passed">
+            <div class="score-row">
+              <div class="score-num">82<small>/100</small></div>
+              <div class="score-meta">
+                <div class="score-lbl">tenant compliance score</div>
+                <div class="score-bar"><i data-fill="82"></i></div>
+                <div class="score-counts">
+                  <span class="cnt-crit"><b>3</b> critical</span>
+                  <span class="cnt-warn"><b>11</b> warnings</span>
+                  <span class="cnt-pass"><b>200</b> passed</span>
+                </div>
+              </div>
+            </div>
+            <div class="findings" aria-hidden="true">
+              <div class="finding"><span class="sev sev-crit">CRIT</span><p><b>Legacy authentication</b> still enabled for 4 accounts</p></div>
+              <div class="finding"><span class="sev sev-crit">CRIT</span><p><b>2 admin accounts</b> excluded from the MFA policy</p></div>
+              <div class="finding"><span class="sev sev-warn">WARN</span><p><b>Mailbox auditing</b> disabled on 12 mailboxes</p></div>
+              <div class="finding"><span class="sev sev-warn">WARN</span><p><b>Guest access</b> unrestricted in 3 Teams</p></div>
+              <div class="finding"><span class="sev sev-pass">PASS</span><p><b>BitLocker</b> enforced on all managed endpoints</p></div>
+            </div>
+            <div class="report-foot" aria-hidden="true">
+              <span>214 checks · completed in <b>4m 12s</b></span>
+              <span>next scan → <b>scheduled monthly</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="plat-cont reveal">
+        <div class="cont-head">
+          <h3>Compliance isn't a <em>one-off</em>.</h3>
+          <p>Settings drift, staff change, Microsoft moves the goalposts. shaudit re-scans on a schedule — and we tell you the moment something slips.</p>
+        </div>
+        <div class="cont-grid">
+          <div class="cont-cell">
+            <span class="c-lbl">monthly re-scan</span>
+            <h4>Every tenant, every month.</h4>
+            <p>The full scan runs automatically. No consultant hours burned, no gaps between audits.</p>
+          </div>
+          <div class="cont-cell">
+            <span class="c-lbl">drift alerts</span>
+            <h4>Know when something slips.</h4>
+            <p>A new admin without MFA, a policy quietly disabled — you hear it from us, not from an incident.</p>
+          </div>
+          <div class="cont-cell">
+            <span class="c-lbl">score trend</span>
+            <h4>Watch the score climb.</h4>
+            <p>One number your whole business understands, tracked quarter over quarter.</p>
+            <div class="trend" aria-hidden="true">
+              <i style="height:46%"></i><i style="height:58%"></i><i style="height:70%"></i><i style="height:88%"></i>
+            </div>
+            <div class="trend-lbl" aria-hidden="true"><span>Q4 · 61</span><span>Q1 · 68</span><span>Q2 · 74</span><span>Q3 · 89</span></div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -713,12 +873,11 @@
               <span class="founder-role">Co-founder · Cloud &amp; identity</span>
             </div>
           </div>
-          <p class="founder-bio">Microsoft 365, Entra and Azure are home. 15 years across enterprise tenants — Exchange migrations, identity, and the security baselines auditors actually like. Based in Bucharest, works wherever there's a working VPN.</p>
+          <p class="founder-bio">15 years living in Microsoft 365, Entra and Azure — hundreds of migrations landed, from 100-seat firms to 10,000+ user enterprises across banking, healthcare, energy and government. Exchange hybrid, tenant-to-tenant, Google Workspace and identity, plus the weekend cutovers nobody else wants to babysit.</p>
           <ul class="founder-tags">
             <li>Microsoft 365 / Entra ID</li>
-            <li>Azure tenants &amp; migrations</li>
             <li>Exchange Online &amp; hybrid</li>
-            <li>Identity &amp; security baselines</li>
+            <li>Tenant &amp; Google Workspace migrations</li>
           </ul>
           <a class="founder-link" href="https://www.linkedin.com/in/lucian-popa-69ba078b" target="_blank" rel="noopener noreferrer">
             <svg class="li-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -826,8 +985,13 @@
           <h3>Remote or on-site.</h3>
           <p>Wherever the problem is — across the office or across the cloud, we show up.</p>
         </div>
-        <div class="cell wide">
-          <span class="c-num">04 / risk-free</span>
+        <div class="cell glow">
+          <span class="c-num">04 / tooling</span>
+          <h3>We built our own audit engine.</h3>
+          <p>Other providers assemble reports by hand. Ours come out of shaudit — a platform we wrote ourselves. Consistent, evidence-backed, re-run on demand. When we say "everything's checked," we can show you the checklist.</p>
+        </div>
+        <div class="cell">
+          <span class="c-num">05 / risk-free</span>
           <h3>A free 30-minute discovery call.</h3>
           <p>Zero cost, zero obligation. Find out exactly what we'd fix first before you commit to anything. Worst case, you leave with a free second opinion.</p>
         </div>
@@ -855,7 +1019,7 @@
       <div class="results reveal">
         <div class="res">
           <span class="r-tag">result · migration</span>
-          <p>Migrated <b>40 users to Microsoft 365</b> over a single weekend — zero downtime, zero lost mail.</p>
+          <p>Migrated <b>hundreds of environments to Microsoft 365</b> — from 100 to 10,000+ users, tenant-to-tenant, hybrid and Google Workspace, using BitTitan, ShareGate, Quest and native Microsoft tooling. Zero lost mail.</p>
         </div>
         <div class="res">
           <span class="r-tag">result · automation</span>
@@ -863,7 +1027,7 @@
         </div>
         <div class="res">
           <span class="r-tag">result · security</span>
-          <p>Took a 12-person firm from no MFA to <b>Cyber Essentials</b> — passed on the first attempt.</p>
+          <p>Rolled out <b>MFA and security hardening to thousands of users</b> — Defender, conditional access and endpoint policies, without locking anyone out.</p>
         </div>
         <div class="res">
           <span class="r-tag">result · endpoints</span>
@@ -911,6 +1075,7 @@
         <a href="#services">Infrastructure</a>
         <a href="#services">Security</a>
         <a href="#services">Automation</a>
+        <a href="#platform">Audits &amp; compliance</a>
       </div>
       <div class="foot-col">
         <h4>Company</h4>
@@ -961,7 +1126,8 @@
   var fill = document.getElementById('pipeFill');
   var nodes = pipe ? pipe.querySelectorAll('.node') : [];
   var reveals = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
-  var gaugesDone = false, pipeDone = false, termDone = false;
+  var platEl = document.getElementById('platform');
+  var gaugesDone = false, pipeDone = false, termDone = false, platDone = false;
 
   function inView(el, frac){
     var r = el.getBoundingClientRect();
@@ -972,6 +1138,10 @@
   function fillGauges(){
     if(gaugesDone || !consoleEl) return; gaugesDone = true;
     consoleEl.querySelectorAll('.bar i').forEach(function(b){ b.style.width = b.getAttribute('data-fill') + '%'; });
+  }
+  function fillPlat(){
+    if(platDone || !platEl) return; platDone = true;
+    platEl.querySelectorAll('.score-bar i').forEach(function(b){ b.style.width = b.getAttribute('data-fill') + '%'; });
   }
   function runPipe(){
     if(pipeDone || !pipe) return; pipeDone = true;
@@ -984,6 +1154,7 @@
       return true;
     });
     if(consoleEl && inView(consoleEl,0.06)){ fillGauges(); }
+    if(platEl && inView(platEl,0.08)){ fillPlat(); }
     if(term && !termDone && inView(term,0.05)){ termDone = true; typeLines(); }
     if(pipe && inView(pipe,0.18)){ runPipe(); }
   }
@@ -994,13 +1165,14 @@
   if('IntersectionObserver' in window){
     var io = new IntersectionObserver(function(){ check(); }, {threshold:[0,0.1,0.4]});
     reveals.forEach(function(el){ io.observe(el); });
-    [consoleEl, term, pipe].forEach(function(el){ if(el) io.observe(el); });
+    [consoleEl, term, pipe, platEl].forEach(function(el){ if(el) io.observe(el); });
   }
 
   /* failsafe: never leave content invisible */
   setTimeout(function(){
     if(reveals.length){ reveals.forEach(function(el){ el.classList.add('in'); }); reveals = []; }
     fillGauges();
+    fillPlat();
     if(term && !termDone){ termDone = true; typeLines(); }
     runPipe();
   }, 2600);
@@ -1025,6 +1197,9 @@
     {html:'  <span class="ok">✓</span> done — <span class="ok">6 hrs/week</span> reclaimed', d:120},
     {html:'<span class="pr">›</span> run notify-AD_expiry.ps1 <span class="dim">--attr pwdLastSet</span>', d:260},
     {html:'  <span class="ok">✓</span> 1,240 accounts scanned — <span class="ok">38 expiry alerts</span> sent', d:120},
+    {html:'<span class="pr">›</span> shaudit <span class="dim">--full</span>', d:260},
+    {html:'  <span class="dim">214 checks ·</span> <span class="lbl">identity</span> <span class="ok">✓</span> <span class="lbl">mail</span> <span class="ok">✓</span> <span class="lbl">endpoints</span> <span class="ok">✓</span> <span class="lbl">data</span> <span class="ok">✓</span>', d:120},
+    {html:'  <span class="crit">3 criticals</span> found — <span class="ok">report generated</span> <span class="dim">→ audit-2026-07.pdf</span>', d:120},
     {html:'<span class="lbl">status:</span> all systems nominal <span class="cursor"></span>', d:60}
   ];
   function typeLines(){
