@@ -360,7 +360,7 @@
   .svc-go{width:46px;height:46px;border-radius:50%;border:1px solid var(--line-2);display:grid;place-items:center;color:var(--muted);transition:.3s var(--ease);flex-shrink:0}
   .svc-row:hover .svc-go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);transform:rotate(-45deg)}
 
-  /* ============ platform / shaudit ============ */
+  /* ============ platform / shautech pulse ============ */
   .plat-grid{display:grid;grid-template-columns:1fr 1.05fr;gap:clamp(32px,5vw,72px);align-items:center}
   .plat-copy .sec-title{margin-top:1.1rem}
   .plat-lead{color:var(--muted);margin-top:1.3rem;max-width:46ch;text-wrap:pretty}
@@ -641,7 +641,7 @@
       <a href="#contact">Contact</a>
     </nav>
     <div class="nav-right">
-      <span class="avail"><span class="dot"></span>Booking June '26</span>
+      <span class="avail"><span class="dot"></span><span id="availTxt">Booking now</span></span>
       <a href="#contact" class="btn btn-primary">Book a free call <span class="arr">→</span></a>
       <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false">
         <span></span><span></span><span></span>
@@ -764,8 +764,8 @@
           <div class="svc-main">
             <span class="svc-code">SCAN · SCORE · FIX</span>
             <h3 class="svc-name">IT audit &amp; compliance report</h3>
-            <p class="svc-desc">We scan your tenant with shaudit, our in-house engine — 200+ automated checks across identity, mail, endpoints and data. You get a scored, prioritised report in days, not weeks, and a clear quote for every fix on the list.</p>
-            <div class="svc-tags"><span class="pow">› powered by shaudit</span><span>200+ checks</span><span>Scored report</span><span>Re-run anytime</span></div>
+            <p class="svc-desc">We scan your tenant with shautech pulse, our in-house engine — 200+ automated checks across identity, mail, endpoints and data. You get a scored, prioritised report in days, not weeks, and a clear quote for every fix on the list.</p>
+            <div class="svc-tags"><span class="pow">› powered by shautech pulse</span><span>200+ checks</span><span>CIS benchmark</span><span>Scored report</span><span>Re-run anytime</span></div>
           </div>
           <span class="svc-go" aria-hidden="true">→</span>
         </a>
@@ -773,18 +773,19 @@
     </div>
   </section>
 
-  <!-- ============ PLATFORM / SHAUDIT ============ -->
+  <!-- ============ PLATFORM / SHAUTECH PULSE ============ -->
   <section id="platform">
     <div class="wrap">
       <div class="plat-grid">
         <div class="plat-copy reveal">
-          <span class="kicker"><span class="tick">//</span> shaudit · our engine · built in-house</span>
+          <span class="kicker"><span class="tick">//</span> shautech pulse · our engine · built in-house</span>
           <h2 class="sec-title">Our audits run on our <em>own engine</em>.</h2>
-          <p class="plat-lead">Most providers assemble audit reports by hand — a consultant, a checklist, a Word doc. We built <span class="mono">shaudit</span> instead: our in-house platform that runs 200+ automated checks across identity, mail, endpoints and data. Nothing gets missed, and nothing depends on who had coffee that morning.</p>
+          <p class="plat-lead">Most providers assemble audit reports by hand — a consultant, a checklist, a Word doc. We built <span class="mono">shautech pulse</span> instead: our in-house platform that runs 200+ automated checks across identity, mail, endpoints and data — each one mapped to the CIS Microsoft 365 Benchmark and Microsoft's own security baselines. Nothing gets missed, and nothing depends on who had coffee that morning.</p>
           <ul class="plat-points">
             <li><b>Consistent</b><span>Same checks, every tenant, every time.</span></li>
             <li><b>Evidence-backed</b><span>Every finding links to the exact setting we saw.</span></li>
             <li><b>Re-runnable</b><span>Scan again next quarter and watch the score climb.</span></li>
+            <li><b>Framework-mapped</b><span>Every check traces to a CIS Benchmark or Microsoft baseline control — ready when insurers and auditors ask.</span></li>
           </ul>
           <div class="plat-cta">
             <a href="#contact" class="btn btn-primary">Get your tenant scored <span class="arr">→</span></a>
@@ -795,10 +796,10 @@
         <div class="console reveal">
           <div class="console-bar">
             <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
-            <span class="name">shaudit · report — <b>client.onmicrosoft.com</b></span>
+            <span class="name">shautech pulse · report — <b>client.onmicrosoft.com</b></span>
             <span class="live"><span class="dot"></span>scan complete</span>
           </div>
-          <div class="report-body" role="img" aria-label="Sample shaudit compliance report: score 82 out of 100, 3 critical findings, 11 warnings, 200 checks passed">
+          <div class="report-body" role="img" aria-label="Sample shautech pulse compliance report: score 82 out of 100, 3 critical findings, 11 warnings, 200 checks passed">
             <div class="score-row">
               <div class="score-num">82<small>/100</small></div>
               <div class="score-meta">
@@ -819,7 +820,7 @@
               <div class="finding"><span class="sev sev-pass">PASS</span><p><b>BitLocker</b> enforced on all managed endpoints</p></div>
             </div>
             <div class="report-foot" aria-hidden="true">
-              <span>214 checks · completed in <b>4m 12s</b></span>
+              <span>214 checks · <b>CIS M365 benchmark</b> · 4m 12s</span>
               <span>next scan → <b>scheduled monthly</b></span>
             </div>
           </div>
@@ -829,7 +830,7 @@
       <div class="plat-cont reveal">
         <div class="cont-head">
           <h3>Compliance isn't a <em>one-off</em>.</h3>
-          <p>Settings drift, staff change, Microsoft moves the goalposts. shaudit re-scans on a schedule — and we tell you the moment something slips.</p>
+          <p>Settings drift, staff change, Microsoft moves the goalposts. shautech pulse re-scans on a schedule — and we tell you the moment something slips.</p>
         </div>
         <div class="cont-grid">
           <div class="cont-cell">
@@ -988,7 +989,7 @@
         <div class="cell glow">
           <span class="c-num">04 / tooling</span>
           <h3>We built our own audit engine.</h3>
-          <p>Other providers assemble reports by hand. Ours come out of shaudit — a platform we wrote ourselves. Consistent, evidence-backed, re-run on demand. When we say "everything's checked," we can show you the checklist.</p>
+          <p>Other providers assemble reports by hand. Ours come out of shautech pulse — a platform we wrote ourselves. Consistent, evidence-backed, re-run on demand. When we say "everything's checked," we can show you the checklist.</p>
         </div>
         <div class="cell">
           <span class="c-num">05 / risk-free</span>
@@ -1106,6 +1107,16 @@
   var onScroll = function(){ header.classList.toggle('scrolled', window.scrollY > 12); };
   onScroll(); window.addEventListener('scroll', onScroll, {passive:true});
 
+  /* ---- availability badge: always show next month ---- */
+  var availTxt = document.getElementById('availTxt');
+  if(availTxt){
+    var next = new Date();
+    next.setDate(1);
+    next.setMonth(next.getMonth() + 1);
+    var month = next.toLocaleString('en-GB', {month:'long'});
+    availTxt.textContent = "Booking " + month + " '" + String(next.getFullYear()).slice(-2);
+  }
+
   /* ---- mobile menu ---- */
   var burger = document.getElementById('burger');
   var menu = document.getElementById('mobileMenu');
@@ -1197,7 +1208,7 @@
     {html:'  <span class="ok">✓</span> done — <span class="ok">6 hrs/week</span> reclaimed', d:120},
     {html:'<span class="pr">›</span> run notify-AD_expiry.ps1 <span class="dim">--attr pwdLastSet</span>', d:260},
     {html:'  <span class="ok">✓</span> 1,240 accounts scanned — <span class="ok">38 expiry alerts</span> sent', d:120},
-    {html:'<span class="pr">›</span> shaudit <span class="dim">--full</span>', d:260},
+    {html:'<span class="pr">›</span> shautech-pulse <span class="dim">--full</span>', d:260},
     {html:'  <span class="dim">214 checks ·</span> <span class="lbl">identity</span> <span class="ok">✓</span> <span class="lbl">mail</span> <span class="ok">✓</span> <span class="lbl">endpoints</span> <span class="ok">✓</span> <span class="lbl">data</span> <span class="ok">✓</span>', d:120},
     {html:'  <span class="crit">3 criticals</span> found — <span class="ok">report generated</span> <span class="dim">→ audit-2026-07.pdf</span>', d:120},
     {html:'<span class="lbl">status:</span> all systems nominal <span class="cursor"></span>', d:60}
