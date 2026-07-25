@@ -7,6 +7,19 @@ Repo: <https://github.com/luciancpopa/shautech> · Live: <https://www.shautech.c
 
 ---
 
+## 2026-07-26 — Lucian Popa
+
+Focus: **shautech labs** — interactive workshop simulators, playable on the site.
+
+| # | Change | Where | Commit |
+|---|--------|-------|--------|
+| 1 | Added **`labs/migration-simulator.html`** ("Operation Moving Clouds"): the 7-level tenant-to-tenant migration game restyled to the site's dark Operator design system (Space Grotesk / JetBrains Mono, panel + accent tokens, shautech/labs header) | Labs | `bc1c878` |
+| 2 | Gave the migration sim an **animated canvas background**: SOURCE/DESTINATION tenant racks with LED slots, curved data lanes, glowing wireframe packets that change shape with what you click (envelopes, bits, chat bubbles, users, globes, license tickets), arrival pulses; DPR-aware, pauses when hidden, reduced-motion fallback | Labs | `bc1c878` |
+| 3 | Added **`labs/security-simulator.html`** ("Breach Day"): 7-level incident-response game — spot-the-phish email, triage decisions, log timeline hunt, containment board, phish-storm arcade, GDPR 72-hour recovery night, hardening tickets; background shows an ATTACKER rack firing red packets that bounce off a shield once contained | Labs | `bc1c878` |
+| 4 | Added the **Labs section** to the homepage (console-window cards for both sims + "book a workshop" note), `Labs` nav links (desktop + mobile), sitemap entries for both labs, and end-of-game "Run this live with your team →" CTAs linking back to #contact | Home + sitemap + Labs | `bc1c878` |
+
+---
+
 ## 2026-07-05 — Lucian Popa
 
 Focus: platform section, product rename to **shautech pulse**, CIS compliance mapping, header badge fix.
