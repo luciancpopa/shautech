@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Secrets — shautech labs</title>
+<meta name="description" content="Operation «Open Secrets» — an interactive Copilot readiness simulator by shautech. Copilot doesn't leak data, it finds what was already leaked: hunt the oversharing, label what matters, and roll out AI properly." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0B0D;
+    --bg-2:#0d0f13;
+    --panel:#101317;
+    --panel-2:#15181f;
+    --line:rgba(255,255,255,0.08);
+    --line-2:rgba(255,255,255,0.14);
+    --text:#F4F6F8;
+    --muted:#98A0AA;
+    --muted-2:#646C76;
+    --accent:#4D9FFF;
+    --accent-soft:#7CBBFF;
+    --accent-ink:#04132B;
+    --glow:rgba(77,159,255,0.30);
+    --crit:#FF7A7A;
+    --warn:#FFB65C;
+    --violet:#8A86FF;
+    --r:14px;
+    --ease:cubic-bezier(.2,.7,.2,1);
+    --blue:var(--accent);
+    --green:#5FD68F;
+    --green-ink:#06180D;
+    --amber:var(--warn);
+    --red:var(--crit);
+    --ink:var(--text);
+    --ink-soft:var(--muted);
+    --card:var(--panel);
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:"Hanken Grotesk",system-ui,sans-serif;
+    color:var(--text);
+    background:var(--bg);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+            mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+    opacity:.5;
+  }
+  body::after{
+    content:"";position:fixed;top:-20%;right:-10%;width:60vw;height:60vw;z-index:0;
+    pointer-events:none;border-radius:50%;
+    background:radial-gradient(circle,rgba(138,134,255,.18) 0%,transparent 60%);
+    filter:blur(40px);opacity:.6;transition:background 1.2s var(--ease);
+  }
+  body.night::after{background:radial-gradient(circle,rgba(138,134,255,.24) 0%,transparent 60%);}
+  ::selection{background:var(--accent);color:var(--accent-ink)}
+  a{color:inherit;text-decoration:none}
+
+  /* ambient flow — Copilot asks on the left, your tenant answers on the right */
+  #copbg{
+    position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(55% 46% at -10% 52%,rgba(138,134,255,.08),transparent 70%),
+      radial-gradient(55% 46% at 110% 48%,rgba(77,159,255,.07),transparent 70%);
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important;} }
+
+  /* ---------- TOP BAR ---------- */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:40;
+    background:rgba(10,11,13,.85);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+    padding:10px 18px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .logo{font-family:var(--mono);font-weight:700;font-size:1rem;letter-spacing:-.01em;display:inline-flex;align-items:center;white-space:nowrap;}
+  .logo .mark{
+    display:inline-grid;place-items:center;width:1.5em;height:1.5em;margin-right:.5em;
+    border:1.5px solid var(--accent);border-radius:6px;color:var(--accent);font-size:.82em;
+  }
+  .logo .lab{color:var(--muted);font-weight:500;}
+  .sim-name{font-family:var(--mono);font-size:.72rem;color:var(--muted-2);letter-spacing:.02em;white-space:nowrap;}
+  @media(max-width:860px){.sim-name{display:none;}}
+  .lvlmap{display:flex;gap:6px;flex:1;justify-content:center;flex-wrap:wrap;}
+  .lvl{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-family:var(--mono);font-size:9px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--muted-2);min-width:56px;
+  }
+  .lvl .bubble{
+    width:32px;height:32px;border-radius:9px;
+    background:var(--panel);border:1px solid var(--line-2);
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+    transition:all .25s var(--ease);
+  }
+  .lvl.now{color:var(--accent-soft);}
+  .lvl.now .bubble{border-color:var(--accent);transform:scale(1.12);box-shadow:0 0 14px var(--glow),0 0 0 1px var(--accent);}
+  .lvl.done{color:var(--muted);}
+  .lvl.done .bubble{background:rgba(77,159,255,.10);border-color:var(--accent);}
+  .lvl.done .bubble::after{content:"✓";color:var(--accent-soft);font-weight:700;font-family:var(--mono);}
+  .lvl.done .bubble em{display:none;}
+  .hud{display:flex;gap:10px;align-items:center;}
+  .pill{
+    font-family:var(--mono);font-size:13px;font-weight:600;
+    background:var(--panel-2);color:var(--muted);
+    border:1px solid var(--line-2);
+    padding:7px 13px;border-radius:20px;
+    transition:transform .15s;
+  }
+  .pill b{color:var(--accent-soft);}
+
+  /* ---------- STAGE ---------- */
+  .stage{
+    position:absolute;top:96px;bottom:0;left:0;right:0;
+    overflow-y:auto;z-index:1;
+    padding:26px clamp(16px,5vw,70px) 40px;
+  }
+  .screen{max-width:880px;margin:0 auto;animation:pop .4s var(--ease) both;}
+  @keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98);}to{opacity:1;transform:none;}}
+
+  .badge{
+    display:inline-flex;align-items:center;gap:.6em;
+    font-family:var(--mono);font-size:.74rem;font-weight:500;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    margin-bottom:14px;
+  }
+  .badge::before{content:"//";color:var(--violet);letter-spacing:0;}
+  h1{font-family:"Space Grotesk",sans-serif;font-size:clamp(28px,4.6vw,44px);line-height:1.08;margin-bottom:10px;letter-spacing:-.02em;font-weight:700;}
+  h2{font-family:"Space Grotesk",sans-serif;font-size:clamp(21px,3.2vw,30px);margin-bottom:8px;letter-spacing:-.015em;font-weight:600;}
+  .say{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:16px 18px 14px;font-size:15px;line-height:1.55;color:var(--text);
+    position:relative;margin:18px 0 14px;
+    box-shadow:0 10px 30px -18px rgba(0,0,0,.8);
+    max-width:680px;
+  }
+  .say::before{
+    content:attr(data-who);
+    position:absolute;top:-10px;left:14px;
+    font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--panel-2);border:1px solid var(--accent);color:var(--accent-soft);
+    padding:2px 9px;border-radius:6px;
+  }
+  .say.tip::before{border-color:var(--green);color:var(--green);}
+  .say.alert::before{border-color:var(--crit);color:var(--crit);}
+  .say.ai::before{border-color:var(--violet);color:var(--violet);}
+  .say b{color:var(--text);}
+  .muted{color:var(--muted);font-size:14px;line-height:1.55;max-width:660px;}
+
+  .btn{
+    font-family:var(--mono);font-size:.92rem;font-weight:600;letter-spacing:.02em;
+    display:inline-flex;align-items:center;gap:.6em;
+    background:transparent;color:var(--text);border:1px solid var(--line-2);
+    padding:.8em 1.3em;border-radius:10px;cursor:pointer;
+    transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .25s,border-color .25s,color .25s;
+    white-space:normal;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent-soft);transform:translateY(-2px);}
+  .btn.blue{background:var(--accent);color:var(--accent-ink);border-color:transparent;}
+  .btn.blue:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px var(--glow),0 0 0 1px var(--accent-soft);color:var(--accent-ink);}
+  .btn.green{background:var(--green);color:var(--green-ink);border-color:transparent;}
+  .btn.green:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px rgba(95,214,143,.4),0 0 0 1px var(--green);color:var(--green-ink);}
+  .btn.small{font-size:.8rem;padding:.6em 1.1em;border-radius:9px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn:focus-visible,.clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .float-pts{
+    position:fixed;font-family:var(--mono);font-weight:700;font-size:18px;color:var(--green);
+    pointer-events:none;z-index:99;animation:rise .9s ease-out forwards;
+    text-shadow:0 0 12px rgba(95,214,143,.6);
+  }
+  @keyframes rise{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-46px);}}
+
+  /* ---------- LEVEL 1 : OVERSHARING HUNT ---------- */
+  .office{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:12px;margin-top:18px;
+  }
+  .obj{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:14px 8px;text-align:center;cursor:pointer;user-select:none;
+    transition:transform .2s var(--ease),border-color .2s,box-shadow .2s;
+    font-family:inherit;color:var(--text);
+  }
+  .obj:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 10px 26px -14px var(--glow);}
+  .obj .ico{font-size:34px;display:block;margin-bottom:6px;}
+  .obj .nm{font-size:12.5px;font-weight:600;}
+  .obj.found{background:rgba(255,122,122,.07);border-color:var(--crit);cursor:default;}
+  .obj.found:hover{transform:none;box-shadow:none;}
+  .obj.found .nm::after{content:" ⚑";color:var(--crit);}
+  .inv{
+    margin-top:16px;background:var(--panel-2);border:1px dashed var(--line-2);
+    border-radius:12px;padding:12px 16px;font-family:var(--mono);font-size:13px;
+    min-height:44px;color:var(--muted);line-height:1.7;max-width:680px;
+  }
+  .inv b{color:var(--text);}
+
+  /* ---------- LEVEL 2 + 7 : DECISIONS / TICKETS ---------- */
+  .choices{display:grid;gap:12px;margin-top:14px;max-width:640px;}
+  .choice{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:14px 16px;cursor:pointer;text-align:left;font-family:inherit;color:var(--text);
+    font-size:14.5px;transition:transform .2s var(--ease),border-color .2s;
+  }
+  .choice:hover{transform:translateX(4px);border-color:var(--accent);}
+  .choice b{display:block;font-size:15px;margin-bottom:2px;}
+  .choice small{color:var(--muted);}
+  .choice.good{background:rgba(95,214,143,.08);border-color:var(--green);}
+  .choice.meh{background:rgba(255,182,92,.08);border-color:var(--warn);}
+  .choice.bad{background:rgba(255,122,122,.08);border-color:var(--crit);}
+  .choice:disabled{cursor:default;transform:none;}
+  .verdict{margin-top:12px;font-size:14px;line-height:1.5;display:none;max-width:640px;}
+  .warnnote{
+    margin-top:10px;background:rgba(255,182,92,.07);border:1px dashed rgba(255,182,92,.45);
+    border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.45;color:#E9C89B;
+  }
+  .warnnote b{color:var(--warn);}
+  .ticket{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:12px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:center;
+    flex-wrap:wrap;
+  }
+  .ticket .tx{flex:1;min-width:200px;font-size:14px;}
+  .ticket .tx b{display:block;font-size:14.5px;}
+  .ticket .tx small{color:var(--muted);}
+  .ticket.done{background:rgba(95,214,143,.05);border-color:var(--green);}
+
+  /* ---------- LEVEL 3 : LABEL THE FILES ---------- */
+  .label-grid{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start;margin-top:16px;}
+  .filerow{
+    display:flex;align-items:center;gap:12px;background:var(--panel);
+    border:1px solid var(--line-2);border-radius:12px;padding:10px 14px;margin-bottom:10px;
+  }
+  .filerow.shake{animation:shake .4s;}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+  .filerow .face{font-size:26px;}
+  .filerow .who{flex:1;}
+  .filerow .who b{display:block;font-size:14px;font-family:var(--mono);font-weight:600;}
+  .filerow .who small{color:var(--muted);font-size:12px;}
+  .lbl-slot{
+    width:126px;height:34px;border:1px dashed var(--line-2);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:10.5px;color:var(--muted-2);cursor:pointer;
+    transition:border-color .2s;letter-spacing:.06em;text-transform:uppercase;
+  }
+  .lbl-slot:hover{border-color:var(--accent);}
+  .lbl-slot.pub{border-style:solid;border-color:var(--green);background:rgba(95,214,143,.08);color:var(--green);font-weight:600;cursor:default;}
+  .lbl-slot.int{border-style:solid;border-color:var(--accent);background:rgba(77,159,255,.08);color:var(--accent-soft);font-weight:600;cursor:default;}
+  .lbl-slot.conf{border-style:solid;border-color:var(--crit);background:rgba(255,122,122,.08);color:var(--crit);font-weight:600;cursor:default;}
+  .chip-stack{position:sticky;top:0;display:flex;flex-direction:column;gap:8px;}
+  .chip-stack .stack-lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2);}
+  .chip{
+    background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;
+    padding:9px 14px;font-family:var(--mono);font-size:11.5px;font-weight:600;cursor:pointer;
+    letter-spacing:.06em;text-transform:uppercase;
+    user-select:none;transition:transform .2s var(--ease),background .2s,color .2s;
+  }
+  .chip:hover{transform:translateY(-2px);}
+  .chip.c-pub{border-color:var(--green);color:var(--green);}
+  .chip.c-int{border-color:var(--accent);color:var(--accent-soft);}
+  .chip.c-conf{border-color:var(--crit);color:var(--crit);}
+  .chip.sel.c-pub{background:var(--green);color:var(--green-ink);}
+  .chip.sel.c-int{background:var(--accent);color:var(--accent-ink);}
+  .chip.sel.c-conf{background:var(--crit);color:#2A0E12;}
+
+  /* ---------- LEVEL 4 : FIX BOARD ---------- */
+  .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:16px;}
+  .act{
+    display:flex;gap:10px;align-items:flex-start;text-align:left;font-family:inherit;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:10px;
+    padding:12px 14px;font-size:13.5px;cursor:pointer;line-height:1.45;color:var(--muted);
+    transition:transform .2s var(--ease),border-color .2s;
+  }
+  .act:hover{transform:translateY(-2px);border-color:var(--accent);}
+  .act b{display:block;color:var(--text);font-size:14px;}
+  .act.done{background:rgba(95,214,143,.07);border-color:var(--green);cursor:default;}
+  .act.done:hover{transform:none;}
+  .act.done b::after{content:" ✓";color:var(--green);}
+  .act.nope{animation:shake .4s;border-color:var(--crit);background:rgba(255,122,122,.07);}
+
+  /* ---------- LEVEL 5 : PROMPT ARCADE ---------- */
+  .arena{
+    position:relative;height:340px;margin-top:16px;
+    background:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px),
+      linear-gradient(180deg,var(--panel-2),var(--bg-2));
+    background-size:48px 48px,48px 48px,100% 100%;
+    border:1px solid var(--line-2);border-radius:var(--r);overflow:hidden;
+  }
+  .side-lbl{
+    position:absolute;top:12px;font-family:var(--mono);font-size:11px;font-weight:600;
+    text-align:center;width:110px;color:var(--muted);
+  }
+  .side-lbl small{color:var(--muted-2);}
+  .side-lbl .c{font-size:44px;display:block;line-height:1.2;}
+  .lbl-src{left:8px;} .lbl-src .c{filter:drop-shadow(0 0 18px rgba(138,134,255,.5));}
+  .lbl-dst{right:8px;} .lbl-dst .c{filter:drop-shadow(0 0 18px var(--glow));}
+  .mailcard{
+    position:absolute;z-index:5;max-width:200px;text-align:left;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:10px;
+    padding:8px 11px;font-family:var(--mono);font-size:11px;line-height:1.45;color:var(--text);
+    cursor:pointer;animation:bob 1.8s ease-in-out infinite;
+    box-shadow:0 8px 22px -10px rgba(0,0,0,.7);
+  }
+  .mailcard:hover{border-color:var(--violet);}
+  .mailcard i{color:var(--violet);font-style:normal;display:block;font-size:10px;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+  .mailcard.zap{animation:zap .5s ease-in forwards;pointer-events:none;border-color:var(--green);}
+  @keyframes zap{to{transform:scale(.25);opacity:0;}}
+  .mailcard.oops{border-color:var(--warn);color:var(--warn);pointer-events:none;}
+  .mailcard.fade{transition:opacity .8s;opacity:0;}
+  .bigbar{
+    position:absolute;bottom:12px;left:14px;right:14px;height:22px;
+    background:var(--bg);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;
+  }
+  .bigbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--violet),var(--green));transition:width .3s;box-shadow:0 0 14px rgba(138,134,255,.4);}
+  .bigbar span{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);
+    text-shadow:0 1px 3px rgba(0,0,0,.7);
+  }
+  .event-banner{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    background:rgba(138,134,255,.12);border:1px solid var(--violet);color:var(--text);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    font-weight:700;font-size:14px;
+    padding:10px 16px;border-radius:12px;
+    display:none;z-index:10;text-align:center;max-width:min(92%,460px);
+  }
+  .event-banner small{color:var(--muted);font-weight:400;}
+  .event-banner.ok{background:rgba(95,214,143,.12);border-color:var(--green);}
+  .event-banner .btn{margin-top:8px;}
+
+  /* ---------- LEVEL 6 : ROLLOUT SWITCH ---------- */
+  .switch-zone{
+    display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:24px;
+  }
+  .big-switch{
+    width:130px;height:190px;background:var(--panel-2);border:1px solid var(--line-2);
+    border-radius:20px;position:relative;cursor:pointer;
+    font-family:inherit;transition:border-color .3s,box-shadow .3s;
+  }
+  .big-switch:hover{border-color:var(--accent);}
+  .big-switch.on{border-color:var(--green);box-shadow:0 0 24px rgba(95,214,143,.25);}
+  .big-switch .knob{
+    position:absolute;left:10px;right:10px;height:74px;top:96px;
+    background:var(--muted-2);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    color:#101317;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.06em;
+    transition:top .35s cubic-bezier(.5,1.6,.5,1), background .35s, color .35s;
+  }
+  .big-switch.on .knob{top:12px;background:var(--green);color:var(--green-ink);}
+  .dns-line{font-family:var(--mono);font-size:13px;min-height:20px;color:var(--muted);text-align:center;}
+
+  /* ---------- FINALE ---------- */
+  .confetti{position:fixed;top:-20px;font-size:20px;z-index:98;animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);}}
+  .rank-big{
+    font-family:"Space Grotesk",sans-serif;font-size:clamp(30px,5vw,48px);font-weight:700;
+    color:var(--accent-soft);margin:8px 0;letter-spacing:-.02em;
+    text-shadow:0 0 30px var(--glow);
+  }
+
+  .center{text-align:center;}
+  .spacer{height:18px;}
+</style>
+</head>
+<body>
+
+<canvas id="copbg" aria-hidden="true"></canvas>
+
+<header id="topbar">
+  <a class="logo" href="../index.html" title="Back to shautech.com"><span class="mark">›</span>shautech<span class="lab">&nbsp;/ labs</span></a>
+  <span class="sim-name">// operation: open-secrets</span>
+  <div class="lvlmap" id="lvlmap"></div>
+  <div class="hud"><div class="pill" id="scorePill">⭐ <b id="score">0</b></div></div>
+</header>
+
+<div class="stage" id="stage"><div class="screen" id="screen"></div></div>
+
+<script>
+/* ═══════════════ AMBIENT BACKGROUND : copilot queries ⇄ tenant answers ═══════════════ */
+(()=>{
+  const cv=document.getElementById('copbg'), ctx=cv.getContext('2d');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SAMPLES=140;
+  let W=0,H=0,paths=[],parts=[],pulses=[],dashOff=0,last=0,raf=null,T=0;
+  let leakP=0.45, retKind='doc';
+
+  const KINDS={doc:['doc'],link:['link'],user:['user'],site:['site'],bits:['bit','one','zero'],check:['check','lock'],mix:['doc','link','user','bit']};
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  window.COPBG={
+    set(t){ if(!KINDS[t])return; retKind=t;
+      parts.forEach(p=>{ if(p.role==='r') p.k=pick(KINDS[t]); }); },
+    leak(p){ leakP=Math.max(0,Math.min(1,p)); }
+  };
+
+  const pal=()=>({q:'138,134,255', ok:'95,214,143', bad:'255,122,122',
+    qHead:'#C6C2FF', okHead:'#A5EFC4', badHead:'#FFB3B3',
+    trace:'rgba(154,148,255,.05)'});
+
+  const rack=()=>{
+    const rw=44, rh=Math.min(H*0.52,380), ry=(H-rh)/2;
+    return {rw,rh,ry, x0:12, x1:W-12-rw, ax:12+rw+2, bx:W-12-rw-2};
+  };
+  function rr(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+  function drawRacks(c){
+    const g=rack();
+    [{x:g.x0,label:'COPILOT · ASSISTANT',rgb:c.q},{x:g.x1,label:'YOUR TENANT',rgb:'77,159,255'}].forEach((r,ri)=>{
+      ctx.save();
+      ctx.strokeStyle='rgba(255,255,255,.10)';
+      ctx.fillStyle='rgba(16,19,23,.55)';
+      rr(r.x,g.ry,g.rw,g.rh,10);ctx.fill();ctx.stroke();
+      const rows=Math.floor((g.rh-24)/24);
+      for(let i=0;i<rows;i++){
+        for(let j=0;j<2;j++){
+          const tw=Math.sin(T*1.8+i*1.7+j*2.6+ri*3)*0.5+0.5;
+          ctx.fillStyle=`rgba(${r.rgb},${(0.08+tw*0.28).toFixed(3)})`;
+          ctx.fillRect(r.x+10+j*15, g.ry+16+i*24, 9, 4);
+        }
+      }
+      ctx.translate(ri===1 ? r.x-8 : r.x+g.rw+14, g.ry+g.rh/2);
+      ctx.rotate(-Math.PI/2);
+      ctx.font='600 9px "JetBrains Mono",monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(152,160,170,.45)';
+      ctx.fillText(r.label.split('').join(' '),0,0);
+      ctx.restore();
+    });
+  }
+
+  function cubic(p0,p1,p2,p3,t){
+    const u=1-t;
+    return {x:u*u*u*p0.x+3*u*u*t*p1.x+3*u*t*t*p2.x+t*t*t*p3.x,
+            y:u*u*u*p0.y+3*u*u*t*p1.y+3*u*t*t*p2.y+t*t*t*p3.y};
+  }
+  function buildPaths(){
+    paths=[];
+    const g=rack(), lanes=6;
+    for(let i=0;i<lanes;i++){
+      const ya=g.ry+g.rh*(0.08+0.84*i/(lanes-1));
+      const yb=g.ry+g.rh*(0.08+0.84*Math.random());
+      const p0={x:g.ax,y:ya}, p3={x:g.bx,y:yb};
+      const p1={x:W*(0.30+Math.random()*0.08), y:ya+(Math.random()*2-1)*H*0.20};
+      const p2={x:W*(0.62+Math.random()*0.08), y:yb+(Math.random()*2-1)*H*0.20};
+      const pts=[];
+      for(let s=0;s<=SAMPLES;s++) pts.push(cubic(p0,p1,p2,p3,s/SAMPLES));
+      const line=new Path2D();
+      pts.forEach((p,k)=>k?line.lineTo(p.x,p.y):line.moveTo(p.x,p.y));
+      paths.push({pts,line});
+    }
+  }
+  const posOn=(path,t)=>{
+    const f=Math.min(Math.max(t,0),1)*SAMPLES;
+    const i=Math.floor(f), j=Math.min(i+1,SAMPLES), k=f-i;
+    const a=path.pts[i], b=path.pts[j];
+    return {x:a.x+(b.x-a.x)*k, y:a.y+(b.y-a.y)*k};
+  };
+  function newPart(role){
+    return {
+      role, /* 'q' = query heading right, 'r' = answer heading left */
+      p:Math.floor(Math.random()*paths.length),
+      t:Math.random(),
+      v:0.045+Math.random()*0.075,
+      s:1.2+Math.random()*1.5,
+      k: role==='q' ? 'spark' : pick(KINDS[retKind]),
+      leak: role==='r' && Math.random()<leakP
+    };
+  }
+  function seedParticles(){
+    const n=Math.max(20,Math.min(42,Math.round(W/36)));
+    parts=Array.from({length:n},(_,i)=>newPart(i%2?'q':'r'));
+  }
+  function glyph(k,x,y,s,rgb,head){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.strokeStyle=`rgba(${rgb},.9)`;
+    ctx.fillStyle=`rgba(${rgb},.13)`;
+    ctx.lineWidth=1;
+    ctx.shadowBlur=8;ctx.shadowColor=`rgba(${rgb},.8)`;
+    switch(k){
+      case 'spark':{ /* 4-point star: a question in flight */
+        ctx.strokeStyle=head;
+        ctx.beginPath();
+        ctx.moveTo(0,-1.8*s);ctx.lineTo(0,1.8*s);
+        ctx.moveTo(-1.8*s,0);ctx.lineTo(1.8*s,0);
+        ctx.moveTo(-1*s,-1*s);ctx.lineTo(1*s,1*s);
+        ctx.moveTo(-1*s,1*s);ctx.lineTo(1*s,-1*s);
+        ctx.stroke();
+        break;}
+      case 'doc':{
+        const w=2.4*s,h=3*s,f=0.8*s;
+        ctx.beginPath();
+        ctx.moveTo(-w/2,-h/2);ctx.lineTo(w/2-f,-h/2);ctx.lineTo(w/2,-h/2+f);
+        ctx.lineTo(w/2,h/2);ctx.lineTo(-w/2,h/2);ctx.closePath();
+        ctx.fill();ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-w/2+0.5*s,-0.2*s);ctx.lineTo(w/2-0.5*s,-0.2*s);
+        ctx.moveTo(-w/2+0.5*s,0.6*s);ctx.lineTo(w/2-0.5*s,0.6*s);
+        ctx.stroke();
+        break;}
+      case 'link':{
+        ctx.beginPath();ctx.ellipse(-0.9*s,0.45*s,1.15*s,0.6*s,-Math.PI/4,0,7);ctx.stroke();
+        ctx.beginPath();ctx.ellipse(0.9*s,-0.45*s,1.15*s,0.6*s,-Math.PI/4,0,7);ctx.stroke();
+        break;}
+      case 'user':{
+        ctx.beginPath();ctx.arc(0,-0.8*s,0.9*s,0,7);ctx.stroke();
+        ctx.beginPath();ctx.arc(0,1.9*s,1.8*s,Math.PI*1.18,Math.PI*1.82);ctx.stroke();
+        break;}
+      case 'site':{
+        const r=1.8*s;
+        ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(r,0);ctx.stroke();
+        ctx.beginPath();ctx.ellipse(0,0,r*0.45,r,0,0,7);ctx.stroke();
+        break;}
+      case 'bit':{
+        const w=1.7*s;
+        ctx.globalAlpha=.85;ctx.fillStyle=head;
+        ctx.fillRect(-w/2,-w/2,w,w);
+        break;}
+      case 'one': case 'zero':{
+        ctx.font=`600 ${Math.max(8,4.5*s)}px "JetBrains Mono",monospace`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.globalAlpha=.8;ctx.fillStyle=head;
+        ctx.fillText(k==='one'?'1':'0',0,0);
+        break;}
+      case 'lock':{
+        const w=2.6*s,h=2*s;
+        ctx.beginPath();ctx.rect(-w/2,-0.1*s,w,h);ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.arc(0,-0.1*s,0.8*s,Math.PI,0);ctx.stroke();
+        break;}
+      case 'check':{
+        ctx.strokeStyle=head;ctx.lineWidth=1.5;
+        ctx.beginPath();
+        ctx.moveTo(-1.2*s,0.1*s);ctx.lineTo(-0.3*s,1*s);ctx.lineTo(1.4*s,-1*s);
+        ctx.stroke();
+        break;}
+      default:{
+        ctx.globalAlpha=.8;ctx.fillStyle=head;
+        ctx.beginPath();ctx.arc(0,0,s,0,7);ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  function resize(){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;
+    cv.width=W*dpr;cv.height=H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    buildPaths();seedParticles();
+    if(reduced) draw(0);
+  }
+  function draw(dt){
+    T+=dt;
+    ctx.clearRect(0,0,W,H);
+    const c=pal();
+    drawRacks(c);
+    dashOff-=7*dt;
+    ctx.save();
+    ctx.strokeStyle=c.trace;ctx.lineWidth=1;
+    ctx.setLineDash([2,7]);ctx.lineDashOffset=dashOff;
+    paths.forEach(p=>ctx.stroke(p.line));
+    ctx.restore();
+    for(const pt of parts){
+      const dir = pt.role==='q' ? 1 : -1;
+      pt.t+=pt.v*dt*dir;
+      if(pt.role==='q' && pt.t>=1){ /* question reached the tenant */
+        const end=posOn(paths[pt.p],1);
+        if(Math.random()<0.4) pulses.push({x:end.x,y:end.y,r:2,a:0.25,rgb:c.q});
+        Object.assign(pt,newPart('q'));pt.t=0;
+      }
+      if(pt.role==='r' && pt.t<=0){ /* answer arrived back at Copilot */
+        const end=posOn(paths[pt.p],0);
+        if(Math.random()<0.55) pulses.push({x:end.x,y:end.y,r:2,a:0.32,rgb:pt.leak?c.bad:c.ok});
+        Object.assign(pt,newPart('r'));pt.t=1;
+      }
+      const path=paths[pt.p];
+      const rgb = pt.role==='q' ? c.q : (pt.leak ? c.bad : c.ok);
+      const head= pt.role==='q' ? c.qHead : (pt.leak ? c.badHead : c.okHead);
+      for(let k=5;k>=1;k--){
+        const q=posOn(path,pt.t-dir*k*0.011);
+        ctx.beginPath();
+        ctx.arc(q.x,q.y,Math.max(pt.s*0.7*(1-k*0.13),.2),0,7);
+        ctx.fillStyle=`rgba(${rgb},${0.16*(1-k/6)})`;
+        ctx.fill();
+      }
+      const hp=posOn(path,pt.t);
+      glyph(pt.k,hp.x,hp.y,pt.s,rgb,head);
+    }
+    pulses=pulses.filter(p=>p.a>0.01);
+    for(const p of pulses){
+      p.r+=34*dt;p.a-=0.5*dt;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.strokeStyle=`rgba(${p.rgb},${Math.max(p.a,0)})`;
+      ctx.lineWidth=1;
+      ctx.stroke();
+    }
+  }
+  function loop(now){
+    const dt=Math.min((now-last)/1000||0,0.05);
+    last=now;
+    draw(dt);
+    raf=requestAnimationFrame(loop);
+  }
+  window.addEventListener('resize',resize);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){cancelAnimationFrame(raf);raf=null;}
+    else if(!reduced && !raf){last=performance.now();raf=requestAnimationFrame(loop);}
+  });
+  resize();
+  if(!reduced) raf=requestAnimationFrame(loop);
+})();
+
+/* ═══════════════ CORE ═══════════════ */
+let score = 0;
+let level = 0;
+const LEVELS = [
+  {icon:"🎬", name:"Start"},
+  {icon:"🔦", name:"Discover"},
+  {icon:"🧭", name:"Decide"},
+  {icon:"🏷️", name:"Label"},
+  {icon:"🔧", name:"Fix"},
+  {icon:"💬", name:"Prompts"},
+  {icon:"🚦", name:"Rollout"},
+  {icon:"🎓", name:"Govern"}
+];
+const mapEl = document.getElementById('lvlmap');
+LEVELS.forEach((l,i)=>{
+  const d=document.createElement('div');
+  d.className='lvl';d.id='lvl'+i;
+  d.innerHTML=`<div class="bubble"><em>${l.icon}</em></div><span>${l.name}</span>`;
+  mapEl.appendChild(d);
+});
+function refreshMap(){
+  LEVELS.forEach((l,i)=>{
+    const el=document.getElementById('lvl'+i);
+    el.classList.toggle('now', i===level);
+    el.classList.toggle('done', i<level);
+  });
+}
+function fitStage(){
+  document.getElementById('stage').style.top=(document.getElementById('topbar').offsetHeight+6)+'px';
+}
+window.addEventListener('resize',fitStage);
+fitStage();
+function addScore(n, x, y){
+  score+=n;
+  document.getElementById('score').textContent=score;
+  const pill=document.getElementById('scorePill');
+  pill.style.transform='scale(1.15)';setTimeout(()=>pill.style.transform='scale(1)',150);
+  if(x!==undefined){
+    const f=document.createElement('div');f.className='float-pts';f.textContent='+'+n;
+    f.style.left=x+'px';f.style.top=y+'px';document.body.appendChild(f);
+    setTimeout(()=>f.remove(),900);
+  }
+}
+const screen = document.getElementById('screen');
+function show(html){
+  screen.style.animation='none';screen.offsetHeight;screen.style.animation='';
+  screen.innerHTML=html;
+  document.body.classList.toggle('night', level===6);
+  document.querySelector('.stage').scrollTop=0;
+  refreshMap();
+}
+function goto(n){ level=n; RENDER[n](); }
+
+/* ═══════════════ L0 : INTRO ═══════════════ */
+function L0(){
+  show(`
+    <div class="badge">LEVEL 0 · THE DEMO SHOCK</div>
+    <h1>The boss wants Copilot.<br>By Monday. 🤖</h1>
+    <div class="say" data-who="THE BOSS">
+      I saw a demo at a conference — you type <i>"summarize this contract"</i> and it just… does it!
+      We're buying it for everyone. Switch it on by Monday, yes? Great meeting! 🏃
+    </div>
+    <div class="say ai" data-who="COPILOT · IN THE DEMO TENANT">
+      <b>"Summarize everything about salaries."</b><br>
+      Certainly! Based on <i>salaries_2026.xlsx</i> (HR site, shared with: <b>Everyone</b>),
+      here are all 48 salaries, sorted by amount… 📊
+    </div>
+    <div class="say tip" data-who="YOUR GUIDE">
+      And THAT is the whole story of this mission. Copilot didn't hack anything —
+      it <b>respects permissions perfectly</b>. The problem is that the permissions were wrong for years,
+      and nobody noticed… because no human had time to read 12,000 files. Copilot has time.
+      <b>Copilot doesn't leak data — it finds what was already leaked.</b> Let's get PixelSoft ready for it. Properly.
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="goto(1)">Challenge accepted →</button>
+  `);
+}
+
+/* ═══════════════ L1 : THE OVERSHARING HUNT ═══════════════ */
+const objects=[
+  {ico:"🧾", nm:"The HR site", flow:"doc", found:"«HR-Salaries» — shared with Everyone since 2019. Copilot would happily summarize it for the intern."},
+  {ico:"🔗", nm:"«Anyone» links", flow:"link", found:"83 files with anonymous «anyone with the link» access — including the price list your competitor would love to read."},
+  {ico:"👻", nm:"The ghost accounts", flow:"user", found:"3 ex-employees still have access to everything. One of them works for a competitor now. Oops."},
+  {ico:"📁", nm:"The «final_FINAL» chaos", flow:"doc", found:"9 copies of the same contract in 9 places, each with different permissions. Which one would Copilot quote? Exactly. Nobody knows."},
+  {ico:"🗄️", nm:"The 2016 archive site", flow:"site", found:"An old project site, open to everyone, full of scanned IDs and contracts. Nobody remembered it exists. Copilot never forgets."},
+  {ico:"🤝", nm:"External sharing", flow:"user", found:"37 folders still shared with former vendors, an old accountant… and one mystery Gmail address nobody recognizes."}
+];
+let foundCount=0;
+function L1(){
+  foundCount=0;
+  show(`
+    <div class="badge">LEVEL 1 · DISCOVER 🔦</div>
+    <h2>Find what Copilot would find</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Before switching Copilot on, we ask one question: <b>"what can people already see that they shouldn't?"</b>
+      — because that's exactly what Copilot will surface, politely and instantly.
+      Shine the flashlight: click each corner of the tenant. (+10 ⭐ per skeleton)
+    </div>
+    <div class="office">
+      ${objects.map((o,i)=>`
+        <button class="obj clickable" id="obj${i}" onclick="discover(${i},event)">
+          <span class="ico">${o.ico}</span><span class="nm">${o.nm}</span>
+        </button>`).join('')}
+    </div>
+    <div class="inv" id="inv">🔦 <b>Findings:</b> (none yet — start clicking!)</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l1next" style="display:none" onclick="goto(2)">Skeletons catalogued! Now decide →</button>
+  `);
+}
+function discover(i,e){
+  const el=document.getElementById('obj'+i);
+  if(el.classList.contains('found'))return;
+  el.classList.add('found');
+  foundCount++;
+  COPBG.set(objects[i].flow);
+  addScore(10,e.clientX,e.clientY);
+  document.getElementById('inv').innerHTML='🔦 <b>Finding '+foundCount+'/'+objects.length+':</b> '+objects[i].found;
+  if(foundCount===objects.length){
+    document.getElementById('inv').innerHTML='🔦 <b>All 6 skeletons found.</b> Scary? A little. Normal? Completely — every tenant older than a year looks like this. The difference between companies isn\'t whether this exists; it\'s whether someone LOOKED before turning the AI loose on it.';
+    document.getElementById('l1next').style.display='inline-flex';
+  }
+}
+
+/* ═══════════════ L2 : DECISIONS ═══════════════ */
+const decisions=[
+  {q:"12,000 files, one you. Where do we start cleaning?",
+   opts:[
+     {t:"Where it hurts most: HR, finance, contracts 🎯", s:"Protect the crown jewels first, then work outward.", v:"good", pts:10,
+      fb:"Right. Risk-first beats alphabetical. The party menu being public is fine; the salary sheet being public is a crisis. Rank by damage, not by folder name. (+10 ⭐)"},
+     {t:"All 12,000 files, one by one, A to Z 🐌", s:"Thorough. Very, very thorough.", v:"meh", pts:5,
+      fb:"Admirably complete — you'd finish around retirement. Perfection is the enemy of Monday. Prioritize, automate, iterate. (+5 ⭐)"},
+     {t:"Nowhere — doesn't Copilot have filters? 🤞", s:"Surely the AI knows what's sensitive.", v:"bad", pts:0,
+      fb:"Copilot's «filter» IS your permissions. If those say the intern can read salaries, Copilot agrees. There is no magic layer that fixes years of oversharing. (0 ⭐)"}
+   ]},
+  {q:"Who decides what counts as «sensitive»?",
+   opts:[
+     {t:"The data owners — each department, with IT enabling 🤝", s:"HR knows HR data. Finance knows finance data.", v:"good", pts:10,
+      fb:"Exactly. IT can find files; only their owners know which ones can hurt. IT builds the labels and the tooling, departments make the calls. (+10 ⭐)"},
+     {t:"IT decides everything, alone, at night 🌙", s:"Fewer meetings, more spreadsheets.", v:"meh", pts:5,
+      fb:"Faster, but IT guessing what's sensitive in legal contracts ends badly in both directions — locked-out lawyers or public payslips. (+5 ⭐)"},
+     {t:"Everything is secret. Lock it ALL down 🔒", s:"Can't leak what nobody can open.", v:"bad", pts:0,
+      fb:"Also can't WORK when nobody can open anything. Total lockdown lasts about four hours before the exceptions start — and the exceptions are worse than the original mess. (0 ⭐)"}
+   ]},
+  {q:"The boss still wants Copilot on Monday. You say…?",
+   opts:[
+     {t:"«Monday: yes — for a pilot group, while we clean» 🚦", s:"10 people now, everyone in waves after.", v:"good", pts:10,
+      fb:"The consultant's answer: the boss hears «yes», you get a controlled rollout. The pilot finds problems while the blast radius is 10 curious people, not the whole company. (+10 ⭐)"},
+     {t:"«Sure, everyone Monday, fingers crossed» 🤞", s:"What's the worst that could happen?", v:"bad", pts:0,
+      fb:"You've SEEN the HR site. The worst that could happen is a summarized salary sheet in the all-hands chat by 9:15. (0 ⭐)"},
+     {t:"«Never. AI is too dangerous for us» 🙅", s:"Just say no.", v:"meh", pts:5,
+      fb:"Caution is healthy, but «never» doesn't stop AI — it sends people to free chatbots with company data and ZERO governance. Shadow AI is worse than governed AI. (+5 ⭐)"}
+   ]}
+];
+let di=0;
+function L2(){
+  di=0;
+  show(`
+    <div class="badge">LEVEL 2 · DECIDE 🧭</div>
+    <h2>The readiness plan</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Now we know what's exposed. Three calls to make before anyone touches a rollout button.
+    </div>
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d=decisions[di];
+  document.getElementById('dzone').innerHTML=`
+    <h2 style="font-size:19px;margin-top:14px">Decision ${di+1}/${decisions.length}: ${d.q}</h2>
+    <div class="choices">
+      ${d.opts.map((o,i)=>`
+        <button class="choice" id="ch${i}" onclick="pick(${i},event)">
+          <b>${o.t}</b><small>${o.s}</small>
+        </button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none"></button>
+  `;
+}
+function pick(i,e){
+  const d=decisions[di], o=d.opts[i];
+  d.opts.forEach((x,j)=>{
+    const el=document.getElementById('ch'+j);
+    el.disabled=true;
+    if(j===i) el.classList.add(o.v);
+  });
+  if(o.pts>0) addScore(o.pts,e.clientX,e.clientY);
+  const v=document.getElementById('verdict');
+  v.innerHTML=`<div class="say" data-who="${o.v==='good'?'NICE':'HMM'}">${o.fb}</div>`;
+  v.style.display='block';
+  const btn=document.getElementById('dnext');
+  btn.style.display='inline-flex';
+  if(di<decisions.length-1){ btn.textContent='Next decision →'; btn.onclick=()=>{di++;renderDecision();}; }
+  else { btn.textContent='One more thing: pick your toolkit →'; btn.onclick=renderToolbox; }
+}
+const tools=[
+  {t:"🧰 The built-in reports & Purview", s:"Sharing reports, access reviews, sensitivity labels — already in the tenant.",
+   fb:"The honest default: most of what you need for readiness is already licensed and switched off. Reports find the oversharing, Purview labels what matters. (+10 ⭐)"},
+  {t:"📊 A dedicated governance tool", s:"Purpose-built oversharing scanners and cleanup automation.",
+   fb:"Great at scale: when it's 12 sites it's a weekend, when it's 1,200 sites you want automation with dashboards and scheduled re-scans. (+10 ⭐)"},
+  {t:"🧑‍🔧 A partner-led readiness assessment", s:"Someone who has done this before runs the discovery with you.",
+   fb:"Speed and pattern-matching: a partner has seen fifty tenants' worth of skeletons and knows exactly which closets to open first. Pairs nicely with either toolset. (+10 ⭐)"}
+];
+function renderToolbox(){
+  document.getElementById('dzone').innerHTML=`
+    <h2 style="font-size:19px;margin-top:14px">What do we clean up WITH? 🧹</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Same rule as always: no wrong answers, only fit. Choose one!
+    </div>
+    <div class="choices">
+      ${tools.map((o,i)=>`
+        <button class="choice" id="tl${i}" onclick="pickTool(${i},event)">
+          <b>${o.t}</b><small>${o.s}</small>
+        </button>`).join('')}
+    </div>
+    <div class="verdict" id="tverdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="tnext" style="display:none" onclick="goto(3)">Toolkit chosen! To the labels →</button>
+  `;
+}
+function pickTool(i,e){
+  tools.forEach((x,j)=>{
+    const el=document.getElementById('tl'+j);
+    el.disabled=true;
+    if(j===i) el.classList.add('good');
+  });
+  addScore(10,e.clientX,e.clientY);
+  const v=document.getElementById('tverdict');
+  v.innerHTML=`<div class="say" data-who="NICE">${tools[i].fb}</div>`;
+  v.style.display='block';
+  document.getElementById('tnext').style.display='inline-flex';
+}
+
+/* ═══════════════ L3 : LABEL THE FILES ═══════════════ */
+const files=[
+  {ico:"🎉", name:"party-menu.pdf", small:"The office party lunch menu. Sausages feature heavily.", ans:"pub"},
+  {ico:"🧾", name:"salaries_2026.xlsx", small:"Everyone's pay, one tidy sheet.", ans:"conf"},
+  {ico:"📑", name:"acme-renewal.docx", small:"Customer contract — prices, terms, signatures.", ans:"conf"},
+  {ico:"🛠️", name:"reset-your-password.docx", small:"IT how-to guide for employees.", ans:"int"},
+  {ico:"🌐", name:"brochure-2026.pdf", small:"Marketing brochure — it's literally on the website.", ans:"pub"},
+  {ico:"🗺️", name:"project-plan.xlsx", small:"Internal migration project timeline.", ans:"int"}
+];
+const CHIPS=[
+  {id:"pub", label:"PUBLIC", cls:"c-pub"},
+  {id:"int", label:"INTERNAL", cls:"c-int"},
+  {id:"conf", label:"CONFIDENTIAL", cls:"c-conf"}
+];
+let chipSel=null, lblDone=0;
+function L3(){
+  chipSel=null;lblDone=0;
+  show(`
+    <div class="badge">LEVEL 3 · LABEL 🏷️</div>
+    <h2>Teach the tenant what matters</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Sensitivity labels are sticky notes with superpowers: they travel WITH the file and can enforce
+      encryption, block external sharing, and tell Copilot-adjacent tooling what's off-limits.
+      Pick a label, then click the file it belongs on. (+10 ⭐ each — wrong guesses just bounce)
+    </div>
+    <div class="label-grid">
+      <div>
+        ${files.map((f,i)=>`
+          <div class="filerow" id="fr${i}">
+            <span class="face">${f.ico}</span>
+            <span class="who"><b>${f.name}</b><small>${f.small}</small></span>
+            <div class="lbl-slot" id="fs${i}" onclick="assignLbl(${i},event)">no label</div>
+          </div>`).join('')}
+      </div>
+      <div class="chip-stack">
+        <div class="stack-lbl">Sensitivity labels</div>
+        ${CHIPS.map(c=>`<button class="chip ${c.cls}" id="chip-${c.id}" onclick="selChip('${c.id}')">🏷️ ${c.label}</button>`).join('')}
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="goto(4)">Everything labelled! Fix the shares →</button>
+  `);
+}
+function selChip(id){
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('chip-'+id).classList.add('sel');
+  chipSel=id;
+}
+function assignLbl(i,e){
+  if(chipSel===null)return;
+  const f=files[i], slot=document.getElementById('fs'+i), row=document.getElementById('fr'+i);
+  if(slot.classList.contains('pub')||slot.classList.contains('int')||slot.classList.contains('conf'))return;
+  if(chipSel===f.ans){
+    slot.classList.add(f.ans);
+    slot.textContent='🏷️ '+CHIPS.find(c=>c.id===f.ans).label;
+    lblDone++;
+    addScore(10,e.clientX,e.clientY);
+    if(lblDone===files.length){
+      COPBG.set('mix');
+      document.getElementById('l3next').style.display='inline-flex';
+    }
+  } else {
+    row.classList.add('shake');
+    setTimeout(()=>row.classList.remove('shake'),450);
+  }
+}
+
+/* ═══════════════ L4 : FIX THE SHARES ═══════════════ */
+const actions=[
+  {t:"🔒 Make HR & Finance sites private", d:"Access for the right groups only — not «Everyone».", ok:true,
+   ex:"The salary sheet now answers only to HR. The intern's Copilot suddenly knows a lot less. Perfect."},
+  {t:"🔗 Kill the «anyone» links", d:"Expire anonymous links tenant-wide; default new shares to «specific people».", ok:true,
+   ex:"83 anonymous doors, closed in one policy change. New shares now require choosing WHO — as they always should have."},
+  {t:"👻 Evict the ghosts", d:"Disable ex-employee accounts, review every guest and that mystery Gmail.", ok:true,
+   ex:"Three ghosts busted and one very suspicious Gmail removed. Offboarding checklist updated so they never pile up again."},
+  {t:"🗄️ Archive the 2016 graveyard", d:"Old sites: confirm with owners, then archive or delete.", ok:true,
+   ex:"The scanned-IDs site is gone from Copilot's reach. Data you no longer hold is data that can't be surfaced — minimization is underrated."},
+  {t:"🔄 Turn on access reviews", d:"Owners re-confirm who needs access, every quarter, automatically.", ok:true,
+   ex:"The cleanup now repeats itself: every quarter, owners click through «does Bob still need this?». Oversharing stops being an archaeology project."},
+  {t:"🚫 Ban file sharing completely", d:"Nobody shares anything, ever again.", ok:false,
+   ex:"Day two: people email attachments to Gmail «just to get work done». You've traded visible sharing for invisible sharing — strictly worse."},
+  {t:"🗑️ Delete everything older than a year", d:"Old files, old problems. Gone.", ok:false,
+   ex:"Including contracts you're legally required to keep for 10 years? Retention is a policy conversation, not a bulk-delete button."},
+  {t:"🙈 Skip cleanup — only give Copilot to trusted people", d:"Managers only. They'd never misuse it.", ok:false,
+   ex:"Trust isn't the issue — their PERMISSIONS are. A trusted manager asking an innocent question still surfaces the salary sheet if it's shared with Everyone."}
+];
+let actDone=0;
+function L4(){
+  actDone=0;
+  show(`
+    <div class="badge">LEVEL 4 · FIX 🔧</div>
+    <h2>Close what's open</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Labels tell us what matters — now we fix who can reach it. Five of these are the right moves.
+      Watch the background as you go: every fix means fewer red answers coming back to Copilot. (+10 ⭐ each)
+    </div>
+    <div class="actions">
+      ${actions.map((a,i)=>`
+        <button class="act clickable" id="act${i}" onclick="doAct(${i},event)">
+          <span><b>${a.t}</b>${a.d}</span>
+        </button>`).join('')}
+    </div>
+    <div class="inv" id="actLog">🔧 <b>Cleanup: 0/5</b> — pick your fixes.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="goto(5)">Tenant tidied! Test the prompts →</button>
+  `);
+}
+function doAct(i,e){
+  const a=actions[i], el=document.getElementById('act'+i);
+  if(el.classList.contains('done')||el.disabled)return;
+  if(a.ok){
+    el.classList.add('done');
+    actDone++;
+    COPBG.leak(Math.max(0.18, 0.45-actDone*0.055)); /* every fix dries up the red answers */
+    addScore(10,e.clientX,e.clientY);
+    document.getElementById('actLog').innerHTML=`🔧 <b>Cleanup: ${actDone}/5</b> — ✓ ${a.ex}`;
+    if(actDone===5){
+      document.getElementById('actLog').innerHTML=`🔧 <b>Cleanup complete!</b> The crown jewels are gated, the anonymous links are dead, and the ghosts are gone. Not perfect — no tenant ever is — but Copilot-ready. Let's prove it.`;
+      document.getElementById('l4next').style.display='inline-flex';
+    }
+  } else {
+    el.classList.add('nope');el.disabled=true;
+    document.getElementById('actLog').innerHTML=`🔧 <b>Cleanup: ${actDone}/5</b> — ✗ ${a.ex}`;
+    setTimeout(()=>el.classList.remove('nope'),500);
+  }
+}
+
+/* ═══════════════ L5 : PROMPT ARCADE ═══════════════ */
+const RISKY=[
+  "Summarize everyone's salaries",
+  "List all customer contracts and their values",
+  "What does HR say about upcoming layoffs?",
+  "Show me documents containing ID numbers",
+  "What did management write about the acquisition?",
+  "Compile all personal phone numbers you can find"
+];
+const SAFE=[
+  "Summarize my meeting notes from Monday",
+  "Draft a polite reply to this customer email",
+  "Turn my project plan into a slide outline",
+  "What are my action items this week?"
+];
+let flagged=0, PROMPT_TARGET=12, promptTimer=null, promptEventFired=false, promptLive=false, pcSeq=0;
+function L5(){
+  flagged=0;promptEventFired=false;promptLive=true;pcSeq=0;
+  show(`
+    <div class="badge">LEVEL 5 · PROMPTS 💬</div>
+    <h2>The pre-flight prompt test</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Before the pilot starts, we red-team our own tenant: fire real prompts at it and see what would surface.
+      <b>Flag the risky prompts</b> — the ones that hunt for sensitive data (+5 ⭐).
+      The everyday work prompts? Leave them be — that's what Copilot is FOR.
+    </div>
+    <div class="arena" id="arena">
+      <div class="side-lbl lbl-src"><span class="c">🤖</span>COPILOT<br><small>(asking)</small></div>
+      <div class="side-lbl lbl-dst"><span class="c">🗄️</span>YOUR TENANT<br><small>(answering)</small></div>
+      <div class="event-banner" id="eventBanner"></div>
+      <div class="bigbar"><i id="bigFill"></i><span id="bigLabel">0 / ${PROMPT_TARGET} flagged</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="goto(6)">Test passed! To the rollout →</button>
+  `);
+  promptTimer=setInterval(spawnPrompt,1100);
+  spawnPrompt();spawnPrompt();
+}
+function spawnPrompt(){
+  if(!promptLive)return;
+  const arena=document.getElementById('arena');
+  if(!arena){clearInterval(promptTimer);return;}
+  if(arena.querySelectorAll('.mailcard:not(.zap):not(.oops)').length>=3)return;
+  const isRisky=Math.random()<0.65;
+  const txt=isRisky?RISKY[Math.floor(Math.random()*RISKY.length)]:SAFE[Math.floor(Math.random()*SAFE.length)];
+  const card=document.createElement('button');
+  card.className='mailcard clickable';
+  card.id='pc'+(pcSeq++);
+  card.innerHTML=`<i>› prompt</i>"${txt}"`;
+  card.style.left=(16+Math.random()*44)+'%';
+  card.style.top=(16+Math.random()*52)+'%';
+  card.onclick=(e)=>{
+    if(!promptLive||card.classList.contains('zap')||card.classList.contains('oops'))return;
+    if(isRisky){
+      card.classList.add('zap');
+      addScore(5,e.clientX,e.clientY);
+      flagged++;
+      updatePromptBar();
+      setTimeout(()=>card.remove(),520);
+      if(!promptEventFired && flagged===Math.floor(PROMPT_TARGET/2)) promptEvent();
+      if(flagged>=PROMPT_TARGET) endPrompts();
+    } else {
+      card.classList.add('oops');
+      card.innerHTML=`<i>checked ✓</i>Normal work — that's what it's for!`;
+      setTimeout(()=>{card.classList.add('fade');setTimeout(()=>card.remove(),850);},1200);
+    }
+  };
+  arena.appendChild(card);
+  if(!isRisky){
+    setTimeout(()=>{
+      if(card.isConnected && !card.classList.contains('oops')){
+        card.classList.add('fade');setTimeout(()=>card.remove(),850);
+      }
+    },5200);
+  }
+}
+function updatePromptBar(){
+  const p=Math.min(100,Math.round(flagged/PROMPT_TARGET*100));
+  document.getElementById('bigFill').style.width=p+'%';
+  document.getElementById('bigLabel').textContent=`${flagged} / ${PROMPT_TARGET} flagged`;
+}
+function promptEvent(){
+  promptEventFired=true;promptLive=false;
+  document.querySelectorAll('.mailcard').forEach(c=>c.style.opacity=.25);
+  const b=document.getElementById('eventBanner');
+  b.classList.remove('ok');
+  b.style.display='block';
+  b.innerHTML=`🤔 Anna asks: "If I can't open a file… can Copilot show it to me anyway?"<br>
+    <small>The most important question of the whole rollout.</small><br>
+    <button class="btn small" onclick="annaAnswer(event)">Answer her</button>`;
+}
+function annaAnswer(e){
+  addScore(10,e.clientX,e.clientY);
+  const b=document.getElementById('eventBanner');
+  b.classList.add('ok');
+  b.innerHTML='✓ "No — Copilot only sees what YOU can already see. That\'s exactly why we spent the week fixing permissions."';
+  setTimeout(()=>{b.style.display='none';b.classList.remove('ok');promptLive=true;
+    document.querySelectorAll('.mailcard').forEach(c=>c.style.opacity=1);},2200);
+}
+function endPrompts(){
+  promptLive=false;clearInterval(promptTimer);
+  document.querySelectorAll('.mailcard').forEach(c=>c.remove());
+  document.getElementById('bigLabel').textContent='pre-flight passed ✓';
+  document.getElementById('l5next').style.display='inline-flex';
+}
+
+/* ═══════════════ L6 : ROLLOUT NIGHT ═══════════════ */
+let rolStep=0, rolIdx=0;
+const rolSteps=[
+  {ico:"👥", t:"Pick the pilot group", d:"Ten people, mixed roles — sales, HR, finance, IT. Curious people who'll actually use it and actually complain.",
+   w:"Include at least one skeptic. Enthusiasts forgive problems; skeptics document them beautifully. Their feedback is worth double."},
+  {ico:"📜", t:"Write the one-page usage policy", d:"What belongs in prompts, what never does (customer data into PUBLIC tools, for one), where Copilot data lives, who to ask when unsure.",
+   w:"ONE page. The 40-page version protects the lawyer who wrote it and informs absolutely no one."},
+  {ico:"🎓", t:"Run the 60-minute onboarding", d:"Prompt basics, live examples on THEIR real files, the «verify before you trust» habit, and where the report-a-problem button is.",
+   w:"Demo on their own documents, not on marketing slides. The moment someone sees THEIR meeting notes summarized, the room changes."},
+  {ico:"📊", t:"Switch on the dashboards", d:"Usage reports, audit logs of prompts and file access, alerts on sensitive-label touches. Watching comes BEFORE scaling.",
+   w:"Decide NOW who reviews these and how often. A dashboard nobody opens is a screensaver."},
+  {ico:"🎫", t:"Assign the pilot licenses", d:"Ten licenses to ten named people — not «the whole sales team, they'll figure it out».",
+   w:"A license is not readiness. The people, policy, training and dashboards above are — the license is just the last mouse click."},
+  {ico:"🌊", t:"Plan the waves", d:"Team by team, each wave gated on its sites being cleaned and its people onboarded. The calendar serves readiness, not the other way around.",
+   w:"Tie each wave to cleanup progress, not to the boss's conference schedule. «Marketing goes live when Marketing's sites pass the check» is an easy rule to defend."},
+  {ico:"🔁", t:"The 30-day review", d:"What helped, what surfaced that shouldn't have, what people actually ask it. Then — and only then — the next wave.",
+   w:"Collect the wins in writing («saved 3 hours on the quarterly report»). Wins fund the rollout politically; you'll need them at budget time."}
+];
+function L6(){
+  rolStep=0;rolIdx=0;
+  show(`
+    <div class="badge">LEVEL 6 · ROLLOUT 🚦</div>
+    <h2>Sunday evening. Tomorrow, ten people get an AI. 🌙</h2>
+    <p class="muted">The tenant is cleaned, labelled and watched. The boss gets his Monday — a <b>pilot</b>,
+    exactly as promised. Flip the switch to start the rollout checklist.</p>
+    <div class="switch-zone">
+      <button class="big-switch clickable" id="bigSwitch" onclick="flip()" aria-label="Start the pilot rollout">
+        <div class="knob" id="knob">OFF</div>
+      </button>
+      <div class="dns-line" id="rolLine">Copilot is dark. Flip it when the pilot is ready. 😤</div>
+    </div>
+    <div id="rolZone" style="max-width:680px;margin:20px auto 0"></div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="goto(7)">Pilot is live! One last morning →</button></div>
+  `);
+}
+function flip(){
+  if(rolStep>0)return;
+  rolStep=1;
+  const sw=document.getElementById('bigSwitch');
+  sw.classList.add('on');
+  document.getElementById('knob').textContent='PILOT';
+  COPBG.leak(0.02);
+  COPBG.set('check');
+  addScore(20,innerWidth/2,innerHeight/2);
+  document.getElementById('rolLine').textContent='Look at the background: the answers coming back are green now. Walk the checklist ↓';
+  renderRol(0);
+}
+function renderRol(i){
+  rolIdx=i;
+  const s=rolSteps[i];
+  const doneList=rolSteps.slice(0,i).map(x=>
+    `<div style="font-family:var(--mono);font-size:12px;color:var(--green);margin-bottom:5px">✓ ${x.ico} ${x.t}</div>`).join('');
+  document.getElementById('rolZone').innerHTML=`
+    ${doneList}
+    <div class="say" data-who="STEP ${i+1} / ${rolSteps.length}" style="margin-top:${i>0?'16px':'4px'}">
+      <b style="font-size:16px">${s.ico} ${s.t}</b><br>
+      <span style="font-size:14.5px">${s.d}</span>
+      <div class="warnnote"><b>⚠ Pay attention:</b> ${s.w}</div>
+      ${i<rolSteps.length-1
+        ? `<div style="margin-top:12px"><button class="btn small blue" onclick="rolNext(event)">Next step →</button></div>`
+        : ``}
+    </div>`;
+  if(i===rolSteps.length-1) document.getElementById('l6next').style.display='inline-flex';
+}
+function rolNext(e){
+  addScore(5,e.clientX,e.clientY);
+  renderRol(rolIdx+1);
+}
+
+/* ═══════════════ L7 : GOVERNANCE TICKETS + FINAL ═══════════════ */
+const tickets=[
+  {t:"«Can Copilot read my private chat and show it to my manager?»", who:"MRS. MIA, first thing Monday",
+   opts:[
+     {o:"Yes, everything is visible to everyone now", ok:false},
+     {o:"No — it answers each person from THEIR OWN access. Your chat answers to you, not to your manager", ok:true},
+     {o:"Only on Tuesdays", ok:false}
+   ],
+   ex:"The golden rule, one more time: Copilot inherits the permissions of whoever is asking. It can't show your manager anything your manager couldn't already open — the fear is understandable, the mechanics say otherwise."},
+  {t:"«Who can see what I ask it?»", who:"RUDY, slightly paranoid (healthy)",
+   opts:[
+     {o:"Nobody, prompts vanish into the void", ok:false},
+     {o:"Prompts are logged for compliance — visible to authorized admins under audit controls, not to your colleagues", ok:true},
+     {o:"Everyone. It's basically a public feed", ok:false}
+   ],
+   ex:"Honest answer: yes, there's an audit trail — that's a feature, not a scandal. It's how you investigate incidents and prove compliance. The transparent version of this answer builds trust; the mumbled version breeds rumors."},
+  {t:"«GDPR and AI… are we even allowed to do this?»", who:"ANNA, compliance hat on",
+   opts:[
+     {o:"Shhh. What Brussels doesn't know won't hurt it", ok:false},
+     {o:"Yes, with homework: data stays in our tenant, it isn't training the public model, and we document it in our privacy records", ok:true},
+     {o:"No, AI is illegal in Europe now", ok:false}
+   ],
+   ex:"Enterprise Copilot processes data inside your tenant boundary and doesn't train the foundation model on it. Your homework: update the processing records, mention it in privacy notices, and be able to explain the above in one breath."},
+  {t:"«Is this thing going to replace us?»", who:"THE WHOLE OFFICE, basically",
+   opts:[
+     {o:"Yes. Nice knowing you all", ok:false},
+     {o:"It replaces the boring 20% — drafts, summaries, minutes. You keep the judgment, and the accountability", ok:true},
+     {o:"No, it's completely useless, ignore it", ok:false}
+   ],
+   ex:"The honest pitch: Copilot is a draft machine. It does the blank-page part; humans do the «is this actually right and should we send it» part. Teams that get this split prosper; teams that skip the second half apologize a lot."},
+  {t:"«Someone pasted a customer contract into a free public chatbot»", who:"VLAD, reporting responsibly",
+   opts:[
+     {o:"Public shaming at the all-hands", ok:false},
+     {o:"That's shadow AI — the fix is a governed alternative + a clear policy + blocking the risky tools, not punishing the person", ok:true},
+     {o:"Nothing we can do, the internet is the internet", ok:false}
+   ],
+   ex:"People use whatever solves today's problem. If the governed tool is good and available, shadow AI mostly evaporates. Block what you must, provide what they need, and keep the no-blame reporting culture from Breach Day."},
+  {t:"«How do we know the licenses are worth it?»", who:"THE BOSS, at budget time",
+   opts:[
+     {o:"Vibes. Expensive vibes", ok:false},
+     {o:"Measure the pilot: hours saved on drafts, meetings, summaries — survey before and after, then decide wave two", ok:true},
+     {o:"We can't ever know. Mystery forever", ok:false}
+   ],
+   ex:"You planned this at rollout: the 30-day review collects real numbers («quarterly report: 3 hours → 40 minutes»). Licenses that pay for themselves get renewed without a fight — but only if someone wrote the wins down."},
+  {t:"«It cited a contract clause that… doesn't exist?»", who:"ANNA, eyebrow raised",
+   opts:[
+     {o:"Impossible. The machine is never wrong", ok:false},
+     {o:"It happens — AI can confabulate. Rule: Copilot drafts, humans verify. Especially numbers, dates and legal text", ok:true},
+     {o:"Delete Copilot immediately and never speak of it", ok:false}
+   ],
+   ex:"Hallucinations are real and nobody should pretend otherwise. The habit that fixes it: check the sources Copilot links before trusting the claim. It's a two-click verification — teach it on day one."},
+  {t:"Last one: the ONE habit everyone should keep?", who:"YOU, wrapping the rollout",
+   opts:[
+     {o:"Ask Copilot to check Copilot", ok:false},
+     {o:"Click the sources. Every important answer, check what it's citing before you trust or forward it", ok:true},
+     {o:"Print every conversation for the archive", ok:false}
+   ],
+   ex:"One habit, taught in one minute, prevents 90% of AI embarrassments: important answer → click the cited sources → confirm they say what Copilot says they say. That's AI literacy in a single move."}
+];
+let tdone=0;
+let firstTry={};
+function L7(){
+  tdone=0;firstTry={};
+  show(`
+    <div class="badge">LEVEL 7 · GOVERN 🎓</div>
+    <h2>Monday morning: the questions hour</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Ten pilots, ten opinions, one inbox: yours. The rollout succeeds or fails on how well
+      you answer this morning. (+10 ⭐ first try — wrong guesses are free.)
+    </div>
+    <div id="tzone">
+      ${tickets.map((tk,i)=>`
+        <div class="ticket" id="tk${i}" style="display:block">
+          <div class="tx" style="margin-bottom:8px"><b>🎟️ ${tk.t}</b><small>— ${tk.who}</small></div>
+          <div class="choices" style="margin-top:4px">
+            ${tk.opts.map((op,j)=>`
+              <button class="choice" id="tk${i}o${j}" style="padding:10px 14px;font-size:13.5px" onclick="solve(${i},${j},event)">${op.o}</button>`).join('')}
+          </div>
+          <div class="verdict" id="tk${i}v" style="margin-top:8px"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+
+function solve(i,j,e){
+  const tk=tickets[i];
+  const card=document.getElementById('tk'+i);
+  if(card.classList.contains('done'))return;
+  const btn=document.getElementById('tk'+i+'o'+j);
+  if(tk.opts[j].ok){
+    card.classList.add('done');
+    tk.opts.forEach((op,k)=>{
+      const b=document.getElementById('tk'+i+'o'+k);
+      b.disabled=true;
+      if(k===j)b.classList.add('good');
+    });
+    if(firstTry[i]===undefined){ addScore(10,e.clientX,e.clientY); }
+    else { addScore(5,e.clientX,e.clientY); }
+    const v=document.getElementById('tk'+i+'v');
+    v.innerHTML=`<div class="say" data-who="SOLVED ✓" style="margin:12px 0 0">${tk.ex}</div>`;
+    v.style.display='block';
+    tdone++;
+    if(tdone===tickets.length) finale();
+  } else {
+    firstTry[i]=false;
+    btn.classList.add('bad');
+    btn.disabled=true;
+    setTimeout(()=>btn.classList.remove('bad'),450);
+  }
+}
+function finale(){
+  for(let i=0;i<40;i++){
+    const c=document.createElement('div');c.className='confetti';
+    c.textContent=["🎉","⭐","🤖","🎊","✨"][i%5];
+    c.style.left=Math.random()*100+'vw';
+    c.style.animationDuration=(2+Math.random()*2.5)+'s';
+    c.style.animationDelay=(Math.random()*0.8)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),5500);
+  }
+  const MAX=410;
+  let rank="Curious Rookie 🐣", msg="You made it to AI-ready — replay and hunt for more stars!";
+  if(score>=370){rank="AI-Ready Legend 🏆";msg="Flawless! You could run the readiness workshop yourself.";}
+  else if(score>=300){rank="Governance Guru 🧭";msg="Sharp! You know exactly what stands between a demo and a rollout.";}
+  else if(score>=220){rank="Prompt Pilot ✈️";msg="Nice work! Another run and you'll catch every call.";}
+  level=8;refreshMap();
+  document.getElementById('lvl7').classList.add('done');
+  document.getElementById('finale').innerHTML=`
+    <div class="center" style="margin-top:10px">
+      <h2>🎉 Open Secrets: closed!</h2>
+      <div class="rank-big">${rank}</div>
+      <div style="font-family:var(--mono);font-weight:600;color:var(--muted)">SCORE: ${score} / ~${MAX} ⭐</div>
+      <p class="muted" style="margin:10px auto;max-width:520px">${msg}</p>
+      <div class="say tip" data-who="REMEMBER" style="text-align:left;margin:22px auto 18px">
+        The whole Copilot readiness story in one breath:
+        <b>1)</b> Copilot respects permissions — so broken permissions ARE the risk →
+        <b>2)</b> find the oversharing before it does → <b>3)</b> prioritize by damage, owners decide sensitivity →
+        <b>4)</b> label what matters → <b>5)</b> fix the shares (private sites, no anonymous links, evict the ghosts, access reviews) →
+        <b>6)</b> red-team your own prompts → <b>7)</b> pilot first, waves after, dashboards on, wins written down.
+        And the one habit for everyone: <b>click the sources</b>. 🤖
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn blue" onclick="location.reload()">↺ Play again</button>
+        <a class="btn green" href="../index.html#contact">Run this live with your team →</a>
+      </div>
+    </div>`;
+}
+
+const RENDER=[L0,L1,L2,L3,L4,L5,L6,L7];
+refreshMap();
+L0();
+</script>
+</body>
+</html>

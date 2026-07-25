@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Bouncer Protocol — shautech labs</title>
+<meta name="description" content="The Bouncer Protocol — an interactive conditional access simulator by shautech. Identity is the new front door: learn the signals, build the baseline policies, and decide who gets in, who gets challenged, and who bounces." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0B0D;
+    --bg-2:#0d0f13;
+    --panel:#101317;
+    --panel-2:#15181f;
+    --line:rgba(255,255,255,0.08);
+    --line-2:rgba(255,255,255,0.14);
+    --text:#F4F6F8;
+    --muted:#98A0AA;
+    --muted-2:#646C76;
+    --accent:#4D9FFF;
+    --accent-soft:#7CBBFF;
+    --accent-ink:#04132B;
+    --glow:rgba(77,159,255,0.30);
+    --crit:#FF7A7A;
+    --warn:#FFB65C;
+    --r:14px;
+    --ease:cubic-bezier(.2,.7,.2,1);
+    --blue:var(--accent);
+    --green:#5FD68F;
+    --green-ink:#06180D;
+    --amber:var(--warn);
+    --red:var(--crit);
+    --ink:var(--text);
+    --ink-soft:var(--muted);
+    --card:var(--panel);
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:"Hanken Grotesk",system-ui,sans-serif;
+    color:var(--text);
+    background:var(--bg);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+            mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+    opacity:.5;
+  }
+  body::after{
+    content:"";position:fixed;top:-20%;right:-10%;width:60vw;height:60vw;z-index:0;
+    pointer-events:none;border-radius:50%;
+    background:radial-gradient(circle,var(--glow) 0%,transparent 60%);
+    filter:blur(40px);opacity:.6;transition:background 1.2s var(--ease);
+  }
+  body.night::after{background:radial-gradient(circle,rgba(138,134,255,.20) 0%,transparent 60%);}
+  ::selection{background:var(--accent);color:var(--accent-ink)}
+  a{color:inherit;text-decoration:none}
+
+  /* ambient flow — sign-in attempts meet the policy gate */
+  #cabg{
+    position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(55% 46% at -10% 52%,rgba(255,182,92,.06),transparent 70%),
+      radial-gradient(55% 46% at 110% 48%,rgba(77,159,255,.07),transparent 70%);
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important;} }
+
+  /* ---------- TOP BAR ---------- */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:40;
+    background:rgba(10,11,13,.85);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+    padding:10px 18px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .logo{font-family:var(--mono);font-weight:700;font-size:1rem;letter-spacing:-.01em;display:inline-flex;align-items:center;white-space:nowrap;}
+  .logo .mark{
+    display:inline-grid;place-items:center;width:1.5em;height:1.5em;margin-right:.5em;
+    border:1.5px solid var(--accent);border-radius:6px;color:var(--accent);font-size:.82em;
+  }
+  .logo .lab{color:var(--muted);font-weight:500;}
+  .sim-name{font-family:var(--mono);font-size:.72rem;color:var(--muted-2);letter-spacing:.02em;white-space:nowrap;}
+  @media(max-width:860px){.sim-name{display:none;}}
+  .lvlmap{display:flex;gap:6px;flex:1;justify-content:center;flex-wrap:wrap;}
+  .lvl{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-family:var(--mono);font-size:9px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--muted-2);min-width:56px;
+  }
+  .lvl .bubble{
+    width:32px;height:32px;border-radius:9px;
+    background:var(--panel);border:1px solid var(--line-2);
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+    transition:all .25s var(--ease);
+  }
+  .lvl.now{color:var(--accent-soft);}
+  .lvl.now .bubble{border-color:var(--accent);transform:scale(1.12);box-shadow:0 0 14px var(--glow),0 0 0 1px var(--accent);}
+  .lvl.done{color:var(--muted);}
+  .lvl.done .bubble{background:rgba(77,159,255,.10);border-color:var(--accent);}
+  .lvl.done .bubble::after{content:"✓";color:var(--accent-soft);font-weight:700;font-family:var(--mono);}
+  .lvl.done .bubble em{display:none;}
+  .hud{display:flex;gap:10px;align-items:center;}
+  .pill{
+    font-family:var(--mono);font-size:13px;font-weight:600;
+    background:var(--panel-2);color:var(--muted);
+    border:1px solid var(--line-2);
+    padding:7px 13px;border-radius:20px;
+    transition:transform .15s;
+  }
+  .pill b{color:var(--accent-soft);}
+
+  /* ---------- STAGE ---------- */
+  .stage{
+    position:absolute;top:96px;bottom:0;left:0;right:0;
+    overflow-y:auto;z-index:1;
+    padding:26px clamp(16px,5vw,70px) 40px;
+  }
+  .screen{max-width:880px;margin:0 auto;animation:pop .4s var(--ease) both;}
+  @keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98);}to{opacity:1;transform:none;}}
+
+  .badge{
+    display:inline-flex;align-items:center;gap:.6em;
+    font-family:var(--mono);font-size:.74rem;font-weight:500;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    margin-bottom:14px;
+  }
+  .badge::before{content:"//";color:var(--accent);letter-spacing:0;}
+  h1{font-family:"Space Grotesk",sans-serif;font-size:clamp(28px,4.6vw,44px);line-height:1.08;margin-bottom:10px;letter-spacing:-.02em;font-weight:700;}
+  h2{font-family:"Space Grotesk",sans-serif;font-size:clamp(21px,3.2vw,30px);margin-bottom:8px;letter-spacing:-.015em;font-weight:600;}
+  .say{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:16px 18px 14px;font-size:15px;line-height:1.55;color:var(--text);
+    position:relative;margin:18px 0 14px;
+    box-shadow:0 10px 30px -18px rgba(0,0,0,.8);
+    max-width:680px;
+  }
+  .say::before{
+    content:attr(data-who);
+    position:absolute;top:-10px;left:14px;
+    font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--panel-2);border:1px solid var(--accent);color:var(--accent-soft);
+    padding:2px 9px;border-radius:6px;
+  }
+  .say.tip::before{border-color:var(--green);color:var(--green);}
+  .say.alert::before{border-color:var(--crit);color:var(--crit);}
+  .say b{color:var(--text);}
+  .muted{color:var(--muted);font-size:14px;line-height:1.55;max-width:660px;}
+
+  .btn{
+    font-family:var(--mono);font-size:.92rem;font-weight:600;letter-spacing:.02em;
+    display:inline-flex;align-items:center;gap:.6em;
+    background:transparent;color:var(--text);border:1px solid var(--line-2);
+    padding:.8em 1.3em;border-radius:10px;cursor:pointer;
+    transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .25s,border-color .25s,color .25s;
+    white-space:normal;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent-soft);transform:translateY(-2px);}
+  .btn.blue{background:var(--accent);color:var(--accent-ink);border-color:transparent;}
+  .btn.blue:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px var(--glow),0 0 0 1px var(--accent-soft);color:var(--accent-ink);}
+  .btn.green{background:var(--green);color:var(--green-ink);border-color:transparent;}
+  .btn.green:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px rgba(95,214,143,.4),0 0 0 1px var(--green);color:var(--green-ink);}
+  .btn.small{font-size:.8rem;padding:.6em 1.1em;border-radius:9px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn:focus-visible,.clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .float-pts{
+    position:fixed;font-family:var(--mono);font-weight:700;font-size:18px;color:var(--green);
+    pointer-events:none;z-index:99;animation:rise .9s ease-out forwards;
+    text-shadow:0 0 12px rgba(95,214,143,.6);
+  }
+  @keyframes rise{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-46px);}}
+
+  /* ---------- LEVEL 1 : SIGNALS ---------- */
+  .office{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:12px;margin-top:18px;
+  }
+  .obj{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:14px 8px;text-align:center;cursor:pointer;user-select:none;
+    transition:transform .2s var(--ease),border-color .2s,box-shadow .2s;
+    font-family:inherit;color:var(--text);
+  }
+  .obj:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 10px 26px -14px var(--glow);}
+  .obj .ico{font-size:34px;display:block;margin-bottom:6px;}
+  .obj .nm{font-size:12.5px;font-weight:600;}
+  .obj.found{background:rgba(77,159,255,.07);border-color:var(--accent);cursor:default;}
+  .obj.found:hover{transform:none;box-shadow:none;}
+  .obj.found .nm::after{content:" ✓";color:var(--accent-soft);}
+  .inv{
+    margin-top:16px;background:var(--panel-2);border:1px dashed var(--line-2);
+    border-radius:12px;padding:12px 16px;font-family:var(--mono);font-size:13px;
+    min-height:44px;color:var(--muted);line-height:1.7;max-width:680px;
+  }
+  .inv b{color:var(--text);}
+
+  /* ---------- LEVEL 2 + 4 + 7 : DECISIONS / TICKETS ---------- */
+  .choices{display:grid;gap:12px;margin-top:14px;max-width:640px;}
+  .choice{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:14px 16px;cursor:pointer;text-align:left;font-family:inherit;color:var(--text);
+    font-size:14.5px;transition:transform .2s var(--ease),border-color .2s;
+  }
+  .choice:hover{transform:translateX(4px);border-color:var(--accent);}
+  .choice b{display:block;font-size:15px;margin-bottom:2px;}
+  .choice small{color:var(--muted);}
+  .choice.good{background:rgba(95,214,143,.08);border-color:var(--green);}
+  .choice.meh{background:rgba(255,182,92,.08);border-color:var(--warn);}
+  .choice.bad{background:rgba(255,122,122,.08);border-color:var(--crit);}
+  .choice:disabled{cursor:default;transform:none;}
+  .verdict{margin-top:12px;font-size:14px;line-height:1.5;display:none;max-width:640px;}
+  .warnnote{
+    margin-top:10px;background:rgba(255,182,92,.07);border:1px dashed rgba(255,182,92,.45);
+    border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.45;color:#E9C89B;
+  }
+  .warnnote b{color:var(--warn);}
+  .ticket{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:12px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:center;
+    flex-wrap:wrap;
+  }
+  .ticket .tx{flex:1;min-width:200px;font-size:14px;}
+  .ticket .tx b{display:block;font-size:14.5px;}
+  .ticket .tx small{color:var(--muted);}
+  .ticket.done{background:rgba(95,214,143,.05);border-color:var(--green);}
+  /* verdict buttons for scenarios */
+  .vrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .vbtn{
+    font-family:var(--mono);font-size:.78rem;font-weight:600;letter-spacing:.03em;
+    background:var(--panel-2);color:var(--text);border:1px solid var(--line-2);
+    padding:.55em 1em;border-radius:8px;cursor:pointer;
+    transition:transform .2s var(--ease),border-color .2s;
+  }
+  .vbtn:hover{transform:translateY(-2px);border-color:var(--accent);}
+  .vbtn:disabled{cursor:default;transform:none;}
+  .vbtn.good{background:rgba(95,214,143,.12);border-color:var(--green);color:var(--green);}
+  .vbtn.bad{background:rgba(255,122,122,.12);border-color:var(--crit);color:var(--crit);}
+
+  /* ---------- LEVEL 3 : BASELINE BOARD ---------- */
+  .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:16px;}
+  .act{
+    display:flex;gap:10px;align-items:flex-start;text-align:left;font-family:inherit;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:10px;
+    padding:12px 14px;font-size:13.5px;cursor:pointer;line-height:1.45;color:var(--muted);
+    transition:transform .2s var(--ease),border-color .2s;
+  }
+  .act:hover{transform:translateY(-2px);border-color:var(--accent);}
+  .act b{display:block;color:var(--text);font-size:14px;}
+  .act.done{background:rgba(95,214,143,.07);border-color:var(--green);cursor:default;}
+  .act.done:hover{transform:none;}
+  .act.done b::after{content:" ✓";color:var(--green);}
+  .act.nope{animation:shake .4s;border-color:var(--crit);background:rgba(255,122,122,.07);}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+
+  /* ---------- LEVEL 5 : RUSH HOUR ARCADE ---------- */
+  .arena{
+    position:relative;height:340px;margin-top:16px;
+    background:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px),
+      linear-gradient(180deg,var(--panel-2),var(--bg-2));
+    background-size:48px 48px,48px 48px,100% 100%;
+    border:1px solid var(--line-2);border-radius:var(--r);overflow:hidden;
+  }
+  .side-lbl{
+    position:absolute;top:12px;font-family:var(--mono);font-size:11px;font-weight:600;
+    text-align:center;width:110px;color:var(--muted);
+  }
+  .side-lbl small{color:var(--muted-2);}
+  .side-lbl .c{font-size:44px;display:block;line-height:1.2;}
+  .lbl-src{left:8px;} .lbl-src .c{filter:drop-shadow(0 0 18px rgba(255,182,92,.45));}
+  .lbl-dst{right:8px;} .lbl-dst .c{filter:drop-shadow(0 0 18px var(--glow));}
+  .mailcard{
+    position:absolute;z-index:5;max-width:205px;text-align:left;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:10px;
+    padding:8px 11px;font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--text);
+    cursor:pointer;animation:bob 1.8s ease-in-out infinite;
+    box-shadow:0 8px 22px -10px rgba(0,0,0,.7);
+  }
+  .mailcard:hover{border-color:var(--accent);}
+  .mailcard i{color:var(--muted-2);font-style:normal;display:block;font-size:9.5px;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+  .mailcard.zap{animation:zap .5s ease-in forwards;pointer-events:none;border-color:var(--crit);}
+  @keyframes zap{to{transform:scale(.25);opacity:0;}}
+  .mailcard.oops{border-color:var(--warn);color:var(--warn);pointer-events:none;}
+  .mailcard.fade{transition:opacity .8s;opacity:0;}
+  .bigbar{
+    position:absolute;bottom:12px;left:14px;right:14px;height:22px;
+    background:var(--bg);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;
+  }
+  .bigbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .3s;box-shadow:0 0 14px var(--glow);}
+  .bigbar span{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);
+    text-shadow:0 1px 3px rgba(0,0,0,.7);
+  }
+  .event-banner{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    background:rgba(255,182,92,.12);border:1px solid var(--warn);color:var(--text);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    font-weight:700;font-size:14px;
+    padding:10px 16px;border-radius:12px;
+    display:none;z-index:10;text-align:center;max-width:min(92%,460px);
+  }
+  .event-banner small{color:var(--muted);font-weight:400;}
+  .event-banner.ok{background:rgba(95,214,143,.12);border-color:var(--green);}
+  .event-banner .btn{margin-top:8px;}
+
+  /* ---------- LEVEL 6 : ENFORCEMENT SWITCH ---------- */
+  .switch-zone{
+    display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:24px;
+  }
+  .big-switch{
+    width:130px;height:190px;background:var(--panel-2);border:1px solid var(--line-2);
+    border-radius:20px;position:relative;cursor:pointer;
+    font-family:inherit;transition:border-color .3s,box-shadow .3s;
+  }
+  .big-switch:hover{border-color:var(--accent);}
+  .big-switch.on{border-color:var(--green);box-shadow:0 0 24px rgba(95,214,143,.25);}
+  .big-switch .knob{
+    position:absolute;left:10px;right:10px;height:74px;top:96px;
+    background:var(--warn);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    color:#2A1A05;font-family:var(--mono);font-weight:700;font-size:11.5px;letter-spacing:.05em;
+    transition:top .35s cubic-bezier(.5,1.6,.5,1), background .35s, color .35s;
+  }
+  .big-switch.on .knob{top:12px;background:var(--green);color:var(--green-ink);}
+  .dns-line{font-family:var(--mono);font-size:13px;min-height:20px;color:var(--muted);text-align:center;}
+
+  /* ---------- FINALE ---------- */
+  .confetti{position:fixed;top:-20px;font-size:20px;z-index:98;animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);}}
+  .rank-big{
+    font-family:"Space Grotesk",sans-serif;font-size:clamp(30px,5vw,48px);font-weight:700;
+    color:var(--accent-soft);margin:8px 0;letter-spacing:-.02em;
+    text-shadow:0 0 30px var(--glow);
+  }
+
+  .center{text-align:center;}
+  .spacer{height:18px;}
+</style>
+</head>
+<body>
+
+<canvas id="cabg" aria-hidden="true"></canvas>
+
+<header id="topbar">
+  <a class="logo" href="../index.html" title="Back to shautech.com"><span class="mark">›</span>shautech<span class="lab">&nbsp;/ labs</span></a>
+  <span class="sim-name">// operation: bouncer-protocol</span>
+  <div class="lvlmap" id="lvlmap"></div>
+  <div class="hud"><div class="pill" id="scorePill">⭐ <b id="score">0</b></div></div>
+</header>
+
+<div class="stage" id="stage"><div class="screen" id="screen"></div></div>
+
+<script>
+/* ═══════════════ AMBIENT BACKGROUND : sign-ins meet the policy gate ═══════════════ */
+(()=>{
+  const cv=document.getElementById('cabg'), ctx=cv.getContext('2d');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SAMPLES=140, GATE=0.52, HOLD=0.55;
+  let W=0,H=0,paths=[],parts=[],pulses=[],dashOff=0,last=0,raf=null,T=0,flash=0;
+  let mode='none'; /* 'none' → 'report' → 'enforced' */
+
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  window.CABG={
+    mode(m){ if(['none','report','enforced'].includes(m)) mode=m; }
+  };
+
+  const pal=()=>({ok:'95,214,143', mfa:'255,182,92', bad:'255,122,122', blue:'77,159,255',
+    okHead:'#A5EFC4', mfaHead:'#FFD9A8', badHead:'#FFB3B3',
+    trace:'rgba(124,187,255,.05)'});
+
+  const rack=()=>{
+    const rw=44, rh=Math.min(H*0.52,380), ry=(H-rh)/2;
+    return {rw,rh,ry, x0:12, x1:W-12-rw, ax:12+rw+2, bx:W-12-rw-2};
+  };
+  function rr(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+  function drawRacks(c){
+    const g=rack();
+    [{x:g.x0,label:'SIGN-IN ATTEMPTS',rgb:c.mfa},{x:g.x1,label:'YOUR APPS',rgb:c.blue}].forEach((r,ri)=>{
+      ctx.save();
+      ctx.strokeStyle='rgba(255,255,255,.10)';
+      ctx.fillStyle='rgba(16,19,23,.55)';
+      rr(r.x,g.ry,g.rw,g.rh,10);ctx.fill();ctx.stroke();
+      const rows=Math.floor((g.rh-24)/24);
+      for(let i=0;i<rows;i++){
+        for(let j=0;j<2;j++){
+          const tw=Math.sin(T*1.8+i*1.7+j*2.6+ri*3)*0.5+0.5;
+          ctx.fillStyle=`rgba(${r.rgb},${(0.08+tw*0.26).toFixed(3)})`;
+          ctx.fillRect(r.x+10+j*15, g.ry+16+i*24, 9, 4);
+        }
+      }
+      ctx.translate(ri===1 ? r.x-8 : r.x+g.rw+14, g.ry+g.rh/2);
+      ctx.rotate(-Math.PI/2);
+      ctx.font='600 9px "JetBrains Mono",monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(152,160,170,.45)';
+      ctx.fillText(r.label.split('').join(' '),0,0);
+      ctx.restore();
+    });
+  }
+  function drawGate(c){
+    const g=rack();
+    const gx=W*GATE;
+    const top=g.ry-6, bot=g.ry+g.rh+6;
+    ctx.save();
+    let col, a, dash;
+    if(mode==='none'){ col='255,255,255'; a=0.07; dash=[3,9]; }
+    else if(mode==='report'){ col=c.mfa; a=0.30+flash*0.3; dash=[4,6]; }
+    else { col=c.blue; a=0.42+flash*0.45; dash=[7,4]; }
+    ctx.strokeStyle=`rgba(${col},${a.toFixed(3)})`;
+    ctx.lineWidth=mode==='enforced'?2:1.4;
+    if(mode==='enforced'){ ctx.shadowBlur=14; ctx.shadowColor=`rgba(${col},.7)`; }
+    ctx.setLineDash(dash);
+    ctx.beginPath();ctx.moveTo(gx,top);ctx.lineTo(gx,bot);ctx.stroke();
+    ctx.setLineDash([]);
+    /* bracket ends */
+    ctx.beginPath();
+    ctx.moveTo(gx-8,top);ctx.lineTo(gx,top);ctx.lineTo(gx+8,top);
+    ctx.moveTo(gx-8,bot);ctx.lineTo(gx,bot);ctx.lineTo(gx+8,bot);
+    ctx.stroke();
+    /* gate label */
+    ctx.translate(gx,top-10);
+    ctx.font='600 9px "JetBrains Mono",monospace';
+    ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.shadowBlur=0;
+    ctx.fillStyle=`rgba(${col},${Math.min(a+0.25,0.8).toFixed(3)})`;
+    ctx.fillText(mode==='none'?'NO POLICIES':(mode==='report'?'CA GATE · REPORT-ONLY':'CA GATE · ENFORCED'),0,0);
+    ctx.restore();
+  }
+
+  function cubic(p0,p1,p2,p3,t){
+    const u=1-t;
+    return {x:u*u*u*p0.x+3*u*u*t*p1.x+3*u*t*t*p2.x+t*t*t*p3.x,
+            y:u*u*u*p0.y+3*u*u*t*p1.y+3*u*t*t*p2.y+t*t*t*p3.y};
+  }
+  function buildPaths(){
+    paths=[];
+    const g=rack(), lanes=6;
+    for(let i=0;i<lanes;i++){
+      const ya=g.ry+g.rh*(0.08+0.84*i/(lanes-1));
+      const yb=g.ry+g.rh*(0.08+0.84*Math.random());
+      const p0={x:g.ax,y:ya}, p3={x:g.bx,y:yb};
+      const p1={x:W*(0.30+Math.random()*0.08), y:ya+(Math.random()*2-1)*H*0.20};
+      const p2={x:W*(0.62+Math.random()*0.08), y:yb+(Math.random()*2-1)*H*0.20};
+      const pts=[];
+      for(let s=0;s<=SAMPLES;s++) pts.push(cubic(p0,p1,p2,p3,s/SAMPLES));
+      const line=new Path2D();
+      pts.forEach((p,k)=>k?line.lineTo(p.x,p.y):line.moveTo(p.x,p.y));
+      paths.push({pts,line});
+    }
+  }
+  const posOn=(path,t)=>{
+    const f=Math.min(Math.max(t,0),1)*SAMPLES;
+    const i=Math.floor(f), j=Math.min(i+1,SAMPLES), k=f-i;
+    const a=path.pts[i], b=path.pts[j];
+    return {x:a.x+(b.x-a.x)*k, y:a.y+(b.y-a.y)*k};
+  };
+  function roll(){
+    const r=Math.random();
+    return r<0.38?'ok':(r<0.68?'mfa':'bad');
+  }
+  function newPart(){
+    return {
+      p:Math.floor(Math.random()*paths.length),
+      t:0,
+      v:0.045+Math.random()*0.075,
+      s:1.2+Math.random()*1.5,
+      k:pick(['user','user','key','mail']),
+      cls:roll(),
+      flagged:false,
+      holdUntil:0,
+      passed:false /* mfa challenge completed */
+    };
+  }
+  function seedParticles(){
+    const n=Math.max(20,Math.min(42,Math.round(W/36)));
+    parts=Array.from({length:n},()=>{const p=newPart();p.t=Math.random();return p;});
+  }
+  function glyph(k,x,y,s,rgb,head){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.strokeStyle=`rgba(${rgb},.9)`;
+    ctx.fillStyle=`rgba(${rgb},.13)`;
+    ctx.lineWidth=1;
+    ctx.shadowBlur=8;ctx.shadowColor=`rgba(${rgb},.8)`;
+    switch(k){
+      case 'user':{
+        ctx.beginPath();ctx.arc(0,-0.8*s,0.9*s,0,7);ctx.stroke();
+        ctx.beginPath();ctx.arc(0,1.9*s,1.8*s,Math.PI*1.18,Math.PI*1.82);ctx.stroke();
+        break;}
+      case 'key':{
+        ctx.beginPath();ctx.arc(-1.2*s,0,0.9*s,0,7);ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-0.3*s,0);ctx.lineTo(2*s,0);
+        ctx.moveTo(1.2*s,0);ctx.lineTo(1.2*s,0.7*s);
+        ctx.moveTo(1.8*s,0);ctx.lineTo(1.8*s,0.85*s);
+        ctx.stroke();
+        break;}
+      case 'mail':{
+        const w=3.4*s,h=2.2*s;
+        ctx.beginPath();ctx.rect(-w/2,-h/2,w,h);ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-w/2,-h/2);ctx.lineTo(0,h*0.14);ctx.lineTo(w/2,-h/2);ctx.stroke();
+        break;}
+      default:{
+        ctx.globalAlpha=.8;ctx.fillStyle=head;
+        ctx.beginPath();ctx.arc(0,0,s,0,7);ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  function resize(){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;
+    cv.width=W*dpr;cv.height=H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    buildPaths();seedParticles();
+    if(reduced) draw(0);
+  }
+  function draw(dt){
+    T+=dt;flash=Math.max(0,flash-dt*1.2);
+    ctx.clearRect(0,0,W,H);
+    const c=pal();
+    drawRacks(c);
+    drawGate(c);
+    dashOff-=7*dt;
+    ctx.save();
+    ctx.strokeStyle=c.trace;ctx.lineWidth=1;
+    ctx.setLineDash([2,7]);ctx.lineDashOffset=dashOff;
+    paths.forEach(p=>ctx.stroke(p.line));
+    ctx.restore();
+    for(const pt of parts){
+      const held = pt.holdUntil>T;
+      if(!held) pt.t+=pt.v*dt;
+      /* the gate */
+      if(pt.t>=GATE && !pt.flagged && !pt.passed && mode!=='none'){
+        const hit=posOn(paths[pt.p],GATE);
+        if(mode==='report'){
+          if(pt.cls==='bad'){ /* flagged, not stopped */
+            pulses.push({x:hit.x,y:hit.y,r:2,a:0.32,rgb:c.mfa});
+            flash=Math.min(flash+0.25,1);
+          }
+          pt.flagged=true;
+        } else { /* enforced */
+          if(pt.cls==='bad'){ /* bounced */
+            pulses.push({x:hit.x,y:hit.y,r:2,a:0.38,rgb:c.bad});
+            flash=Math.min(flash+0.4,1);
+            Object.assign(pt,newPart());
+            continue;
+          }
+          if(pt.cls==='mfa' && !pt.holdUntil){ /* challenged: pause at the gate */
+            pt.holdUntil=T+HOLD;
+            pt.t=GATE;
+            continue;
+          }
+          if(pt.cls==='mfa' && pt.holdUntil && pt.holdUntil<=T){ /* challenge passed */
+            pulses.push({x:hit.x,y:hit.y,r:2,a:0.30,rgb:c.ok});
+            pt.cls='ok';pt.passed=true;pt.holdUntil=0;
+          } else if(pt.cls==='ok'){ pt.passed=true; }
+        }
+      }
+      if(pt.t>=1){ /* reached the apps */
+        const end=posOn(paths[pt.p],1);
+        if(Math.random()<0.5){
+          const bad = pt.cls==='bad'; /* only possible when mode isn't enforced */
+          pulses.push({x:end.x,y:end.y,r:2,a:0.30,rgb:bad?c.bad:c.ok});
+        }
+        Object.assign(pt,newPart());
+        continue;
+      }
+      const path=paths[pt.p];
+      const rgb = pt.cls==='ok'?c.ok:(pt.cls==='mfa'?c.mfa:c.bad);
+      const head= pt.cls==='ok'?c.okHead:(pt.cls==='mfa'?c.mfaHead:c.badHead);
+      for(let k=5;k>=1;k--){
+        const q=posOn(path,pt.t-k*0.011);
+        ctx.beginPath();
+        ctx.arc(q.x,q.y,Math.max(pt.s*0.7*(1-k*0.13),.2),0,7);
+        ctx.fillStyle=`rgba(${rgb},${0.16*(1-k/6)})`;
+        ctx.fill();
+      }
+      const hp=posOn(path,pt.t);
+      if(held){ /* pulsing ring while the MFA prompt is up */
+        ctx.beginPath();
+        ctx.arc(hp.x,hp.y,4+Math.sin(T*10)*1.5,0,7);
+        ctx.strokeStyle=`rgba(${c.mfa},.7)`;
+        ctx.lineWidth=1;
+        ctx.stroke();
+      }
+      glyph(pt.k,hp.x,hp.y,pt.s,rgb,head);
+    }
+    pulses=pulses.filter(p=>p.a>0.01);
+    for(const p of pulses){
+      p.r+=34*dt;p.a-=0.5*dt;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.strokeStyle=`rgba(${p.rgb},${Math.max(p.a,0)})`;
+      ctx.lineWidth=1;
+      ctx.stroke();
+    }
+  }
+  function loop(now){
+    const dt=Math.min((now-last)/1000||0,0.05);
+    last=now;
+    draw(dt);
+    raf=requestAnimationFrame(loop);
+  }
+  window.addEventListener('resize',resize);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){cancelAnimationFrame(raf);raf=null;}
+    else if(!reduced && !raf){last=performance.now();raf=requestAnimationFrame(loop);}
+  });
+  resize();
+  if(!reduced) raf=requestAnimationFrame(loop);
+})();
+
+/* ═══════════════ CORE ═══════════════ */
+let score = 0;
+let level = 0;
+const LEVELS = [
+  {icon:"🎬", name:"Start"},
+  {icon:"📡", name:"Signals"},
+  {icon:"🧭", name:"Decide"},
+  {icon:"🧱", name:"Baseline"},
+  {icon:"⚖️", name:"Verdicts"},
+  {icon:"🌊", name:"Rush hour"},
+  {icon:"🚪", name:"Enforce"},
+  {icon:"🎛️", name:"Tune"}
+];
+const mapEl = document.getElementById('lvlmap');
+LEVELS.forEach((l,i)=>{
+  const d=document.createElement('div');
+  d.className='lvl';d.id='lvl'+i;
+  d.innerHTML=`<div class="bubble"><em>${l.icon}</em></div><span>${l.name}</span>`;
+  mapEl.appendChild(d);
+});
+function refreshMap(){
+  LEVELS.forEach((l,i)=>{
+    const el=document.getElementById('lvl'+i);
+    el.classList.toggle('now', i===level);
+    el.classList.toggle('done', i<level);
+  });
+}
+function fitStage(){
+  document.getElementById('stage').style.top=(document.getElementById('topbar').offsetHeight+6)+'px';
+}
+window.addEventListener('resize',fitStage);
+fitStage();
+function addScore(n, x, y){
+  score+=n;
+  document.getElementById('score').textContent=score;
+  const pill=document.getElementById('scorePill');
+  pill.style.transform='scale(1.15)';setTimeout(()=>pill.style.transform='scale(1)',150);
+  if(x!==undefined){
+    const f=document.createElement('div');f.className='float-pts';f.textContent='+'+n;
+    f.style.left=x+'px';f.style.top=y+'px';document.body.appendChild(f);
+    setTimeout(()=>f.remove(),900);
+  }
+}
+const screen = document.getElementById('screen');
+function show(html){
+  screen.style.animation='none';screen.offsetHeight;screen.style.animation='';
+  screen.innerHTML=html;
+  document.body.classList.toggle('night', level===6);
+  document.querySelector('.stage').scrollTop=0;
+  refreshMap();
+}
+function goto(n){ level=n; RENDER[n](); }
+
+/* ═══════════════ L0 : INTRO ═══════════════ */
+function L0(){
+  show(`
+    <div class="badge">LEVEL 0 · THE NEW FRONT DOOR</div>
+    <h1>Your office has walls.<br>Your cloud has a bouncer. 🚪</h1>
+    <div class="say" data-who="THE BOSS">
+      Quick one — my nephew says our data is «in the cloud», so… where's the firewall?
+      What's actually stopping some guy in another country from just… logging in as me? Asking for a friend. 😅
+    </div>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Great question, actually. In the cloud there IS no wall — anyone on Earth can reach your login page.
+      What stands between them and your data is <b>the bouncer</b>: a set of rules that checks every single
+      sign-in — who you are, where you're coming from, what device you're on — and decides:
+      <b>come in</b>, <b>show me more ID</b>, or <b>not tonight</b>.
+      In Microsoft-land the bouncer is called <b>Conditional Access</b>. Today, you write his rulebook.
+      Look at the background: right now there are NO rules — everything walks straight in, including the red ones. 😬
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="goto(1)">Hand me the rulebook →</button>
+  `);
+}
+
+/* ═══════════════ L1 : THE SIGNALS ═══════════════ */
+const objects=[
+  {ico:"👤", nm:"Who is asking", found:"The account and its groups. An intern and a Global Admin should NOT face the same door policy — admins get the strict list."},
+  {ico:"📍", nm:"Where from", found:"Country and network. Your office IP at 9 AM is one story; a country you've never traded with at 3 AM is another."},
+  {ico:"💻", nm:"What device", found:"A company laptop that's enrolled, encrypted and healthy — or a hotel lobby PC with seven toolbars. The bouncer can tell the difference."},
+  {ico:"📱", nm:"Which app & protocol", found:"Modern Outlook plays by the rules. Ancient protocols like IMAP/POP can't even do MFA — attackers adore them. (Foreshadowing!)"},
+  {ico:"⚠️", nm:"How risky it looks", found:"Live risk signals: password seen in a breach dump, «impossible travel», anonymous VPN exit nodes. The bouncer reads the news."},
+  {ico:"🎫", nm:"What they're opening", found:"The lunch menu app and the finance system are not the same door. Sensitive apps can demand extra proof."}
+];
+let foundCount=0;
+function L1(){
+  foundCount=0;
+  show(`
+    <div class="badge">LEVEL 1 · SIGNALS 📡</div>
+    <h2>What the bouncer can see</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Before writing rules, know your inputs. Every sign-in arrives carrying six signals —
+      click each one to see what it tells you. (+10 ⭐ each)
+    </div>
+    <div class="office">
+      ${objects.map((o,i)=>`
+        <button class="obj clickable" id="obj${i}" onclick="discover(${i},event)">
+          <span class="ico">${o.ico}</span><span class="nm">${o.nm}</span>
+        </button>`).join('')}
+    </div>
+    <div class="inv" id="inv">📡 <b>Signals learned: 0/6</b> — click to inspect.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l1next" style="display:none" onclick="goto(2)">Signals mastered! Big decisions →</button>
+  `);
+}
+function discover(i,e){
+  const el=document.getElementById('obj'+i);
+  if(el.classList.contains('found'))return;
+  el.classList.add('found');
+  foundCount++;
+  addScore(10,e.clientX,e.clientY);
+  document.getElementById('inv').innerHTML='📡 <b>Signal '+foundCount+'/'+objects.length+':</b> '+objects[i].found;
+  if(foundCount===objects.length){
+    document.getElementById('inv').innerHTML='📡 <b>All six signals learned.</b> The magic of conditional access: it combines them. «Known user + healthy device + usual country» sails through; change any one signal and the door tightens — automatically, at 4 AM, without you.';
+    document.getElementById('l1next').style.display='inline-flex';
+  }
+}
+
+/* ═══════════════ L2 : DECISIONS ═══════════════ */
+const decisions=[
+  {q:"Where does your rulebook come from?",
+   opts:[
+     {t:"Start from proven baseline templates, adapt to us 📋", s:"Microsoft and the community already wrote the greatest hits.", v:"good", pts:10,
+      fb:"Correct. MFA-for-all, block-legacy-auth, protect-admins — these are solved problems with ready templates. Your creativity is better spent on the exceptions. (+10 ⭐)"},
+     {t:"Write every policy from scratch, artisanally 🎨", s:"Hand-crafted, small-batch security rules.", v:"meh", pts:5,
+      fb:"You'd arrive at… the same baseline, three weeks later, with two typos. Start from templates, customize where your business is genuinely different. (+5 ⭐)"},
+     {t:"No rules — MFA popups annoy people 🙅", s:"Happy users, open door.", v:"bad", pts:0,
+      fb:"The door with no bouncer gets a visit eventually — and you saw in Breach Day what a visit costs. A few prompts a week is the cheapest insurance that exists. (0 ⭐)"}
+   ]},
+  {q:"How do you switch the rules on?",
+   opts:[
+     {t:"Report-only first: watch who WOULD be blocked 📊", s:"The rules run silently and just take notes.", v:"good", pts:10,
+      fb:"The pro move. Report-only mode shows you every would-be block BEFORE anyone gets locked out — you find the old scanner and the sales tablets while they still work. (+10 ⭐)"},
+     {t:"Enforce everything Friday at 5 PM 🔥", s:"Rip the plaster off. See you Monday!", v:"bad", pts:0,
+      fb:"Monday, 8 AM: 30 people locked out, the boss among them, and you're on holiday. Enforcement without a report-only phase is how CA gets a bad reputation. (0 ⭐)"},
+     {t:"Enforce for everyone except the loud complainers 🤫", s:"Path of least resistance.", v:"meh", pts:5,
+      fb:"Now your most-targeted users (executives are ALWAYS the loudest) have the weakest door. Exceptions by volume of complaint is security by squeaky wheel. (+5 ⭐)"}
+   ]},
+  {q:"The «break-glass» account — the emergency key when everything goes wrong?",
+   opts:[
+     {t:"Two emergency admin accounts, excluded from CA, creds in a safe, tested 🗝️", s:"For the night a bad policy locks everyone out.", v:"good", pts:10,
+      fb:"Yes — and this one is NOT optional. One misconfigured policy can lock out every admin including you, and then nobody can fix the policy. Two break-glass accounts, monitored for any use, credentials offline. (+10 ⭐)"},
+     {t:"No exceptions. Ever. Maximum security 💪", s:"Rules are rules.", v:"bad", pts:0,
+      fb:"Brave, until the Friday you enforce a broken policy and realize the only accounts that could repair it… are locked out by it. That ticket to Microsoft support takes days. (0 ⭐)"},
+     {t:"Exclude the whole IT department, to be safe 🕳️", s:"IT would never get phished, right?", v:"meh", pts:5,
+      fb:"That's not a break-glass, that's a barn door — and IT admins are the JUICIEST phishing targets in the building. Two named accounts, not a department. (+5 ⭐)"}
+   ]}
+];
+let di=0;
+function L2(){
+  di=0;
+  show(`
+    <div class="badge">LEVEL 2 · DECIDE 🧭</div>
+    <h2>Three calls before the first rule</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Conditional access failures are almost never technical — they're rollout failures.
+      These three decisions prevent all the famous ones.
+    </div>
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d=decisions[di];
+  document.getElementById('dzone').innerHTML=`
+    <h2 style="font-size:19px;margin-top:14px">Decision ${di+1}/${decisions.length}: ${d.q}</h2>
+    <div class="choices">
+      ${d.opts.map((o,i)=>`
+        <button class="choice" id="ch${i}" onclick="pick(${i},event)">
+          <b>${o.t}</b><small>${o.s}</small>
+        </button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none"></button>
+  `;
+}
+function pick(i,e){
+  const d=decisions[di], o=d.opts[i];
+  d.opts.forEach((x,j)=>{
+    const el=document.getElementById('ch'+j);
+    el.disabled=true;
+    if(j===i) el.classList.add(o.v);
+  });
+  if(o.pts>0) addScore(o.pts,e.clientX,e.clientY);
+  const v=document.getElementById('verdict');
+  v.innerHTML=`<div class="say" data-who="${o.v==='good'?'NICE':'HMM'}">${o.fb}</div>`;
+  v.style.display='block';
+  const btn=document.getElementById('dnext');
+  btn.style.display='inline-flex';
+  if(di<decisions.length-1){ btn.textContent='Next decision →'; btn.onclick=()=>{di++;renderDecision();}; }
+  else { btn.textContent='One more thing: your door philosophy →'; btn.onclick=renderToolbox; }
+}
+const tools=[
+  {t:"⚖️ Balanced: strict where it hurts, invisible where it doesn't", s:"Tight rules on admins & finance, frictionless for daily work.",
+   fb:"The crowd favorite: users barely notice the bouncer on a normal day, and that's exactly why they don't fight him on the abnormal one. (+10 ⭐)"},
+  {t:"🛡️ Zero-trust maximalist: verify everything, always", s:"Every session proves itself, every time.",
+   fb:"The gold standard IF you invest in making it smooth — compliant devices and phishing-resistant MFA make «always verify» nearly invisible. Just budget for the tuning. (+10 ⭐)"},
+  {t:"🌱 Start small, tighten monthly", s:"Baseline now, one notch stricter each review.",
+   fb:"The pragmatist's path: a modest baseline TODAY beats a perfect policy set next quarter. The review calendar does the rest. (+10 ⭐)"}
+];
+function renderToolbox(){
+  document.getElementById('dzone').innerHTML=`
+    <h2 style="font-size:19px;margin-top:14px">Pick your door philosophy 🚪</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      No wrong answers here — only what fits your users, budget and appetite. Choose one!
+    </div>
+    <div class="choices">
+      ${tools.map((o,i)=>`
+        <button class="choice" id="tl${i}" onclick="pickTool(${i},event)">
+          <b>${o.t}</b><small>${o.s}</small>
+        </button>`).join('')}
+    </div>
+    <div class="verdict" id="tverdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="tnext" style="display:none" onclick="goto(3)">Philosophy set! Build the baseline →</button>
+  `;
+}
+function pickTool(i,e){
+  tools.forEach((x,j)=>{
+    const el=document.getElementById('tl'+j);
+    el.disabled=true;
+    if(j===i) el.classList.add('good');
+  });
+  addScore(10,e.clientX,e.clientY);
+  const v=document.getElementById('tverdict');
+  v.innerHTML=`<div class="say" data-who="NICE">${tools[i].fb}</div>`;
+  v.style.display='block';
+  document.getElementById('tnext').style.display='inline-flex';
+}
+
+/* ═══════════════ L3 : BUILD THE BASELINE ═══════════════ */
+const actions=[
+  {t:"🔐 Require MFA for all users", d:"A stolen password alone opens nothing.", ok:true,
+   ex:"The cornerstone. 99% of account-takeover attacks die right here."},
+  {t:"🦖 Block legacy authentication", d:"IMAP, POP, SMTP-basic — protocols that can't do MFA.", ok:true,
+   ex:"The side door is bricked up. Attackers who can't beat MFA go around it via IMAP — not anymore."},
+  {t:"💻 Require healthy devices for company data", d:"Enrolled, encrypted, compliant — or no entry.", ok:true,
+   ex:"Now a stolen password AND a stolen MFA code still isn't enough — you'd need a company-managed device too."},
+  {t:"👑 Extra-strict rules for admins", d:"MFA every time, compliant device, no exceptions.", ok:true,
+   ex:"The keys to the kingdom get a vault door. Admin accounts are 1% of users and 100% of the catastrophic breaches."},
+  {t:"🌍 Challenge or block unfamiliar countries", d:"Business from 3 countries ≠ sign-ins from 90.", ok:true,
+   ex:"Sign-ins from where you actually operate flow free; the rest meet the bouncer. (Travelers get the challenge, not the wall.)"},
+  {t:"⏰ Require MFA every 5 minutes", d:"Can't be too careful!", ok:false,
+   ex:"By lunch, users approve prompts without reading them — which is EXACTLY how MFA-fatigue attacks work. Friction ≠ security."},
+  {t:"📵 Block all mobile phones", d:"Phones are small and scary.", ok:false,
+   ex:"And now nobody can read email in the field, so they forward everything to Gmail. An enrolled phone is FRIENDLY — use compliance, not bans."},
+  {t:"📜 Allow everything, but log it thoroughly", d:"We'll know exactly how we got breached.", ok:false,
+   ex:"Logs without enforcement are a diary of your regrets. The bouncer has to actually bounce."}
+];
+let actDone=0;
+function L3(){
+  actDone=0;
+  show(`
+    <div class="badge">LEVEL 3 · BASELINE 🧱</div>
+    <h2>Five rules that do 95% of the work</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Every strong tenant stands on the same five policies. Find them — and dodge the three
+      classic mistakes hiding among them. (+10 ⭐ each)
+    </div>
+    <div class="actions">
+      ${actions.map((a,i)=>`
+        <button class="act clickable" id="act${i}" onclick="doAct(${i},event)">
+          <span><b>${a.t}</b>${a.d}</span>
+        </button>`).join('')}
+    </div>
+    <div class="inv" id="actLog">🧱 <b>Baseline: 0/5</b> — choose your policies.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="goto(4)">Baseline built! Test your judgment →</button>
+  `);
+}
+function doAct(i,e){
+  const a=actions[i], el=document.getElementById('act'+i);
+  if(el.classList.contains('done')||el.disabled)return;
+  if(a.ok){
+    el.classList.add('done');
+    actDone++;
+    addScore(10,e.clientX,e.clientY);
+    document.getElementById('actLog').innerHTML=`🧱 <b>Baseline: ${actDone}/5</b> — ✓ ${a.ex}`;
+    if(actDone===5){
+      CABG.mode('report');
+      document.getElementById('actLog').innerHTML=`🧱 <b>Baseline complete — now in REPORT-ONLY.</b> Look at the background: the gate is up and amber, taking notes. Risky sign-ins get flagged as they pass — nobody is blocked yet. That's exactly where a careful rollout sits for a week or two.`;
+      document.getElementById('l3next').style.display='inline-flex';
+    }
+  } else {
+    el.classList.add('nope');el.disabled=true;
+    document.getElementById('actLog').innerHTML=`🧱 <b>Baseline: ${actDone}/5</b> — ✗ ${a.ex}`;
+    setTimeout(()=>el.classList.remove('nope'),500);
+  }
+}
+
+/* ═══════════════ L4 : THE VERDICTS ═══════════════ */
+const scen=[
+  {t:"Anna · office laptop (compliant) · office network · opening email, 9:04 AM", who:"THE EVERYDAY CASE",
+   ans:1, why:"Every signal is green: known user, healthy device, usual place, normal app. The bouncer nods her through — good security is INVISIBLE for normal work. That invisibility is what buys you goodwill for the strict cases."},
+  {t:"The boss · hotel Wi-Fi in Paris · his enrolled laptop · opening SharePoint", who:"THE BUSINESS TRIP",
+   ans:2, why:"New country, but a healthy known device — that's a «prove it's you» moment, not a wall. One MFA tap in the hotel lobby and he's in. If your policy BLOCKED every travelling exec, CA would be dead at PixelSoft by Thursday."},
+  {t:"Someone with the boss's CORRECT password · unknown device · country you've never traded with · 3:12 AM", who:"THE MAIN EVENT",
+   ans:3, why:"This is the Breach Day attacker, remember him? Right password — and it doesn't matter: unknown device fails compliance, the location fails geography, the hour smells wrong. Blocked cold. THIS sign-in is the whole reason conditional access exists."},
+  {t:"Mrs. Mia · her personal home PC (not enrolled) · opening the finance folder", who:"THE AWKWARD ONE",
+   ans:3, why:"Harsh but right: an unmanaged home PC opening finance data fails your device policy — malware on that PC would read everything she reads. The fix isn't an exception: it's giving her a sanctioned path (enrolled device or a protected browser-only mode)."},
+  {t:"The old warehouse scanner · IMAP protocol · trying to email inventory reports", who:"THE DINOSAUR 🦖",
+   ans:3, why:"Legacy auth = no MFA possible = permanently blocked, even with the right password. And you KNEW about it in advance — report-only mode flagged this scanner two weeks ago, so it got modern auth before enforcement night. No surprises."},
+  {t:"Rudy · enrolled phone · usual city · opening Teams like every morning", who:"THE MOBILE CASE",
+   ans:1, why:"An ENROLLED phone is a friendly device: encrypted, wipeable, compliant. Usual user, usual city, usual app — through he goes. (Compare with the «block all phones» idea from Level 3: this is what you'd have broken.)"}
+];
+const VLABELS=["","✅ Allowed","🔐 MFA challenge","⛔ Blocked"];
+let scDone=0, scFirst={};
+function L4(){
+  scDone=0;scFirst={};
+  show(`
+    <div class="badge">LEVEL 4 · VERDICTS ⚖️</div>
+    <h2>You are the bouncer now</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Your baseline is live in report-only. Six sign-ins approach the door — for each one, call the verdict
+      your policies WOULD give: allow, challenge, or block. (+10 ⭐ first try)
+    </div>
+    ${scen.map((s,i)=>`
+      <div class="ticket" id="sc${i}" style="display:block">
+        <div class="tx" style="margin-bottom:4px"><b>🚪 ${s.t}</b><small>— ${s.who}</small></div>
+        <div class="vrow">
+          ${[1,2,3].map(v=>`<button class="vbtn" id="sc${i}v${v}" onclick="verdict(${i},${v},event)">${VLABELS[v]}</button>`).join('')}
+        </div>
+        <div class="verdict" id="sc${i}x" style="margin-top:6px"></div>
+      </div>`).join('')}
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="goto(5)">Verdicts delivered! Rush hour →</button>
+  `);
+}
+function verdict(i,v,e){
+  const s=scen[i], card=document.getElementById('sc'+i);
+  if(card.classList.contains('done'))return;
+  const btn=document.getElementById('sc'+i+'v'+v);
+  if(v===s.ans){
+    card.classList.add('done');
+    [1,2,3].forEach(k=>{
+      const b=document.getElementById('sc'+i+'v'+k);
+      b.disabled=true;
+      if(k===v)b.classList.add('good');
+    });
+    addScore(scFirst[i]===undefined?10:5,e.clientX,e.clientY);
+    const x=document.getElementById('sc'+i+'x');
+    x.innerHTML=`<div class="say" data-who="VERDICT ✓" style="margin:8px 0 0">${s.why}</div>`;
+    x.style.display='block';
+    scDone++;
+    if(scDone===scen.length) document.getElementById('l4next').style.display='inline-flex';
+  } else {
+    scFirst[i]=false;
+    btn.classList.add('bad');
+    btn.disabled=true;
+    setTimeout(()=>btn.classList.remove('bad'),450);
+  }
+}
+
+/* ═══════════════ L5 : RUSH HOUR ARCADE ═══════════════ */
+const BADS=[
+  "boss@ · Windows XP · unknown country · IMAP",
+  "admin@ · anonymous VPN · 3:47 AM · new device",
+  "anna@ · password from a breach dump · far country",
+  "vlad@ · impossible travel: Cluj → overseas in 9 min",
+  "info@ · legacy SMTP · 200 login attempts/min",
+  "mia@ · unenrolled PC · foreign IP · finance app"
+];
+const GOODS=[
+  "anna@ · office laptop ✓ · Bucharest · Outlook",
+  "rudy@ · enrolled phone ✓ · usual city · Teams",
+  "vlad@ · compliant laptop ✓ · office Wi-Fi · admin portal + MFA",
+  "boss@ · enrolled laptop ✓ · Paris hotel · MFA passed"
+];
+let bounced=0, RUSH_TARGET=12, rushTimer=null, rushEventFired=false, rushLive=false, rcSeq=0;
+function L5(){
+  bounced=0;rushEventFired=false;rushLive=true;rcSeq=0;
+  show(`
+    <div class="badge">LEVEL 5 · RUSH HOUR 🌊</div>
+    <h2>Monday, 8:58 AM. Everyone signs in at once.</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Before the policies enforce, feel the problem with your own hands: YOU are the door.
+      <b>Bounce the risky sign-ins</b> (+5 ⭐), let the normal ones through. Read fast — the queue doesn't wait.
+    </div>
+    <div class="arena" id="arena">
+      <div class="side-lbl lbl-src"><span class="c">🚶</span>THE QUEUE<br><small>(everyone at 9 AM)</small></div>
+      <div class="side-lbl lbl-dst"><span class="c">🏢</span>YOUR APPS<br><small>(the good stuff)</small></div>
+      <div class="event-banner" id="eventBanner"></div>
+      <div class="bigbar"><i id="bigFill"></i><span id="bigLabel">0 / ${RUSH_TARGET} bounced</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="goto(6)">Point made! Automate the door →</button>
+  `);
+  rushTimer=setInterval(spawnSignin,1000);
+  spawnSignin();spawnSignin();
+}
+function spawnSignin(){
+  if(!rushLive)return;
+  const arena=document.getElementById('arena');
+  if(!arena){clearInterval(rushTimer);return;}
+  if(arena.querySelectorAll('.mailcard:not(.zap):not(.oops)').length>=3)return;
+  const isBad=Math.random()<0.6;
+  const txt=isBad?BADS[Math.floor(Math.random()*BADS.length)]:GOODS[Math.floor(Math.random()*GOODS.length)];
+  const card=document.createElement('button');
+  card.className='mailcard clickable';
+  card.id='rc'+(rcSeq++);
+  card.innerHTML=`<i>sign-in attempt</i>${txt}`;
+  card.style.left=(16+Math.random()*44)+'%';
+  card.style.top=(16+Math.random()*52)+'%';
+  card.onclick=(e)=>{
+    if(!rushLive||card.classList.contains('zap')||card.classList.contains('oops'))return;
+    if(isBad){
+      card.classList.add('zap');
+      addScore(5,e.clientX,e.clientY);
+      bounced++;
+      updateRushBar();
+      setTimeout(()=>card.remove(),520);
+      if(!rushEventFired && bounced===Math.floor(RUSH_TARGET/2)) rushEvent();
+      if(bounced>=RUSH_TARGET) endRush();
+    } else {
+      card.classList.add('oops');
+      card.innerHTML=`<i>checked ✓</i>Legit — that's just Monday. Let them work!`;
+      setTimeout(()=>{card.classList.add('fade');setTimeout(()=>card.remove(),850);},1200);
+    }
+  };
+  arena.appendChild(card);
+  if(!isBad){
+    setTimeout(()=>{
+      if(card.isConnected && !card.classList.contains('oops')){
+        card.classList.add('fade');setTimeout(()=>card.remove(),850);
+      }
+    },5200);
+  }
+}
+function updateRushBar(){
+  const p=Math.min(100,Math.round(bounced/RUSH_TARGET*100));
+  document.getElementById('bigFill').style.width=p+'%';
+  document.getElementById('bigLabel').textContent=`${bounced} / ${RUSH_TARGET} bounced`;
+}
+function rushEvent(){
+  rushEventFired=true;rushLive=false;
+  document.querySelectorAll('.mailcard').forEach(c=>c.style.opacity=.25);
+  const b=document.getElementById('eventBanner');
+  b.classList.remove('ok');
+  b.style.display='block';
+  b.innerHTML=`😮‍💨 Feeling it? A real tenant sees ~400 sign-ins a MINUTE.<br>
+    <small>Your clicking finger is not a security architecture.</small><br>
+    <button class="btn small" onclick="autoDoor(event)">Exactly — that's why policies exist</button>`;
+}
+function autoDoor(e){
+  addScore(10,e.clientX,e.clientY);
+  const b=document.getElementById('eventBanner');
+  b.classList.add('ok');
+  b.innerHTML='✓ The rules you wrote make this exact call, on every attempt, in milliseconds, forever. Finish the shift — then we automate.';
+  setTimeout(()=>{b.style.display='none';b.classList.remove('ok');rushLive=true;
+    document.querySelectorAll('.mailcard').forEach(c=>c.style.opacity=1);},2000);
+}
+function endRush(){
+  rushLive=false;clearInterval(rushTimer);
+  document.querySelectorAll('.mailcard').forEach(c=>c.remove());
+  document.getElementById('bigLabel').textContent='shift survived ✓';
+  document.getElementById('l5next').style.display='inline-flex';
+}
+
+/* ═══════════════ L6 : ENFORCEMENT NIGHT ═══════════════ */
+let enfStep=0, enfIdx=0;
+const enfSteps=[
+  {ico:"📊", t:"Read the report-only results", d:"Two weeks of notes from the silent bouncer: who WOULD have been blocked, how often, and why. This list is gold — it's every Monday-morning disaster, pre-lived.",
+   w:"Three findings need fixing BEFORE the switch: the warehouse scanner (IMAP), two sales tablets (not enrolled), and one exec's ancient home browser."},
+  {ico:"🧯", t:"Fix the fallout list", d:"Scanner gets modern auth, tablets get enrolled, the exec gets a 10-minute enrollment call. Every name off the list is one angry ticket that never happens.",
+   w:"Fix the list, don't exclude it. An exclusion «just for now» is a hole «forever» — that's how Swiss-cheese policies are born."},
+  {ico:"🗝️", t:"Test the break-glass account", d:"Sign in with it. Confirm it bypasses every policy. Confirm its use fires an alert. Print the credentials, seal the envelope, into the safe.",
+   w:"An untested break-glass account is decorative. Test it TONIGHT — the night you need it is the wrong night to learn it doesn't work."},
+  {ico:"👥", t:"Enforce for the pilot ring", d:"IT plus the volunteers go first. One week of the real thing: prompts, enrollments, edge cases — with people who signed up to find problems.",
+   w:"Watch the pilot's sign-in logs daily. A failure PATTERN (same app, same device type) is a policy bug — fix it before wave two meets it."},
+  {ico:"🌍", t:"Enforce for everyone — in waves", d:"Team by team, with a heads-up email each wave: «you'll see a new prompt, here's the 30-second setup, here's who to call».",
+   w:"Brief the helpdesk FIRST. The rollout's reputation is decided by how the first confused caller gets treated on Monday morning."},
+  {ico:"📈", t:"Watch the logs, live", d:"Enforcement day: sign-in failures on one screen, helpdesk queue on the other. Clusters mean policy bugs; singletons mean coaching.",
+   w:"Set an alert on break-glass usage and on admin sign-in failures — those two signals must never be noise."},
+  {ico:"📝", t:"Document and date everything", d:"Each policy: what it does, why it exists, who owns it. Each exclusion: WHY and UNTIL WHEN. Review calendar: quarterly.",
+   w:"Exclusions without expiry dates become permanent security holes with excellent excuses. Date them all — the calendar is the enforcement."}
+];
+function L6(){
+  enfStep=0;enfIdx=0;
+  show(`
+    <div class="badge">LEVEL 6 · ENFORCE 🚪</div>
+    <h2>Thursday, 10 PM. The bouncer stops taking notes. 🌙</h2>
+    <p class="muted">Two weeks of report-only, the fallout list is fixed, the pilot ring is briefed.
+    Time to turn the rulebook from <b>observations</b> into <b>decisions</b>. Flip it.</p>
+    <div class="switch-zone">
+      <button class="big-switch clickable" id="bigSwitch" onclick="flip()" aria-label="Enforce the policies">
+        <div class="knob" id="knob">REPORT-ONLY</div>
+      </button>
+      <div class="dns-line" id="enfLine">The gate is amber and advisory. Flip it to make it real. 😤</div>
+    </div>
+    <div id="enfZone" style="max-width:680px;margin:20px auto 0"></div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="goto(7)">Enforced and calm! Last stop: tuning →</button></div>
+  `);
+}
+function flip(){
+  if(enfStep>0)return;
+  enfStep=1;
+  const sw=document.getElementById('bigSwitch');
+  sw.classList.add('on');
+  document.getElementById('knob').textContent='ENFORCED';
+  CABG.mode('enforced');
+  addScore(20,innerWidth/2,innerHeight/2);
+  document.getElementById('enfLine').textContent='Watch the background: red bounces off, amber pauses for MFA and turns green. The door works. Now the checklist ↓';
+  renderEnf(0);
+}
+function renderEnf(i){
+  enfIdx=i;
+  const s=enfSteps[i];
+  const doneList=enfSteps.slice(0,i).map(x=>
+    `<div style="font-family:var(--mono);font-size:12px;color:var(--green);margin-bottom:5px">✓ ${x.ico} ${x.t}</div>`).join('');
+  document.getElementById('enfZone').innerHTML=`
+    ${doneList}
+    <div class="say" data-who="STEP ${i+1} / ${enfSteps.length}" style="margin-top:${i>0?'16px':'4px'}">
+      <b style="font-size:16px">${s.ico} ${s.t}</b><br>
+      <span style="font-size:14.5px">${s.d}</span>
+      <div class="warnnote"><b>⚠ Pay attention:</b> ${s.w}</div>
+      ${i<enfSteps.length-1
+        ? `<div style="margin-top:12px"><button class="btn small blue" onclick="enfNext(event)">Next step →</button></div>`
+        : ``}
+    </div>`;
+  if(i===enfSteps.length-1) document.getElementById('l6next').style.display='inline-flex';
+}
+function enfNext(e){
+  addScore(5,e.clientX,e.clientY);
+  renderEnf(enfIdx+1);
+}
+
+/* ═══════════════ L7 : TUNING TICKETS + FINAL ═══════════════ */
+const tickets=[
+  {t:"«SIX MFA prompts today. SIX. Make it stop»", who:"THE BOSS, day two",
+   opts:[
+     {o:"Disable MFA for him. He's the boss", ok:false},
+     {o:"Tune it: trusted enrolled devices + usual locations shouldn't re-prompt — frequent prompts mean a policy needs adjusting, not deleting", ok:true},
+     {o:"Tell him prompts build character", ok:false}
+   ],
+   ex:"Prompt fatigue is a real attack vector AND a real usability bug. A healthy setup challenges on CHANGE (new device, new place, new risk), not on routine. If routine work triggers prompts, fix the policy — never by excluding the loudest exec."},
+  {t:"«Our consultant flies to a new country every week»", who:"FINANCE, about the travelling auditor",
+   opts:[
+     {o:"Delete the location policy entirely", ok:false},
+     {o:"A scoped exception: her account + compliant device + strong MFA, reviewed quarterly with an expiry date", ok:true},
+     {o:"She can work when she gets home", ok:false}
+   ],
+   ex:"Exceptions should be narrow (one person, extra conditions), documented, and DATED. The pattern «weird case → delete the whole policy» is how baselines dissolve; the pattern «weird case → precise exception» is how they survive reality."},
+  {t:"«We bought 15 tablets for the warehouse»", who:"OPERATIONS, unboxing",
+   opts:[
+     {o:"Exclude the warehouse from all policies", ok:false},
+     {o:"Enroll them before handout — then they're compliant devices and the policies just work", ok:true},
+     {o:"Tablets don't count as computers", ok:false}
+   ],
+   ex:"New hardware through enrollment first = zero exceptions needed. The rule of thumb: every device that touches company data is either MANAGED or it meets a stricter door. No third category."},
+  {t:"«What if Entra ID itself has an outage? Are we all locked out?»", who:"VLAD, thinking ahead (good)",
+   opts:[
+     {o:"Yes. We become a candle-lit paper company", ok:false},
+     {o:"That's the break-glass scenario: tested emergency accounts, printed procedures, and knowing which apps still work with existing sessions", ok:true},
+     {o:"Outages never happen to us", ok:false}
+   ],
+   ex:"Resilience thinking: existing sessions usually survive an identity outage, break-glass covers the admin path, and the printed one-pager covers the panic. You tested it on enforcement night — that's why it was on the checklist."},
+  {t:"«The new intern can't get in on day one»", who:"HR, Monday 9:01 AM",
+   opts:[
+     {o:"Give interns a shared account. What could go wrong", ok:false},
+     {o:"Fix onboarding: account + MFA registration + device enrollment BEFORE day one — the door works when the paperwork precedes the person", ok:true},
+     {o:"Interns don't need computers, builds humility", ok:false}
+   ],
+   ex:"CA turns sloppy onboarding into a visible outage — which is a feature: it forces the fix. New-starter checklist: account, MFA enrolled at the welcome desk, device enrolled, THEN the desk with the balloon."},
+  {t:"«Attackers are stealing session tokens now, I read»", who:"ANNA, who reads the right newsletters",
+   opts:[
+     {o:"Unplug everything, live in the woods", ok:false},
+     {o:"Level up: phishing-resistant MFA (passkeys/FIDO2) and token protection policies — the bouncer's next belt", ok:true},
+     {o:"Tokens can't be stolen, that's sci-fi", ok:false}
+   ],
+   ex:"She's right — the arms race moved past passwords to tokens and MFA-phishing. The answer is the next tier of the same system: phishing-resistant credentials and binding sessions to devices. Your baseline is the floor, not the ceiling."},
+  {t:"«Are we done now? Forever?»", who:"THE BOSS, hopeful",
+   opts:[
+     {o:"Yes! Security: completed ✅", ok:false},
+     {o:"The quarterly review is the finish line that moves: new apps, new threats, expiring exceptions — 90 minutes, four times a year", ok:true},
+     {o:"We'll revisit when something breaks", ok:false}
+   ],
+   ex:"Policies rot silently: apps change, people leave, «temporary» exceptions calcify. The quarterly review — policies, exceptions, sign-in reports, one improvement — is the cheapest security meeting on the calendar."},
+  {t:"Last one: the ONE number to watch weekly?", who:"YOU, setting up the dashboard",
+   opts:[
+     {o:"Total sign-ins. Big numbers feel important", ok:false},
+     {o:"Risky sign-ins & failed-MFA patterns — the report that shows who's knocking and where the door is being tested", ok:true},
+     {o:"The boss's prompt count", ok:false}
+   ],
+   ex:"One weekly glance at the risky sign-in report tells you who's being targeted, which legacy hole someone found, and whether a policy drifted. Five minutes, every Friday — the bouncer's shift report."}
+];
+let tdone=0;
+let firstTry={};
+function L7(){
+  tdone=0;firstTry={};
+  show(`
+    <div class="badge">LEVEL 7 · TUNE 🎛️</div>
+    <h2>The first week: tuning without caving</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Enforcement was the easy part — now come the humans. Every ticket this week is a fork:
+      <b>cave</b> (delete policies) or <b>tune</b> (keep the door, oil the hinges). Choose well. (+10 ⭐ first try)
+    </div>
+    <div id="tzone">
+      ${tickets.map((tk,i)=>`
+        <div class="ticket" id="tk${i}" style="display:block">
+          <div class="tx" style="margin-bottom:8px"><b>🎟️ ${tk.t}</b><small>— ${tk.who}</small></div>
+          <div class="choices" style="margin-top:4px">
+            ${tk.opts.map((op,j)=>`
+              <button class="choice" id="tk${i}o${j}" style="padding:10px 14px;font-size:13.5px" onclick="solve(${i},${j},event)">${op.o}</button>`).join('')}
+          </div>
+          <div class="verdict" id="tk${i}v" style="margin-top:8px"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+
+function solve(i,j,e){
+  const tk=tickets[i];
+  const card=document.getElementById('tk'+i);
+  if(card.classList.contains('done'))return;
+  const btn=document.getElementById('tk'+i+'o'+j);
+  if(tk.opts[j].ok){
+    card.classList.add('done');
+    tk.opts.forEach((op,k)=>{
+      const b=document.getElementById('tk'+i+'o'+k);
+      b.disabled=true;
+      if(k===j)b.classList.add('good');
+    });
+    if(firstTry[i]===undefined){ addScore(10,e.clientX,e.clientY); }
+    else { addScore(5,e.clientX,e.clientY); }
+    const v=document.getElementById('tk'+i+'v');
+    v.innerHTML=`<div class="say" data-who="SOLVED ✓" style="margin:12px 0 0">${tk.ex}</div>`;
+    v.style.display='block';
+    tdone++;
+    if(tdone===tickets.length) finale();
+  } else {
+    firstTry[i]=false;
+    btn.classList.add('bad');
+    btn.disabled=true;
+    setTimeout(()=>btn.classList.remove('bad'),450);
+  }
+}
+function finale(){
+  for(let i=0;i<40;i++){
+    const c=document.createElement('div');c.className='confetti';
+    c.textContent=["🎉","⭐","🚪","🎊","✨"][i%5];
+    c.style.left=Math.random()*100+'vw';
+    c.style.animationDuration=(2+Math.random()*2.5)+'s';
+    c.style.animationDelay=(Math.random()*0.8)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),5500);
+  }
+  const MAX=410;
+  let rank="Door Greeter 🐣", msg="You survived the door — replay and hunt for more stars!";
+  if(score>=370){rank="Zero Trust Legend 🏆";msg="Flawless! You can run the identity workshop yourself.";}
+  else if(score>=300){rank="Policy Architect 📐";msg="Sharp! You know exactly how a rollout survives its users.";}
+  else if(score>=220){rank="Gatekeeper 🗝️";msg="Solid! Another run and you'll nail every verdict.";}
+  level=8;refreshMap();
+  document.getElementById('lvl7').classList.add('done');
+  document.getElementById('finale').innerHTML=`
+    <div class="center" style="margin-top:10px">
+      <h2>🎉 The door holds!</h2>
+      <div class="rank-big">${rank}</div>
+      <div style="font-family:var(--mono);font-weight:600;color:var(--muted)">SCORE: ${score} / ~${MAX} ⭐</div>
+      <p class="muted" style="margin:10px auto;max-width:520px">${msg}</p>
+      <div class="say tip" data-who="REMEMBER" style="text-align:left;margin:22px auto 18px">
+        The bouncer protocol, in one breath:
+        <b>1)</b> the cloud has no walls — every sign-in meets a decision →
+        <b>2)</b> six signals: who, where, what device, which app, how risky, opening what →
+        <b>3)</b> five baseline rules do 95%: MFA for all, block legacy auth, healthy devices, strict admins, geography →
+        <b>4)</b> report-only first, fix the fallout, THEN enforce → <b>5)</b> break-glass: two accounts, tested, sealed →
+        <b>6)</b> tune, don't cave: precise dated exceptions, never deleted baselines →
+        <b>7)</b> quarterly reviews and one weekly glance at risky sign-ins. The best door is the one nobody notices — until 3:12 AM. 🚪
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn blue" onclick="location.reload()">↺ Play again</button>
+        <a class="btn green" href="../index.html#contact">Run this live with your team →</a>
+      </div>
+    </div>`;
+}
+
+const RENDER=[L0,L1,L2,L3,L4,L5,L6,L7];
+refreshMap();
+L0();
+</script>
+</body>
+</html>

@@ -239,8 +239,8 @@
   header{position:sticky;top:0;z-index:50;transition:background .3s,border-color .3s,backdrop-filter .3s;border-bottom:1px solid transparent}
   header.scrolled{background:rgba(10,11,13,.72);backdrop-filter:blur(14px);border-bottom-color:var(--line)}
   .nav{display:flex;align-items:center;justify-content:space-between;height:74px;gap:1.5rem}
-  .nav-links{display:flex;align-items:center;gap:2rem}
-  .nav-links a{font-family:"JetBrains Mono",monospace;font-size:.85rem;color:var(--muted);letter-spacing:.02em;transition:color .2s;position:relative}
+  .nav-links{display:flex;align-items:center;gap:clamp(1rem,1.7vw,2rem)}
+  .nav-links a{font-family:"JetBrains Mono",monospace;font-size:.85rem;color:var(--muted);letter-spacing:.02em;transition:color .2s;position:relative;white-space:nowrap}
   .nav-links a::after{content:"";position:absolute;left:0;bottom:-6px;height:1.5px;width:0;background:var(--accent);transition:width .25s var(--ease)}
   .nav-links a:hover{color:var(--text)}
   .nav-links a:hover::after{width:100%}
@@ -303,23 +303,8 @@
   .gauge .bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:3px;transition:width 1.2s var(--ease)}
 
   /* ============ labs ============ */
-  .labs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:clamp(16px,2.5vw,28px)}
-  .lab-card{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:transform .3s var(--ease),border-color .3s,box-shadow .3s}
-  .lab-card:hover{transform:translateY(-4px);border-color:rgba(77,159,255,.5);box-shadow:0 24px 60px -28px var(--glow)}
-  .lab-bar{display:flex;align-items:center;gap:.7rem;padding:.8rem 1.1rem;border-bottom:1px solid var(--line);background:rgba(255,255,255,.015)}
-  .lab-bar .dots{display:flex;gap:.45rem}
-  .lab-bar .dots i{width:11px;height:11px;border-radius:50%;background:var(--line-2)}
-  .lab-bar .dots i:first-child{background:#2a3340}
-  .lab-file{font-family:"JetBrains Mono",monospace;font-size:.76rem;color:var(--muted)}
-  .lab-live{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--accent-soft);display:inline-flex;align-items:center;gap:.45em}
+  .lab-live{display:inline-flex;align-items:center;gap:.45em;margin-left:1em;font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.02em;text-transform:none;color:var(--accent-soft)}
   .lab-live .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2.4s infinite}
-  .lab-body{padding:1.4rem 1.4rem 1.5rem;display:flex;flex-direction:column;flex:1}
-  .lab-name{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:clamp(1.4rem,2.3vw,1.8rem);letter-spacing:-.02em;margin:.5rem 0 .55rem;line-height:1.08}
-  .lab-desc{color:var(--muted);font-size:.98rem;max-width:52ch}
-  .lab-go{margin-top:auto;padding-top:1.3rem;font-family:"JetBrains Mono",monospace;font-weight:600;font-size:.9rem;color:var(--accent-soft);display:inline-flex;align-items:center;gap:.6em}
-  .lab-go .arr{transition:transform .25s var(--ease)}
-  .lab-card:hover .lab-go .arr{transform:translateX(4px)}
-  .lab-card:hover .svc-tags span{border-color:var(--line-2)}
   .labs-note{margin-top:clamp(24px,3.5vw,40px);color:var(--muted)}
   .labs-note a{color:var(--accent-soft);font-family:"JetBrains Mono",monospace;font-size:.9rem;border-bottom:1px solid rgba(77,159,255,.4);padding-bottom:2px;transition:color .2s,border-color .2s}
   .labs-note a:hover{color:var(--text);border-color:var(--accent)}
@@ -580,14 +565,17 @@
     .node h3,.node p{grid-column:2}
     .node .badge{grid-row:span 3}
   }
-  @media(max-width:720px){
-    .nav-links,.avail,.nav-right .btn{display:none}
+  @media(max-width:1020px){
+    .nav-links,.avail{display:none}
     .burger{display:flex}
     .mobile-menu{display:block;position:fixed;inset:0;z-index:60;background:rgba(8,9,11,.97);backdrop-filter:blur(10px);padding:90px var(--pad) 40px;transform:translateY(-100%);transition:transform .4s var(--ease);visibility:hidden}
     .mobile-menu.open{transform:none;visibility:visible}
     .mobile-menu a{display:block;font-family:"Space Grotesk";font-weight:600;font-size:2rem;padding:.6rem 0;border-bottom:1px solid var(--line);letter-spacing:-.02em}
     .mobile-menu .btn{margin-top:2rem;width:100%;justify-content:center;font-size:1rem}
     .mobile-close{position:absolute;top:24px;right:var(--pad);background:none;border:1px solid var(--line-2);border-radius:9px;width:44px;height:44px;color:var(--text);font-size:1.4rem;cursor:pointer}
+  }
+  @media(max-width:720px){
+    .nav-right .btn{display:none}
     .hero-title{font-size:clamp(2.7rem,13vw,4rem)}
     .bento{grid-template-columns:1fr}
     .cell.feat,.cell.wide{grid-column:auto}
@@ -889,34 +877,46 @@
         <p class="sec-lead">shautech labs — the interactive simulators from our customer workshops. You make the calls, you see the consequences. Play them right here: no signup, no slides, no jargon.</p>
       </div>
 
-      <div class="labs-grid">
-        <a class="lab-card reveal" href="labs/migration-simulator.html">
-          <div class="lab-bar" aria-hidden="true">
-            <span class="dots"><i></i><i></i><i></i></span>
-            <span class="lab-file">labs/migration-simulator</span>
-            <span class="lab-live"><span class="dot"></span>playable</span>
+      <div class="svc">
+        <a class="svc-row reveal" href="labs/migration-simulator.html">
+          <span class="svc-idx">01</span>
+          <div class="svc-main">
+            <span class="svc-code">LAB 01 · TENANT-TO-TENANT MIGRATION<span class="lab-live"><span class="dot"></span>playable</span></span>
+            <h3 class="svc-name">Operation «Moving Clouds»</h3>
+            <p class="svc-desc">Move a whole company to a new cloud in 7 levels — discovery, planning, the pilot, the waves, the Saturday-night cutover and the Monday helpdesk hour. If you can click, you can migrate.</p>
+            <div class="svc-tags"><span>7 levels</span><span>~15 min</span><span>for non-techies too</span><span class="pow">› play it now</span></div>
           </div>
-          <div class="lab-body">
-            <span class="svc-code">LAB 01 · TENANT-TO-TENANT MIGRATION</span>
-            <h3 class="lab-name">Operation «Moving Clouds»</h3>
-            <p class="lab-desc">Move a whole company to a new cloud in 7 levels — discovery, planning, the pilot, the waves, the Saturday-night cutover and the Monday helpdesk hour. If you can click, you can migrate.</p>
-            <div class="svc-tags"><span>7 levels</span><span>~15 min</span><span>for non-techies too</span><span class="pow">› also run as a live workshop</span></div>
-            <span class="lab-go">Play it now <span class="arr">→</span></span>
-          </div>
+          <span class="svc-go" aria-hidden="true">→</span>
         </a>
-        <a class="lab-card reveal" href="labs/security-simulator.html">
-          <div class="lab-bar" aria-hidden="true">
-            <span class="dots"><i></i><i></i><i></i></span>
-            <span class="lab-file">labs/security-simulator</span>
-            <span class="lab-live"><span class="dot"></span>playable</span>
+        <a class="svc-row reveal" href="labs/security-simulator.html">
+          <span class="svc-idx">02</span>
+          <div class="svc-main">
+            <span class="svc-code">LAB 02 · SECURITY INCIDENT RESPONSE<span class="lab-live"><span class="dot"></span>playable</span></span>
+            <h3 class="svc-name">Breach Day</h3>
+            <p class="svc-desc">Monday, 09:02 — a pixel-perfect phishing mail lands in the boss's inbox. Spot the tells, follow the trail in the logs, contain the damage, survive the copycat storm and beat the 72-hour GDPR clock.</p>
+            <div class="svc-tags"><span>7 levels</span><span>~15 min</span><span>based on real incidents</span><span class="pow">› play it now</span></div>
           </div>
-          <div class="lab-body">
-            <span class="svc-code">LAB 02 · SECURITY INCIDENT RESPONSE</span>
-            <h3 class="lab-name">Breach Day</h3>
-            <p class="lab-desc">Monday, 09:02 — a pixel-perfect phishing mail lands in the boss's inbox. Spot the tells, follow the trail in the logs, contain the damage, survive the copycat storm and beat the 72-hour GDPR clock.</p>
-            <div class="svc-tags"><span>7 levels</span><span>~15 min</span><span>based on real incidents</span><span class="pow">› also run as a live workshop</span></div>
-            <span class="lab-go">Play it now <span class="arr">→</span></span>
+          <span class="svc-go" aria-hidden="true">→</span>
+        </a>
+        <a class="svc-row reveal" href="labs/copilot-simulator.html">
+          <span class="svc-idx">03</span>
+          <div class="svc-main">
+            <span class="svc-code">LAB 03 · COPILOT READINESS<span class="lab-live"><span class="dot"></span>playable</span></span>
+            <h3 class="svc-name">Operation «Open Secrets»</h3>
+            <p class="svc-desc">Copilot doesn't leak data — it finds what was already leaked. Hunt the oversharing skeletons, label what matters, fix the shares and red-team your own prompts before the AI moves in.</p>
+            <div class="svc-tags"><span>7 levels</span><span>~15 min</span><span>the salary-sheet demo shock</span><span class="pow">› play it now</span></div>
           </div>
+          <span class="svc-go" aria-hidden="true">→</span>
+        </a>
+        <a class="svc-row reveal" href="labs/conditional-access-simulator.html">
+          <span class="svc-idx">04</span>
+          <div class="svc-main">
+            <span class="svc-code">LAB 04 · CONDITIONAL ACCESS<span class="lab-live"><span class="dot"></span>playable</span></span>
+            <h3 class="svc-name">The Bouncer Protocol</h3>
+            <p class="svc-desc">Identity is the new front door. Learn the six signals, build the five baseline policies, then play bouncer: who gets in, who gets challenged, who bounces — and why report-only mode saves careers.</p>
+            <div class="svc-tags"><span>7 levels</span><span>~15 min</span><span>you are the bouncer</span><span class="pow">› play it now</span></div>
+          </div>
+          <span class="svc-go" aria-hidden="true">→</span>
         </a>
       </div>
 
