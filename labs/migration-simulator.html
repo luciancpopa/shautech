@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migration Simulator — shautech labs</title>
+<meta name="description" content="Operation «Moving Clouds» — an interactive tenant-to-tenant migration simulator by shautech. Learn how a cloud migration really works, level by level." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0B0D;
+    --bg-2:#0d0f13;
+    --panel:#101317;
+    --panel-2:#15181f;
+    --line:rgba(255,255,255,0.08);
+    --line-2:rgba(255,255,255,0.14);
+    --text:#F4F6F8;
+    --muted:#98A0AA;
+    --muted-2:#646C76;
+    --accent:#4D9FFF;
+    --accent-soft:#7CBBFF;
+    --accent-ink:#04132B;
+    --glow:rgba(77,159,255,0.30);
+    --crit:#FF7A7A;
+    --warn:#FFB65C;
+    --r:14px;
+    --ease:cubic-bezier(.2,.7,.2,1);
+    /* game aliases (JS references these names) */
+    --blue:var(--accent);
+    --blue-deep:var(--accent-soft);
+    --green:#5FD68F;
+    --green-ink:#06180D;
+    --amber:var(--warn);
+    --red:var(--crit);
+    --ink:var(--text);
+    --ink-soft:var(--muted);
+    --card:var(--panel);
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:"Hanken Grotesk",system-ui,sans-serif;
+    color:var(--text);
+    background:var(--bg);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* faint control-panel grid + accent glow, same as the main site */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+            mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+    opacity:.5;
+  }
+  body::after{
+    content:"";position:fixed;top:-20%;right:-10%;width:60vw;height:60vw;z-index:0;
+    pointer-events:none;border-radius:50%;
+    background:radial-gradient(circle,var(--glow) 0%,transparent 60%);
+    filter:blur(40px);opacity:.6;transition:background 1.2s var(--ease);
+  }
+  body.night::after{background:radial-gradient(circle,rgba(122,110,255,.22) 0%,transparent 60%);}
+  ::selection{background:var(--accent);color:var(--accent-ink)}
+  a{color:inherit;text-decoration:none}
+
+  /* ambient migration flow — data packets travelling tenant → tenant */
+  #migbg{
+    position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(55% 46% at -10% 52%,rgba(77,159,255,.08),transparent 70%),
+      radial-gradient(55% 46% at 110% 48%,rgba(95,214,143,.06),transparent 70%);
+  }
+  body.night #migbg{
+    background:
+      radial-gradient(55% 46% at -10% 52%,rgba(138,134,255,.09),transparent 70%),
+      radial-gradient(55% 46% at 110% 48%,rgba(95,214,143,.05),transparent 70%);
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important;} }
+
+  /* ---------- TOP BAR : LEVEL MAP ---------- */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:40;
+    background:rgba(10,11,13,.85);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+    padding:10px 18px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .logo{font-family:var(--mono);font-weight:700;font-size:1rem;letter-spacing:-.01em;display:inline-flex;align-items:center;white-space:nowrap;}
+  .logo .mark{
+    display:inline-grid;place-items:center;width:1.5em;height:1.5em;margin-right:.5em;
+    border:1.5px solid var(--accent);border-radius:6px;color:var(--accent);font-size:.82em;
+  }
+  .logo .lab{color:var(--muted);font-weight:500;}
+  .sim-name{font-family:var(--mono);font-size:.72rem;color:var(--muted-2);letter-spacing:.02em;white-space:nowrap;}
+  @media(max-width:860px){.sim-name{display:none;}}
+  .lvlmap{display:flex;gap:6px;flex:1;justify-content:center;flex-wrap:wrap;}
+  .lvl{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-family:var(--mono);font-size:9px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--muted-2);min-width:56px;
+  }
+  .lvl .bubble{
+    width:32px;height:32px;border-radius:9px;
+    background:var(--panel);border:1px solid var(--line-2);
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+    transition:all .25s var(--ease);
+  }
+  .lvl.now{color:var(--accent-soft);}
+  .lvl.now .bubble{border-color:var(--accent);transform:scale(1.12);box-shadow:0 0 14px var(--glow),0 0 0 1px var(--accent);}
+  .lvl.done{color:var(--muted);}
+  .lvl.done .bubble{background:rgba(77,159,255,.10);border-color:var(--accent);}
+  .lvl.done .bubble::after{content:"✓";color:var(--accent-soft);font-weight:700;font-family:var(--mono);}
+  .lvl.done .bubble em{display:none;}
+  .hud{display:flex;gap:10px;align-items:center;}
+  .pill{
+    font-family:var(--mono);font-size:13px;font-weight:600;
+    background:var(--panel-2);color:var(--muted);
+    border:1px solid var(--line-2);
+    padding:7px 13px;border-radius:20px;
+    transition:transform .15s;
+  }
+  .pill b{color:var(--accent-soft);}
+
+  /* ---------- STAGE ---------- */
+  .stage{
+    position:absolute;top:96px;bottom:0;left:0;right:0;
+    overflow-y:auto;z-index:1;
+    padding:26px clamp(16px,5vw,70px) 40px;
+  }
+  .screen{max-width:880px;margin:0 auto;animation:pop .4s var(--ease) both;}
+  @keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98);}to{opacity:1;transform:none;}}
+
+  .badge{
+    display:inline-flex;align-items:center;gap:.6em;
+    font-family:var(--mono);font-size:.74rem;font-weight:500;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    margin-bottom:14px;
+  }
+  .badge::before{content:"//";color:var(--accent);letter-spacing:0;}
+  h1{font-family:"Space Grotesk",sans-serif;font-size:clamp(28px,4.6vw,44px);line-height:1.08;margin-bottom:10px;letter-spacing:-.02em;font-weight:700;}
+  h2{font-family:"Space Grotesk",sans-serif;font-size:clamp(21px,3.2vw,30px);margin-bottom:8px;letter-spacing:-.015em;font-weight:600;}
+  .say{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:16px 18px 14px;font-size:15px;line-height:1.55;color:var(--text);
+    position:relative;margin:18px 0 14px;
+    box-shadow:0 10px 30px -18px rgba(0,0,0,.8);
+    max-width:680px;
+  }
+  .say::before{
+    content:attr(data-who);
+    position:absolute;top:-10px;left:14px;
+    font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--panel-2);border:1px solid var(--accent);color:var(--accent-soft);
+    padding:2px 9px;border-radius:6px;
+  }
+  .say.tip::before{border-color:var(--green);color:var(--green);}
+  .say b{color:var(--text);}
+  .muted{color:var(--muted);font-size:14px;line-height:1.55;max-width:660px;}
+
+  .btn{
+    font-family:var(--mono);font-size:.92rem;font-weight:600;letter-spacing:.02em;
+    display:inline-flex;align-items:center;gap:.6em;
+    background:transparent;color:var(--text);border:1px solid var(--line-2);
+    padding:.8em 1.3em;border-radius:10px;cursor:pointer;
+    transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .25s,border-color .25s,color .25s;
+    white-space:normal;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent-soft);transform:translateY(-2px);}
+  .btn.blue{background:var(--accent);color:var(--accent-ink);border-color:transparent;}
+  .btn.blue:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px var(--glow),0 0 0 1px var(--accent-soft);color:var(--accent-ink);}
+  .btn.green{background:var(--green);color:var(--green-ink);border-color:transparent;}
+  .btn.green:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px rgba(95,214,143,.4),0 0 0 1px var(--green);color:var(--green-ink);}
+  .btn.small{font-size:.8rem;padding:.6em 1.1em;border-radius:9px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn:focus-visible,.clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  /* toast +points */
+  .float-pts{
+    position:fixed;font-family:var(--mono);font-weight:700;font-size:18px;color:var(--green);
+    pointer-events:none;z-index:99;animation:rise .9s ease-out forwards;
+    text-shadow:0 0 12px rgba(95,214,143,.6);
+  }
+  @keyframes rise{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-46px);}}
+
+  /* ---------- LEVEL 1 : DISCOVERY OFFICE ---------- */
+  .office{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:12px;margin-top:18px;
+  }
+  .obj{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:14px 8px;text-align:center;cursor:pointer;user-select:none;
+    transition:transform .2s var(--ease),border-color .2s,box-shadow .2s;
+    font-family:inherit;color:var(--text);
+  }
+  .obj:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 10px 26px -14px var(--glow);}
+  .obj .ico{font-size:34px;display:block;margin-bottom:6px;}
+  .obj .nm{font-size:12.5px;font-weight:600;}
+  .obj.found{background:rgba(95,214,143,.07);border-color:var(--green);cursor:default;}
+  .obj.found:hover{transform:none;box-shadow:none;}
+  .obj.found .nm::after{content:" ✓";color:var(--green);}
+  .inv{
+    margin-top:16px;background:var(--panel-2);border:1px dashed var(--line-2);
+    border-radius:12px;padding:12px 16px;font-family:var(--mono);font-size:13px;
+    min-height:44px;color:var(--muted);line-height:1.6;
+  }
+  .inv b{color:var(--text);}
+  /* inventory sheet + collect checklist */
+  .sheet{
+    margin-top:16px;background:var(--panel);border:1px solid var(--line-2);
+    border-radius:12px;overflow:auto;
+  }
+  .sheet table{border-collapse:collapse;width:100%;font-size:13px;min-width:520px;}
+  .sheet th{
+    background:var(--panel-2);color:var(--muted-2);text-align:left;padding:9px 12px;
+    font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    border-bottom:1px solid var(--line-2);
+  }
+  .sheet td{padding:8px 12px;border-top:1px solid var(--line);color:var(--muted);}
+  .sheet td:first-child{color:var(--text);}
+  .sheet tr:nth-child(even) td{background:rgba(255,255,255,.015);}
+  .sheet .hot td{background:rgba(255,182,92,.07);color:var(--warn);}
+  .sheet .hot td:first-child{color:var(--warn);}
+  .clist{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:9px;margin-top:14px;}
+  .citem{
+    display:flex;gap:9px;align-items:flex-start;text-align:left;font-family:inherit;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:10px;
+    padding:10px 12px;font-size:13px;cursor:pointer;line-height:1.4;color:var(--muted);
+    transition:transform .2s var(--ease),border-color .2s;
+  }
+  .citem:hover{transform:translateY(-2px);border-color:var(--accent);}
+  .citem::before{content:"☐";font-size:16px;color:var(--muted-2);font-weight:700;}
+  .citem.checked{background:rgba(95,214,143,.07);border-color:var(--green);cursor:default;}
+  .citem.checked:hover{transform:none;}
+  .citem.checked::before{content:"☑";color:var(--green);}
+  .citem b{display:block;color:var(--text);}
+  .warnnote{
+    margin-top:10px;background:rgba(255,182,92,.07);border:1px dashed rgba(255,182,92,.45);
+    border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.45;color:#E9C89B;
+  }
+  .warnnote b{color:var(--warn);}
+
+  /* ---------- LEVEL 2 : DECISIONS ---------- */
+  .choices{display:grid;gap:12px;margin-top:14px;max-width:640px;}
+  .choice{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:14px 16px;cursor:pointer;text-align:left;font-family:inherit;color:var(--text);
+    font-size:14.5px;transition:transform .2s var(--ease),border-color .2s;
+  }
+  .choice:hover{transform:translateX(4px);border-color:var(--accent);}
+  .choice b{display:block;font-size:15px;margin-bottom:2px;}
+  .choice small{color:var(--muted);}
+  .choice.good{background:rgba(95,214,143,.08);border-color:var(--green);}
+  .choice.meh{background:rgba(255,182,92,.08);border-color:var(--warn);}
+  .choice.bad{background:rgba(255,122,122,.08);border-color:var(--crit);}
+  .choice:disabled{cursor:default;transform:none;}
+  .verdict{margin-top:12px;font-size:14px;line-height:1.5;display:none;max-width:640px;}
+
+  /* ---------- LEVEL 3 : LICENSES ---------- */
+  .prep-grid{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start;margin-top:16px;}
+  .userrow{
+    display:flex;align-items:center;gap:12px;background:var(--panel);
+    border:1px solid var(--line-2);border-radius:12px;padding:10px 14px;margin-bottom:10px;
+  }
+  .userrow .face{font-size:28px;}
+  .userrow .who{flex:1;}
+  .userrow .who b{display:block;font-size:14.5px;}
+  .userrow .who small{color:var(--muted);font-size:12px;}
+  .lic-slot{
+    width:110px;height:36px;border:1px dashed var(--line-2);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;color:var(--muted-2);cursor:pointer;
+    transition:border-color .2s;
+  }
+  .lic-slot:hover{border-color:var(--accent);}
+  .lic-slot.filled{border-style:solid;border-color:var(--green);background:rgba(95,214,143,.08);color:var(--green);font-weight:600;cursor:default;}
+  .lic-stack{position:sticky;top:0;display:flex;flex-direction:column;gap:8px;}
+  .lic-stack .stack-lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2);}
+  .lic{
+    background:var(--panel-2);border:1px solid var(--accent);border-radius:8px;
+    color:var(--accent-soft);
+    padding:9px 14px;font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;
+    user-select:none;transition:transform .2s var(--ease),background .2s,color .2s;
+  }
+  .lic:hover{transform:translateY(-2px);}
+  .lic.used{opacity:0;pointer-events:none;}
+  .lic.sel{background:var(--accent);color:var(--accent-ink);transform:scale(1.06);box-shadow:0 0 18px var(--glow);}
+
+  /* ---------- LEVEL 4 : PILOT ---------- */
+  .pilot-row{
+    display:flex;align-items:center;gap:14px;background:var(--panel);
+    border:1px solid var(--line-2);border-radius:12px;padding:12px 16px;margin-bottom:12px;
+    flex-wrap:wrap;
+  }
+  .pilot-row .face{font-size:30px;}
+  .pilot-row .who{flex:1;min-width:150px;}
+  .pilot-row .who b{display:block;}
+  .pilot-row .who small{color:var(--muted);}
+  .pstatus{font-family:var(--mono);font-size:12px;font-weight:600;min-width:130px;color:var(--muted);}
+  .pstatus.ok{color:var(--green);}
+  .pstatus.err{color:var(--crit);}
+  .mini-bar{width:130px;height:10px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;overflow:hidden;}
+  .mini-bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s;box-shadow:0 0 8px var(--glow);}
+
+  /* ---------- LEVEL 5 : BIG MIGRATION ARCADE ---------- */
+  .arena{
+    position:relative;height:340px;margin-top:16px;
+    background:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px),
+      linear-gradient(180deg,var(--panel-2),var(--bg-2));
+    background-size:48px 48px,48px 48px,100% 100%;
+    border:1px solid var(--line-2);border-radius:var(--r);overflow:hidden;
+  }
+  .cloud-house{
+    position:absolute;top:12px;font-family:var(--mono);font-size:11px;font-weight:600;
+    text-align:center;width:120px;color:var(--muted);
+  }
+  .cloud-house small{color:var(--muted-2);}
+  .cloud-house .c{font-size:56px;display:block;line-height:1;filter:drop-shadow(0 0 18px var(--glow));}
+  .cloud-src{left:8px;}
+  .cloud-dst{right:8px;}
+  .item{
+    position:absolute;font-size:30px;cursor:pointer;user-select:none;
+    background:none;border:none;padding:4px;font-family:inherit;
+    transition:opacity .2s;animation:bob 1.6s ease-in-out infinite;
+    z-index:5;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5));
+  }
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
+  .item.fly{animation:fly .7s ease-in forwards;pointer-events:none;}
+  @keyframes fly{
+    to{left:calc(100% - 70px);top:34px;transform:scale(.4);opacity:.2;}
+  }
+  .bigbar{
+    position:absolute;bottom:12px;left:14px;right:14px;height:22px;
+    background:var(--bg);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;
+  }
+  .bigbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .3s;box-shadow:0 0 14px var(--glow);}
+  .bigbar span{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);
+    text-shadow:0 1px 3px rgba(0,0,0,.7);
+  }
+  .event-banner{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    background:rgba(255,122,122,.12);border:1px solid var(--crit);color:var(--text);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    font-weight:700;font-size:14px;
+    padding:10px 16px;border-radius:12px;
+    display:none;z-index:10;text-align:center;max-width:min(92%,460px);
+  }
+  .event-banner small{color:var(--muted);}
+  .event-banner.ok{background:rgba(95,214,143,.12);border-color:var(--green);}
+  .event-banner .btn{margin-top:8px;}
+
+  /* ---------- LEVEL 6 : CUTOVER ---------- */
+  .switch-zone{
+    display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:24px;
+  }
+  .big-switch{
+    width:130px;height:190px;background:var(--panel-2);border:1px solid var(--line-2);
+    border-radius:20px;position:relative;cursor:pointer;
+    font-family:inherit;transition:border-color .3s,box-shadow .3s;
+  }
+  .big-switch:hover{border-color:var(--accent);}
+  .big-switch.on{border-color:var(--green);box-shadow:0 0 24px rgba(95,214,143,.25);}
+  .big-switch .knob{
+    position:absolute;left:10px;right:10px;height:74px;top:96px;
+    background:var(--crit);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    color:#2A0E12;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.06em;
+    transition:top .35s cubic-bezier(.5,1.6,.5,1), background .35s, color .35s;
+  }
+  .big-switch.on .knob{top:12px;background:var(--green);color:var(--green-ink);}
+  .dns-line{font-family:var(--mono);font-size:13px;min-height:20px;color:var(--muted);text-align:center;}
+
+  /* ---------- LEVEL 7 : VALIDATION + FINAL ---------- */
+  .ticket{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:12px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:center;
+    flex-wrap:wrap;
+  }
+  .ticket .tx{flex:1;min-width:200px;font-size:14px;}
+  .ticket .tx b{display:block;font-size:14.5px;}
+  .ticket .tx small{color:var(--muted);}
+  .ticket.done{background:rgba(95,214,143,.05);border-color:var(--green);}
+  .confetti{position:fixed;top:-20px;font-size:20px;z-index:98;animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);}}
+  .rank-big{
+    font-family:"Space Grotesk",sans-serif;font-size:clamp(30px,5vw,48px);font-weight:700;
+    color:var(--accent-soft);margin:8px 0;letter-spacing:-.02em;
+    text-shadow:0 0 30px var(--glow);
+  }
+
+  .center{text-align:center;}
+  .spacer{height:18px;}
+</style>
+</head>
+<body>
+
+<canvas id="migbg" aria-hidden="true"></canvas>
+
+<header id="topbar">
+  <a class="logo" href="../index.html" title="Back to shautech.com"><span class="mark">›</span>shautech<span class="lab">&nbsp;/ labs</span></a>
+  <span class="sim-name">// operation: moving-clouds</span>
+  <div class="lvlmap" id="lvlmap"></div>
+  <div class="hud"><div class="pill" id="scorePill">⭐ <b id="score">0</b></div></div>
+</header>
+
+<div class="stage" id="stage"><div class="screen" id="screen"></div></div>
+
+<script>
+/* ═══════════════ AMBIENT BACKGROUND : tenant → tenant data flow ═══════════════ */
+(()=>{
+  const cv=document.getElementById('migbg'), ctx=cv.getContext('2d');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SAMPLES=140;
+  let W=0,H=0,paths=[],parts=[],pulses=[],dashOff=0,last=0,raf=null,T=0;
+  let flow='dot';
+
+  /* what travels the wire — one entry per thing the player touches in the game */
+  const KINDS={
+    dot:['dot'],
+    mail:['mail'],
+    bits:['bit','bit','one','zero'],
+    chat:['chat'],
+    users:['user'],
+    sites:['site'],
+    calendar:['cal'],
+    license:['tick'],
+    mix:['mail','bit','chat','cal','one','zero']
+  };
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  window.MIGBG={
+    set(t){
+      if(!KINDS[t]||t===flow)return;
+      flow=t;
+      parts.forEach(p=>p.k=pick(KINDS[t]));
+    }
+  };
+
+  const pal=()=>document.body.classList.contains('night')
+    ? {trail:'138,134,255', alt:'95,214,143', head:'#C6C2FF', trace:'rgba(154,148,255,.055)'}
+    : {trail:'77,159,255',  alt:'95,214,143', head:'#BFDCFF', trace:'rgba(124,187,255,.055)'};
+
+  /* tenant "racks" pinned to the screen edges */
+  const rack=()=>{
+    const rw=44, rh=Math.min(H*0.52,380), ry=(H-rh)/2;
+    return {rw,rh,ry, x0:12, x1:W-12-rw, ax:12+rw+2, bx:W-12-rw-2};
+  };
+  function rr(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+  function drawRacks(c){
+    const g=rack();
+    [{x:g.x0,label:'SOURCE TENANT',dst:false},{x:g.x1,label:'DESTINATION TENANT',dst:true}].forEach(r=>{
+      ctx.save();
+      ctx.strokeStyle='rgba(255,255,255,.10)';
+      ctx.fillStyle='rgba(16,19,23,.55)';
+      rr(r.x,g.ry,g.rw,g.rh,10);ctx.fill();ctx.stroke();
+      const rows=Math.floor((g.rh-24)/24);
+      for(let i=0;i<rows;i++){
+        for(let j=0;j<2;j++){
+          const tw=Math.sin(T*1.8+i*1.7+j*2.6+(r.dst?3:0))*0.5+0.5;
+          ctx.fillStyle=r.dst
+            ? `rgba(${c.alt},${(0.08+tw*0.30).toFixed(3)})`
+            : `rgba(${c.trail},${(0.08+tw*0.24).toFixed(3)})`;
+          ctx.fillRect(r.x+10+j*15, g.ry+16+i*24, 9, 4);
+        }
+      }
+      ctx.translate(r.dst ? r.x-8 : r.x+g.rw+14, g.ry+g.rh/2);
+      ctx.rotate(-Math.PI/2);
+      ctx.font='600 9px "JetBrains Mono",monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(152,160,170,.45)';
+      ctx.fillText(r.label.split('').join(' '),0,0);
+      ctx.restore();
+    });
+  }
+
+  function cubic(p0,p1,p2,p3,t){
+    const u=1-t;
+    return {x:u*u*u*p0.x+3*u*u*t*p1.x+3*u*t*t*p2.x+t*t*t*p3.x,
+            y:u*u*u*p0.y+3*u*u*t*p1.y+3*u*t*t*p2.y+t*t*t*p3.y};
+  }
+  function buildPaths(){
+    paths=[];
+    const g=rack(), lanes=6;
+    for(let i=0;i<lanes;i++){
+      const ya=g.ry+g.rh*(0.08+0.84*i/(lanes-1));
+      const yb=g.ry+g.rh*(0.08+0.84*Math.random());
+      const p0={x:g.ax,y:ya}, p3={x:g.bx,y:yb};
+      const p1={x:W*(0.30+Math.random()*0.08), y:ya+(Math.random()*2-1)*H*0.20};
+      const p2={x:W*(0.62+Math.random()*0.08), y:yb+(Math.random()*2-1)*H*0.20};
+      const pts=[];
+      for(let s=0;s<=SAMPLES;s++) pts.push(cubic(p0,p1,p2,p3,s/SAMPLES));
+      const line=new Path2D();
+      pts.forEach((p,k)=>k?line.lineTo(p.x,p.y):line.moveTo(p.x,p.y));
+      paths.push({pts,line});
+    }
+  }
+  const posOn=(path,t)=>{
+    const f=Math.min(Math.max(t,0),1)*SAMPLES;
+    const i=Math.floor(f), j=Math.min(i+1,SAMPLES), k=f-i;
+    const a=path.pts[i], b=path.pts[j];
+    return {x:a.x+(b.x-a.x)*k, y:a.y+(b.y-a.y)*k};
+  };
+  function seedParticles(){
+    const n=Math.max(20,Math.min(42,Math.round(W/36)));
+    parts=Array.from({length:n},()=>({
+      p:Math.floor(Math.random()*paths.length),
+      t:Math.random(),
+      v:0.045+Math.random()*0.075,
+      s:1.2+Math.random()*1.5,
+      k:pick(KINDS[flow]),
+      alt:Math.random()<0.16   /* the green ones: packets already verified on the other side */
+    }));
+  }
+  /* wireframe glyphs, drawn around (0,0) at scale s */
+  function glyph(k,x,y,s,rgb,head){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.strokeStyle=`rgba(${rgb},.9)`;
+    ctx.fillStyle=`rgba(${rgb},.13)`;
+    ctx.lineWidth=1;
+    ctx.shadowBlur=8;ctx.shadowColor=`rgba(${rgb},.8)`;
+    switch(k){
+      case 'mail':{
+        const w=3.4*s,h=2.2*s;
+        ctx.beginPath();ctx.rect(-w/2,-h/2,w,h);ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-w/2,-h/2);ctx.lineTo(0,h*0.14);ctx.lineTo(w/2,-h/2);ctx.stroke();
+        break;}
+      case 'bit':{
+        const w=1.7*s;
+        ctx.globalAlpha=.85;ctx.fillStyle=head;
+        ctx.fillRect(-w/2,-w/2,w,w);
+        break;}
+      case 'one': case 'zero':{
+        ctx.font=`600 ${Math.max(8,4.5*s)}px "JetBrains Mono",monospace`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.globalAlpha=.8;ctx.fillStyle=head;
+        ctx.fillText(k==='one'?'1':'0',0,0);
+        break;}
+      case 'chat':{
+        const w=3.2*s,h=2.3*s;
+        rr(-w/2,-h/2,w,h,Math.min(3,h/3));ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-w*0.15,h/2);ctx.lineTo(-w*0.02,h/2+1.1*s);ctx.lineTo(w*0.2,h/2);ctx.stroke();
+        break;}
+      case 'user':{
+        ctx.beginPath();ctx.arc(0,-0.8*s,0.9*s,0,7);ctx.stroke();
+        ctx.beginPath();ctx.arc(0,1.9*s,1.8*s,Math.PI*1.18,Math.PI*1.82);ctx.stroke();
+        break;}
+      case 'site':{
+        const r=1.8*s;
+        ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(r,0);ctx.stroke();
+        ctx.beginPath();ctx.ellipse(0,0,r*0.45,r,0,0,7);ctx.stroke();
+        break;}
+      case 'cal':{
+        const w=3*s,h=2.8*s;
+        ctx.beginPath();ctx.rect(-w/2,-h/2,w,h);ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-w/2,-h/2+0.9*s);ctx.lineTo(w/2,-h/2+0.9*s);ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-w*0.25,-h/2-0.5*s);ctx.lineTo(-w*0.25,-h/2+0.3*s);
+        ctx.moveTo(w*0.25,-h/2-0.5*s);ctx.lineTo(w*0.25,-h/2+0.3*s);
+        ctx.stroke();
+        break;}
+      case 'tick':{
+        const w=3.6*s,h=2*s;
+        ctx.beginPath();ctx.rect(-w/2,-h/2,w,h);ctx.fill();ctx.stroke();
+        ctx.setLineDash([1.5,1.5]);
+        ctx.beginPath();ctx.moveTo(-w/2+w*0.3,-h/2);ctx.lineTo(-w/2+w*0.3,h/2);ctx.stroke();
+        ctx.setLineDash([]);
+        break;}
+      default:{
+        ctx.globalAlpha=.8;ctx.fillStyle=head;
+        ctx.beginPath();ctx.arc(0,0,s,0,7);ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  function resize(){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;
+    cv.width=W*dpr;cv.height=H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    buildPaths();seedParticles();
+    if(reduced) draw(0);
+  }
+  function draw(dt){
+    T+=dt;
+    ctx.clearRect(0,0,W,H);
+    const c=pal();
+    drawRacks(c);
+    /* faint circuit traces with a slow dash crawl */
+    dashOff-=7*dt;
+    ctx.save();
+    ctx.strokeStyle=c.trace;ctx.lineWidth=1;
+    ctx.setLineDash([2,7]);ctx.lineDashOffset=dashOff;
+    paths.forEach(p=>ctx.stroke(p.line));
+    ctx.restore();
+    /* packets in flight */
+    for(const pt of parts){
+      pt.t+=pt.v*dt;
+      if(pt.t>=1){ /* arrived at the new tenant */
+        const end=posOn(paths[pt.p],1);
+        if(Math.random()<0.5) pulses.push({x:end.x,y:end.y,r:2,a:0.30,alt:pt.alt});
+        pt.t=0;pt.p=Math.floor(Math.random()*paths.length);
+        pt.v=0.045+Math.random()*0.075;
+        pt.k=pick(KINDS[flow]);
+        pt.alt=Math.random()<0.16;
+      }
+      const path=paths[pt.p], rgb=pt.alt?c.alt:c.trail;
+      for(let k=5;k>=1;k--){ /* fading tail */
+        const q=posOn(path,pt.t-k*0.011);
+        ctx.beginPath();
+        ctx.arc(q.x,q.y,Math.max(pt.s*0.7*(1-k*0.13),.2),0,7);
+        ctx.fillStyle=`rgba(${rgb},${0.16*(1-k/6)})`;
+        ctx.fill();
+      }
+      const hp=posOn(path,pt.t);
+      glyph(pt.k,hp.x,hp.y,pt.s,rgb,pt.alt?'#A5EFC4':c.head);
+    }
+    /* soft arrival pulses at the destination rack */
+    pulses=pulses.filter(p=>p.a>0.01);
+    for(const p of pulses){
+      p.r+=34*dt;p.a-=0.5*dt;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.strokeStyle=`rgba(${p.alt?c.alt:c.trail},${Math.max(p.a,0)})`;
+      ctx.lineWidth=1;
+      ctx.stroke();
+    }
+  }
+  function loop(now){
+    const dt=Math.min((now-last)/1000||0,0.05);
+    last=now;
+    draw(dt);
+    raf=requestAnimationFrame(loop);
+  }
+  window.addEventListener('resize',resize);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){cancelAnimationFrame(raf);raf=null;}
+    else if(!reduced && !raf){last=performance.now();raf=requestAnimationFrame(loop);}
+  });
+  resize();
+  if(!reduced) raf=requestAnimationFrame(loop);
+})();
+
+/* ═══════════════ CORE ═══════════════ */
+let score = 0;
+let level = 0;
+const LEVELS = [
+  {icon:"🎬", name:"Start"},
+  {icon:"🔍", name:"Discovery"},
+  {icon:"🗺️", name:"Planning"},
+  {icon:"🎫", name:"Preparation"},
+  {icon:"🧪", name:"Pilot"},
+  {icon:"🚚", name:"Migration"},
+  {icon:"🔀", name:"Cutover"},
+  {icon:"✅", name:"Validation"}
+];
+const mapEl = document.getElementById('lvlmap');
+LEVELS.forEach((l,i)=>{
+  const d=document.createElement('div');
+  d.className='lvl';d.id='lvl'+i;
+  d.innerHTML=`<div class="bubble"><em>${l.icon}</em></div><span>${l.name}</span>`;
+  mapEl.appendChild(d);
+});
+function refreshMap(){
+  LEVELS.forEach((l,i)=>{
+    const el=document.getElementById('lvl'+i);
+    el.classList.toggle('now', i===level);
+    el.classList.toggle('done', i<level);
+  });
+}
+/* keep the stage clear of the header, whatever height it wraps to */
+function fitStage(){
+  document.getElementById('stage').style.top=(document.getElementById('topbar').offsetHeight+6)+'px';
+}
+window.addEventListener('resize',fitStage);
+fitStage();
+function addScore(n, x, y){
+  score+=n;
+  document.getElementById('score').textContent=score;
+  const pill=document.getElementById('scorePill');
+  pill.style.transform='scale(1.15)';setTimeout(()=>pill.style.transform='scale(1)',150);
+  if(x!==undefined){
+    const f=document.createElement('div');f.className='float-pts';f.textContent='+'+n;
+    f.style.left=x+'px';f.style.top=y+'px';document.body.appendChild(f);
+    setTimeout(()=>f.remove(),900);
+  }
+}
+const screen = document.getElementById('screen');
+function show(html){
+  screen.style.animation='none';screen.offsetHeight;screen.style.animation='';
+  screen.innerHTML=html;
+  document.body.classList.toggle('night', level===6);
+  document.querySelector('.stage').scrollTop=0;
+  refreshMap();
+}
+function goto(n){ level=n; RENDER[n](); }
+
+/* ═══════════════ L0 : INTRO ═══════════════ */
+function L0(){
+  show(`
+    <div class="badge">LEVEL 0 · BRIEFING</div>
+    <h1>Congratulations, you've just become<br>today's IT hero! 🦸</h1>
+    <div class="say" data-who="THE BOSS">
+      Big news! Our company, <b>PixelSoft</b>, has been acquired by <b>MegaCorp</b>.
+      We need to move <i>everything</i> — emails, files, accounts, teams — from our old
+      "cloud" into their new one. It's called a <b>tenant-to-tenant migration</b>. You'll handle it, right? Thanks, bye! 🏃
+    </div>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Don't worry, you don't need to be technical. A "tenant" is simply <b>a company's space in the cloud</b> —
+      like an apartment building where the company has its own unit, with emails, files and users.
+      We're moving everything from building A to building B without losing anything along the way. Let's do this, step by step!
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="goto(1)">I accept the mission! →</button>
+  `);
+}
+
+/* ═══════════════ L1 : DISCOVERY ═══════════════ */
+const objects=[
+  {ico:"📧", nm:"The email server", flow:"mail", found:"48 mailboxes, some with 15 years of messages. Yes, including the jokes from 2011."},
+  {ico:"📁", nm:"The company files", flow:"bits", found:"820 GB of documents. Half of them are named «final_FINAL_v3_good.docx»."},
+  {ico:"💬", nm:"The chat teams", flow:"chat", found:"12 Teams teams, including a secret one called «Coffee Break»."},
+  {ico:"👤", nm:"The employee list", flow:"users", found:"48 user accounts + 3 accounts of colleagues who left 2 years ago. Oops."},
+  {ico:"🌐", nm:"The internal sites", flow:"sites", found:"5 internal sites. One was last updated in 2019."},
+  {ico:"🖨️", nm:"The corner printer", flow:"dot", found:"Good news: the printer does NOT migrate to the cloud. It stays here, jamming paper in peace."}
+];
+let foundCount=0, collectDone=0;
+const collectItems=[
+  {b:"👤 Users & groups", flow:"users", d:"Who exists, who's actually active, who left (goodbye, ghost accounts)."},
+  {b:"📧 Mailboxes", flow:"mail", d:"Size of each mailbox + shared mailboxes (info@, sales@) and distribution lists."},
+  {b:"📁 OneDrive files", flow:"bits", d:"How big each person's storage is and who shares what with whom."},
+  {b:"🗂️ SharePoint sites", flow:"sites", d:"Sites, document libraries and — crucially — the permissions on them."},
+  {b:"💬 Teams & channels", flow:"chat", d:"Which teams exist, who owns them, and where the files live."},
+  {b:"🌐 Domains & DNS records", flow:"sites", d:"The company's email address entries in the «internet address book»."},
+  {b:"🎫 Licenses", flow:"license", d:"What everyone has today vs. what they'll need in the new cloud."},
+  {b:"🔌 Connected apps", flow:"dot", d:"Printers/scanners that send email, the CRM, website forms — anything wired to the old cloud."}
+];
+function L1(){
+  foundCount=0;collectDone=0;
+  show(`
+    <div class="badge">LEVEL 1 · DISCOVERY 🔍</div>
+    <h2>You can't move what you don't know you have</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      The first step of any migration: <b>the inventory</b>. We walk through the "digital office" and write down everything that exists.
+      Click each object to discover it! (+10 ⭐ per discovery)
+    </div>
+    <div class="office">
+      ${objects.map((o,i)=>`
+        <button class="obj clickable" id="obj${i}" onclick="discover(${i},event)">
+          <span class="ico">${o.ico}</span><span class="nm">${o.nm}</span>
+        </button>`).join('')}
+    </div>
+    <div class="inv" id="inv">📋 <b>Inventory:</b> (empty for now — click the objects!)</div>
+    <div id="sheetZone"></div>
+    <div class="spacer"></div>
+    <button class="btn" id="l1sheetBtn" style="display:none" onclick="showSheet()">📊 Open the inventory sheet →</button>
+    <button class="btn blue" id="l1next" style="display:none" onclick="goto(2)">Inventory complete! On to the plan →</button>
+  `);
+}
+function discover(i,e){
+  const el=document.getElementById('obj'+i);
+  if(el.classList.contains('found'))return;
+  el.classList.add('found');
+  foundCount++;
+  MIGBG.set(objects[i].flow);
+  addScore(10,e.clientX,e.clientY);
+  document.getElementById('inv').innerHTML='📋 <b>Discovered:</b> '+objects[i].found+
+    '<br><small style="color:var(--muted-2)">('+foundCount+'/'+objects.length+' objects found)</small>';
+  if(foundCount===objects.length){
+    document.getElementById('inv').innerHTML='📋 <b>All objects found!</b> But clicking around is not enough — a real discovery ends with a <b>written inventory</b>. Let\'s see what that actually looks like.';
+    document.getElementById('l1sheetBtn').style.display='inline-flex';
+  }
+}
+function showSheet(){
+  document.getElementById('l1sheetBtn').style.display='none';
+  document.getElementById('sheetZone').innerHTML=`
+    <div class="say tip" data-who="YOUR GUIDE" style="margin-top:20px">
+      This is what collected data looks like: a boring-but-priceless <b>spreadsheet</b>. In real life it's exported
+      automatically with reports or scripts — nobody counts emails by hand. Notice how it already
+      <b>predicts problems</b>: Mrs. Mia's mailbox is glowing orange for a reason…
+    </div>
+    <div class="sheet">
+      <table>
+        <tr><th>WHO / WHAT</th><th>MAILBOX</th><th>ONEDRIVE</th><th>NOTES</th></tr>
+        <tr><td>Anna (Accounting)</td><td>9.8 GB</td><td>4.2 GB</td><td>15 years of email, all «important»</td></tr>
+        <tr><td>Rudy (Design)</td><td>2.1 GB</td><td>410 GB</td><td>giant design files — will migrate slowly</td></tr>
+        <tr class="hot"><td>Mrs. Mia (Reception)</td><td>14.6 GB ⚠</td><td>0.3 GB</td><td>huge attachments — flag for cleanup!</td></tr>
+        <tr><td>Vlad (IT)</td><td>1.2 GB</td><td>12 GB</td><td>perfect first test pilot</td></tr>
+        <tr><td>…44 more people</td><td>…</td><td>…</td><td>collected the same way</td></tr>
+        <tr><td>info@ (shared mailbox)</td><td>6.4 GB</td><td>—</td><td>3 people use it — don't forget it!</td></tr>
+        <tr><td>«Coffee Break» (Team)</td><td>—</td><td>2.1 GB</td><td>secret but beloved — must survive</td></tr>
+      </table>
+    </div>
+    <div class="say tip" data-who="THE CHECKLIST" style="margin-top:18px">
+      And here's <b>what to collect</b>, category by category. Tick each one to confirm it's on your list! (+5 ⭐ each)
+    </div>
+    <div class="clist">
+      ${collectItems.map((c,i)=>`
+        <button class="citem clickable" id="ci${i}" onclick="checkItem(${i},event)">
+          <span><b>${c.b}</b>${c.d}</span>
+        </button>`).join('')}
+    </div>`;
+}
+function checkItem(i,e){
+  const el=document.getElementById('ci'+i);
+  if(el.classList.contains('checked'))return;
+  el.classList.add('checked');
+  collectDone++;
+  MIGBG.set(collectItems[i].flow);
+  addScore(5,e.clientX,e.clientY);
+  if(collectDone===collectItems.length){
+    document.getElementById('l1next').style.display='inline-flex';
+  }
+}
+
+/* ═══════════════ L2 : PLANNING DECISIONS ═══════════════ */
+const decisions=[
+  {q:"How do we move the data of all 48 people?",
+   opts:[
+     {t:"Big Bang 💥", s:"Move everything, for everyone, in a single weekend.", v:"meh", pts:5,
+      fb:"It works for small companies, but if a problem shows up, it shows up for EVERYONE at once. Brave… maybe too brave. (+5 ⭐)"},
+     {t:"In waves 🌊", s:"Move small groups, one at a time, starting with the least demanding folks.", v:"good", pts:10,
+      fb:"Exactly! Waves = if something breaks, it breaks for 5 people, not 48. You learn from every wave. (+10 ⭐)"},
+     {t:"Everyone moves themselves 🤷", s:"Send them a PDF guide and wish them luck.", v:"bad", pts:0,
+      fb:"Oh no. Half of them wouldn't read the guide, the other half would «move» their files onto a USB stick. (0 ⭐)"}
+   ]},
+  {q:"When do we do the final cutover (the moment everyone switches to the new system)?",
+   opts:[
+     {t:"Monday morning ☕", s:"Everyone is fresh and full of energy.", v:"bad", pts:0,
+      fb:"Monday morning everyone wants to read their email… which is currently being moved. Guaranteed chaos. (0 ⭐)"},
+     {t:"Saturday night 🌙", s:"When nobody's working and we have the whole weekend as a safety net.", v:"good", pts:10,
+      fb:"Perfect! The cutover always happens when the impact is lowest — and you still have Sunday to fix surprises. (+10 ⭐)"},
+     {t:"On Christmas 🎄", s:"A surprise gift for everyone!", v:"bad", pts:0,
+      fb:"Technically it's quiet… but who fixes things if they break? Santa doesn't know the admin password. (0 ⭐)"}
+   ]},
+  {q:"Do we tell people in advance what's about to happen?",
+   opts:[
+     {t:"No, let it be a surprise 🎉", s:"On Monday they'll have a new system! Ta-daaa!", v:"bad", pts:0,
+      fb:"The «surprise» turns into 48 calls to IT before lunch. Communication is not optional. (0 ⭐)"},
+     {t:"Yes, early and clearly 📣", s:"Emails, a simple guide and a Q&A session.", v:"good", pts:10,
+      fb:"Yes! The biggest part of a successful migration isn't technical — it's not catching people off guard. (+10 ⭐)"},
+     {t:"Only the managers 🤫", s:"Everyone else hears it from them, like a game of telephone.", v:"meh", pts:5,
+      fb:"Better than nothing, but the message gets distorted: «is everything getting deleted?!». Tell everyone. (+5 ⭐)"}
+   ]}
+];
+let di=0;
+function L2(){
+  di=0;
+  show(`
+    <div class="badge">LEVEL 2 · PLANNING 🗺️</div>
+    <h2>The big decisions</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Now that we know WHAT we're moving, we decide HOW. Every choice has consequences — choose wisely!
+    </div>
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d=decisions[di];
+  document.getElementById('dzone').innerHTML=`
+    <h2 style="font-size:19px;margin-top:14px">Decision ${di+1}/${decisions.length}: ${d.q}</h2>
+    <div class="choices">
+      ${d.opts.map((o,i)=>`
+        <button class="choice" id="ch${i}" onclick="pick(${i},event)">
+          <b>${o.t}</b>${o.s}
+        </button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none"></button>
+  `;
+}
+function pick(i,e){
+  const d=decisions[di], o=d.opts[i];
+  d.opts.forEach((x,j)=>{
+    const el=document.getElementById('ch'+j);
+    el.disabled=true;
+    if(j===i) el.classList.add(o.v);
+  });
+  if(o.pts>0) addScore(o.pts,e.clientX,e.clientY);
+  const v=document.getElementById('verdict');
+  v.innerHTML=`<div class="say" data-who="${o.v==='good'?'NICE':'HMM'}">${o.fb}</div>`;
+  v.style.display='block';
+  const btn=document.getElementById('dnext');
+  btn.style.display='inline-flex';
+  if(di<decisions.length-1){ btn.textContent='Next decision →'; btn.onclick=()=>{di++;renderDecision();}; }
+  else { btn.textContent='One more thing: pick your toolbox →'; btn.onclick=renderToolbox; }
+}
+const tools=[
+  {t:"🧰 A 3rd-party migration tool", s:"ShareGate, BitTitan MigrationWiz, Quest, AvePoint…",
+   fb:"Great choice for most companies: friendly dashboards, progress reports, mapping wizards and a support line to call at 2 AM. It costs money, but it saves nerves — and nerves are expensive too. (+10 ⭐)"},
+  {t:"🧑‍💻 PowerShell scripts", s:"Free, powerful, fully under your control — if you speak «script».",
+   fb:"The DIY route: free and infinitely flexible, but YOU write, test and babysit everything. Perfect if your team has script wizards and time. (+10 ⭐)"},
+  {t:"🏢 Microsoft's built-in tools", s:"Native cross-tenant migration, no extra vendor.",
+   fb:"The native route: Microsoft's own cross-tenant migration covers mailboxes and OneDrive without buying anything extra — it just needs careful setup and has fewer bells and whistles. (+10 ⭐)"}
+];
+function renderToolbox(){
+  document.getElementById('dzone').innerHTML=`
+    <h2 style="font-size:19px;margin-top:14px">Final call: what do we migrate WITH? 🛠️</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Good news: there's no wrong answer here. All three options do the same job — <b>get the truck from
+      cloud A to cloud B</b>. You pick based on budget, company size and your team's skills. Choose one!
+    </div>
+    <div class="choices">
+      ${tools.map((o,i)=>`
+        <button class="choice" id="tl${i}" onclick="pickTool(${i},event)">
+          <b>${o.t}</b><small>${o.s}</small>
+        </button>`).join('')}
+    </div>
+    <div class="verdict" id="tverdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="tnext" style="display:none" onclick="goto(3)">Toolbox packed! To preparation →</button>
+  `;
+}
+function pickTool(i,e){
+  tools.forEach((x,j)=>{
+    const el=document.getElementById('tl'+j);
+    el.disabled=true;
+    if(j===i) el.classList.add('good');
+  });
+  addScore(10,e.clientX,e.clientY);
+  const v=document.getElementById('tverdict');
+  v.innerHTML=`<div class="say" data-who="NICE">${tools[i].fb}<br><br><small style="color:var(--muted)">For this mission we'll picture a friendly migration tool with a dashboard — easier to visualize. In real life, mixing is normal: a tool for the heavy lifting + a few scripts for the odd corners.</small></div>`;
+  v.style.display='block';
+  document.getElementById('tnext').style.display='inline-flex';
+}
+
+/* ═══════════════ L3 : PREP / LICENSES ═══════════════ */
+const crew=[
+  {face:"👩‍💼", name:"Anna from Accounting", small:"Has 15 years of emails. All of them «important»."},
+  {face:"👨‍🎨", name:"Rudy from Design", small:"820 GB? Half of it is his."},
+  {face:"👵", name:"Mrs. Mia at Reception", small:"Still calls it «the electronic mail». Respect."},
+  {face:"🧑‍💻", name:"Vlad, your IT buddy", small:"Will test first. He «volunteered»."}
+];
+let licSel=null, licDone=0;
+function L3(){
+  licSel=null;licDone=0;
+  show(`
+    <div class="badge">LEVEL 3 · PREPARATION 🎫</div>
+    <h2>Making room in the new "building"</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Before you move someone into a new apartment, the apartment has to exist and have a key!
+      In the cloud, the "key" is a <b>license</b>. Create the accounts, then give each colleague a license:
+      click a license, then click their slot. (+10 ⭐ per person)
+    </div>
+    <div id="acctZone">
+      <button class="btn" onclick="makeAccounts(this)">🏗️ Create the accounts in the new tenant</button>
+      <div class="inv" id="acctLog" style="display:none"></div>
+    </div>
+    <div class="prep-grid" id="prepGrid" style="display:none">
+      <div>
+        ${crew.map((c,i)=>`
+          <div class="userrow">
+            <span class="face">${c.face}</span>
+            <span class="who"><b>${c.name}</b><small>${c.small}</small></span>
+            <div class="lic-slot" id="ls${i}" onclick="assignLic(${i},event)">no license</div>
+          </div>`).join('')}
+      </div>
+      <div class="lic-stack">
+        <div class="stack-lbl">Available licenses</div>
+        ${crew.map((c,i)=>`<button class="lic" id="lic${i}" onclick="selLic(${i})">🎫 M365 License</button>`).join('')}
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="goto(4)">Everyone has keys! To the pilot →</button>
+  `);
+}
+function makeAccounts(btn){
+  btn.disabled=true;
+  const log=document.getElementById('acctLog');
+  log.style.display='block';
+  const lines=["> creating account: anna@megacorp.com … ✓","> creating account: rudy@megacorp.com … ✓","> creating account: mia@megacorp.com … ✓","> creating account: vlad@megacorp.com … ✓","> done! 4 new accounts are waiting. Passwords do NOT migrate — everyone gets a new one. 🔑"];
+  let i=0;
+  const t=setInterval(()=>{
+    log.innerHTML=lines.slice(0,i+1).join('<br>');
+    i++;
+    if(i===lines.length){clearInterval(t);document.getElementById('prepGrid').style.display='grid';addScore(10);}
+  },500);
+}
+function selLic(i){
+  document.querySelectorAll('.lic').forEach(l=>l.classList.remove('sel'));
+  const el=document.getElementById('lic'+i);
+  if(el.classList.contains('used'))return;
+  el.classList.add('sel');licSel=i;
+}
+function assignLic(u,e){
+  if(licSel===null)return;
+  const slot=document.getElementById('ls'+u);
+  if(slot.classList.contains('filled'))return;
+  slot.classList.add('filled');slot.textContent='🎫 active';
+  document.getElementById('lic'+licSel).classList.remove('sel');
+  document.getElementById('lic'+licSel).classList.add('used');
+  licSel=null;licDone++;
+  MIGBG.set('license');
+  addScore(10,e.clientX,e.clientY);
+  if(licDone===crew.length) document.getElementById('l3next').style.display='inline-flex';
+}
+
+/* ═══════════════ L4 : PILOT ═══════════════ */
+let pilotState=[0,0,0]; // 0 = waiting, 1 = done, 2 = failed
+let miaFixed=false;
+function L4(){
+  pilotState=[0,0,0];miaFixed=false;
+  const pilots=[crew[3],crew[2],crew[0]];
+  show(`
+    <div class="badge">LEVEL 4 · THE PILOT 🧪</div>
+    <h2>The dress rehearsal</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      We never move the whole company on the first try! We pick a few brave "guinea pigs" and migrate them as a test.
+      If something goes wrong, we find out now — not on Saturday night. Click "Migrate" for each pilot.
+    </div>
+    ${pilots.map((p,i)=>`
+      <div class="pilot-row">
+        <span class="face">${p.face}</span>
+        <span class="who"><b>${p.name}</b><small>${p.small}</small></span>
+        <div class="mini-bar"><i id="pb${i}"></i></div>
+        <span class="pstatus" id="ps${i}">waiting…</span>
+        <button class="btn small blue" id="pgo${i}" onclick="pilotGo(${i},event)">Migrate</button>
+      </div>`).join('')}
+    <div id="pilotVerdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="goto(5)">Pilot successful! The big migration →</button>
+  `);
+}
+function pilotGo(i,e){
+  MIGBG.set('mix');
+  const btn=document.getElementById('pgo'+i);btn.disabled=true;
+  const bar=document.getElementById('pb'+i), st=document.getElementById('ps'+i);
+  st.textContent='migrating…';st.className='pstatus';
+  let w=0;
+  const failAt = (i===1)? 62 : 101; // Mrs. Mia fails first time
+  const t=setInterval(()=>{
+    w+=Math.random()*14+6;
+    if(i===1 && !miaFixed && w>=failAt){
+      clearInterval(t);bar.style.width='62%';bar.style.background='var(--red)';
+      st.textContent='⚠ ERROR!';st.className='pstatus err';
+      pilotState[1]=2;
+      document.getElementById('pilotVerdict').innerHTML=`
+        <div class="say" data-who="ALERT">
+          Mrs. Mia's migration got stuck! The reason: her mailbox has <b>huge attachments</b> —
+          14 GB of animated cat greeting cards received since 2009. 🐈
+          <div style="margin-top:10px"><button class="btn small" onclick="fixMia(event)">🧹 Archive the cats and retry</button></div>
+        </div>`;
+      return;
+    }
+    if(w>=100){
+      clearInterval(t);bar.style.width='100%';
+      st.textContent='✓ migrated successfully';st.className='pstatus ok';
+      pilotState[i]=1;addScore(10,e?e.clientX:innerWidth/2,e?e.clientY:200);
+      checkPilotDone();
+    } else bar.style.width=w+'%';
+  },160);
+}
+function fixMia(e){
+  miaFixed=true;
+  addScore(15,e.clientX,e.clientY);
+  document.getElementById('pilotVerdict').innerHTML=`
+    <div class="say" data-who="LESSON">
+      This is exactly why the pilot exists! We discovered the problem on <b>one</b> person, not 48.
+      Now we know to check mailbox sizes <i>before</i> the big wave. (+15 ⭐)
+    </div>`;
+  const bar=document.getElementById('pb1');bar.style.background='var(--blue)';
+  pilotState[1]=0;
+  document.getElementById('pgo1').disabled=false;
+  document.getElementById('ps1').textContent='ready to retry';
+  document.getElementById('ps1').className='pstatus';
+  bar.style.width='0%';
+}
+function checkPilotDone(){
+  if(pilotState.every(s=>s===1)) document.getElementById('l4next').style.display='inline-flex';
+}
+
+/* ═══════════════ L5 : BIG MIGRATION ARCADE ═══════════════ */
+const ITEM_TYPES=["✉️","📁","💬","📅","🗂️"];
+const ITEM_FLOW={"✉️":"mail","📁":"bits","💬":"chat","📅":"calendar","🗂️":"bits"};
+let migrated=0, TARGET=14, spawnTimer=null, eventFired=false, arcadeLive=false;
+function L5(){
+  migrated=0;eventFired=false;arcadeLive=true;
+  show(`
+    <div class="badge">LEVEL 5 · THE BIG MIGRATION 🚚</div>
+    <h2>The waves begin!</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Now we move everyone's data, wave after wave. Click the objects as they appear to send them
+      to the new cloud! Watch out: the cloud has speed limits… ☕
+    </div>
+    <div class="arena" id="arena">
+      <div class="cloud-house cloud-src"><span class="c">☁️</span>PixelSoft<br><small>(old)</small></div>
+      <div class="cloud-house cloud-dst"><span class="c">⛅</span>MegaCorp<br><small>(new)</small></div>
+      <div class="event-banner" id="eventBanner"></div>
+      <div class="bigbar"><i id="bigFill"></i><span id="bigLabel">0%</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="goto(6)">The data has arrived! To the cutover →</button>
+  `);
+  spawnTimer=setInterval(spawnItem,900);
+  spawnItem();
+}
+function spawnItem(){
+  if(!arcadeLive)return;
+  const arena=document.getElementById('arena');
+  if(!arena){clearInterval(spawnTimer);return;}
+  if(arena.querySelectorAll('.item:not(.fly)').length>=4)return;
+  const it=document.createElement('button');
+  it.className='item clickable';
+  it.textContent=ITEM_TYPES[Math.floor(Math.random()*ITEM_TYPES.length)];
+  it.style.left=(15+Math.random()*45)+'%';
+  it.style.top=(24+Math.random()*55)+'%';
+  it.onclick=(e)=>{
+    if(it.classList.contains('fly'))return;
+    it.classList.add('fly');
+    MIGBG.set(ITEM_FLOW[it.textContent]||'mix');
+    addScore(5,e.clientX,e.clientY);
+    migrated++;
+    updateBigBar();
+    setTimeout(()=>it.remove(),750);
+    if(!eventFired && migrated===Math.floor(TARGET/2)) throttleEvent();
+    if(migrated>=TARGET) endArcade();
+  };
+  arena.appendChild(it);
+}
+function updateBigBar(){
+  const p=Math.min(100,Math.round(migrated/TARGET*100));
+  document.getElementById('bigFill').style.width=p+'%';
+  document.getElementById('bigLabel').textContent=p+'%';
+}
+function throttleEvent(){
+  eventFired=true;arcadeLive=false;
+  document.querySelectorAll('.item').forEach(i=>i.style.opacity=.25);
+  const b=document.getElementById('eventBanner');
+  b.classList.remove('ok');
+  b.style.display='block';
+  b.innerHTML=`🐌 SLOWDOWN! The cloud says: "too fast, too much!"<br>
+    <small style="font-weight:400">This is normal — it's called «throttling». You don't fix it with anger, you fix it with patience.</small><br>
+    <button class="btn small" onclick="coffee(event)">☕ Take a coffee break</button>`;
+}
+function coffee(e){
+  addScore(10,e.clientX,e.clientY);
+  const b=document.getElementById('eventBanner');
+  b.classList.add('ok');
+  b.innerHTML='☕ Ahh… Speed is back. The migration continues!';
+  setTimeout(()=>{b.style.display='none';b.classList.remove('ok');arcadeLive=true;
+    document.querySelectorAll('.item').forEach(i=>i.style.opacity=1);},1300);
+}
+function endArcade(){
+  arcadeLive=false;clearInterval(spawnTimer);
+  document.querySelectorAll('.item').forEach(i=>i.remove());
+  document.getElementById('bigLabel').textContent='100% ✓';
+  document.getElementById('l5next').style.display='inline-flex';
+}
+
+/* ═══════════════ L6 : CUTOVER ═══════════════ */
+let dnsStep=0, cutIdx=0;
+const cutSteps=[
+  {ico:"🔒", t:"Freeze the old cloud", d:"We switch the old tenant to «read-only» mode. Nobody can change anything while we move — like taking a photo of the apartment before handing over the keys.",
+   w:"Announce the freeze in advance! A cloud that suddenly refuses to save files creates instant panic."},
+  {ico:"🔁", t:"Run the final sync", d:"One last quick copy catches everything from the past few hours — that email from 5 PM, that file saved at the last minute. Now both clouds are perfectly identical.",
+   w:"Compare the numbers before moving on: same count of emails, files and folders on both sides. Trust, but verify."},
+  {ico:"🔌", t:"Detach the domain from the old cloud", d:"The address @pixelsoft.com can only «live» in ONE tenant at a time. We officially remove it from the old cloud. For a few minutes it belongs to no one — this is the most delicate moment of the whole night.",
+   w:"Every user must first get a temporary address in the old tenant, or the removal will be blocked. Check aliases, shared mailboxes and groups too — they all hold onto the domain."},
+  {ico:"🏠", t:"Attach the domain to the new cloud", d:"We add @pixelsoft.com to MegaCorp's tenant and prove we own it. From now on, this is its official home.",
+   w:"Prepare the ownership proof (a small verification record) BEFORE tonight — you don't want to be reading documentation at 1 AM."},
+  {ico:"📖", t:"Update the internet's address book (DNS)", d:"We update the DNS records — think of them as the internet's address book. Every mail server in the world learns: «deliver pixelsoft.com mail to the new cloud». Spreading this news takes minutes… sometimes hours. That's why we started at 11 PM.",
+   w:"Two classics to not forget: lower the TTL (the «expiry date» of the old address entry) a few days earlier so the news spreads fast, and update SPF/DKIM/DMARC — the records that prove your emails aren't spam. Miss those and Monday's emails land in junk folders."},
+  {ico:"📬", t:"Watch the first email arrive", d:"*ping!* A test message lands safely in the new system. Login works, mail flows, files open. The lever did its job.",
+   w:"Test more than one thing: internal mail, external mail (send to a Gmail!), a phone, and a shared mailbox. Five minutes of testing now saves fifty tickets on Monday."},
+  {ico:"🎉", t:"Celebrate (quietly, it's midnight)", d:"Cutover complete! On Monday, everyone opens their laptop in the new cloud — and everything is right where it should be.",
+   w:"Do NOT delete the old tenant tonight — or next week. Keep it read-only for a while as a safety net. You never know what someone will miss in two weeks."}
+];
+function L6(){
+  dnsStep=0;cutIdx=0;
+  show(`
+    <div class="badge">LEVEL 6 · THE CUTOVER 🔀</div>
+    <h2>Saturday, 11 PM. The city sleeps. You don't. 🌙</h2>
+    <p class="muted">The big moment has arrived: <b>the cutover</b>. Until now, the data has been quietly copying over,
+    but the company's official email address still "lives" in the old cloud. Now we move it officially.
+    From this moment on, everyone works in the new system.</p>
+    <div class="switch-zone">
+      <button class="big-switch clickable" id="bigSwitch" onclick="flip()" aria-label="Switch the domain">
+        <div class="knob" id="knob">OLD</div>
+      </button>
+      <div class="dns-line" id="dnsLine">Pull the lever when you're ready. Take a deep breath. 😤</div>
+    </div>
+    <div id="cutZone" style="max-width:680px;margin:20px auto 0"></div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="goto(7)">It worked! To the final check →</button></div>
+  `);
+}
+function flip(){
+  if(dnsStep>0)return;
+  dnsStep=1;
+  const sw=document.getElementById('bigSwitch');
+  sw.classList.add('on');
+  document.getElementById('knob').textContent='NEW';
+  MIGBG.set('sites');
+  addScore(20,innerWidth/2,innerHeight/2);
+  document.getElementById('dnsLine').textContent='Lever pulled! Now walk through what actually happens, step by step ↓';
+  renderCut(0);
+}
+function renderCut(i){
+  cutIdx=i;
+  const s=cutSteps[i];
+  const doneList=cutSteps.slice(0,i).map(x=>
+    `<div style="font-family:var(--mono);font-size:12px;color:var(--green);margin-bottom:5px">✓ ${x.ico} ${x.t}</div>`).join('');
+  document.getElementById('cutZone').innerHTML=`
+    ${doneList}
+    <div class="say" data-who="STEP ${i+1} / ${cutSteps.length}" style="margin-top:${i>0?'16px':'4px'}">
+      <b style="font-size:16px">${s.ico} ${s.t}</b><br>
+      <span style="font-size:14.5px">${s.d}</span>
+      <div class="warnnote"><b>⚠ Pay attention:</b> ${s.w}</div>
+      ${i<cutSteps.length-1
+        ? `<div style="margin-top:12px"><button class="btn small blue" onclick="cutNext(event)">Next step →</button></div>`
+        : ``}
+    </div>`;
+  if(i===cutSteps.length-1) document.getElementById('l6next').style.display='inline-flex';
+}
+function cutNext(e){
+  addScore(5,e.clientX,e.clientY);
+  renderCut(cutIdx+1);
+}
+
+/* ═══════════════ L7 : VALIDATION + FINAL ═══════════════ */
+const tickets=[
+  {t:"First things first: did all the data actually arrive?", who:"YOU (being professional)",
+   opts:[
+     {o:"Trust the migration tool blindly — it said «Success» 🤞", ok:false},
+     {o:"Compare item counts on both sides + spot-check a few mailboxes and folders", ok:true},
+     {o:"Ask all 48 people to count their own emails", ok:false}
+   ],
+   ex:"«Success» in a tool means «I finished», not «nothing is missing». Compare the numbers from your inventory sheet with the destination, and open a few mailboxes yourself. Trust, but verify."},
+  {t:"«Outlook keeps asking for my password over and over!»", who:"ANNA, slightly stressed",
+   opts:[
+     {o:"Tell her to type it louder", ok:false},
+     {o:"Her Outlook profile still points to the old cloud — create a fresh profile / sign in with the new account", ok:true},
+     {o:"Buy her a new laptop", ok:false}
+   ],
+   ex:"The #1 post-migration classic. The old Outlook profile is «confused» — it remembers the old cloud. A fresh profile connected to the new account fixes it in minutes."},
+  {t:"«My phone stopped receiving work email!»", who:"RUDY, from the coffee machine",
+   opts:[
+     {o:"Phones don't do email anymore, it's a new policy", ok:false},
+     {o:"Restart the phone 10 times", ok:false},
+     {o:"Remove the old mail account on the phone and add the new one", ok:true}
+   ],
+   ex:"Same story as Outlook: the phone is still knocking on the old cloud's door. Delete the old account, add the new one — mail flows again. Put this in the user guide BEFORE Monday!"},
+  {t:"«The file link I sent a customer last week is dead!»", who:"MRS. MIA, apologetic",
+   opts:[
+     {o:"Old sharing links point to the old cloud — reshare the file from its new home", ok:true},
+     {o:"The customer probably deleted it", ok:false},
+     {o:"Links naturally expire every month, this is normal", ok:false}
+   ],
+   ex:"Sharing links contain the old cloud's address inside them — they don't survive the move. The file is safe in the new cloud; it just needs to be shared again from there."},
+  {t:"«A customer says our emails land in their SPAM folder!»", who:"THE BOSS, not amused",
+   opts:[
+     {o:"Tell every customer to check spam forever", ok:false},
+     {o:"Check SPF / DKIM / DMARC — the records that prove your mail is legitimate", ok:true},
+     {o:"Send every email twice, one will get through", ok:false}
+   ],
+   ex:"When a domain moves, the «ID papers» of your email (SPF, DKIM, DMARC records) must be updated for the new cloud. Miss one and the world's spam filters get suspicious. Fix the records and reputation recovers."},
+  {t:"«My OneDrive folder on the desktop is EMPTY! Everything is GONE!»", who:"VLAD, testing your calm",
+   opts:[
+     {o:"The files are gone forever, start your career over", ok:false},
+     {o:"The sync app still watches the old cloud — sign it into the new account and let it re-sync", ok:true},
+     {o:"Look behind the monitor", ok:false}
+   ],
+   ex:"Nothing is lost — the little sync app on the desktop is simply still connected to the old, now-empty place. Sign it into the new account, give it time to re-download, and everything reappears."},
+  {t:"«Our website's contact form stopped sending us messages!»", who:"MARKETING, three days later",
+   opts:[
+     {o:"Nobody wants to contact us anymore", ok:false},
+     {o:"The form still sends mail through the old cloud — update its settings to the new one", ok:true},
+     {o:"Forms are obsolete, delete the website", ok:false}
+   ],
+   ex:"The sneaky category: apps, printers, scanners and website forms that quietly sent email through the old cloud. This is exactly why «🔌 Connected apps» was on the discovery checklist — they each need to be repointed."},
+  {t:"Last move: what do we do with the old, empty cloud?", who:"YOU, wrapping up",
+   opts:[
+     {o:"Delete it tonight — clean break! 🔥", ok:false},
+     {o:"Keep it read-only for a while as a safety net, then retire it properly", ok:true},
+     {o:"Keep paying for it forever, just in case", ok:false}
+   ],
+   ex:"Never burn the bridge the same week. Keep the old tenant read-only for an agreed period (often 30–90 days) — someone WILL remember a forgotten file. Then retire it and stop paying for two clouds."}
+];
+let tdone=0;
+let firstTry={};
+function L7(){
+  tdone=0;firstTry={};
+  show(`
+    <div class="badge">LEVEL 7 · VALIDATION ✅</div>
+    <h2>Monday morning: the helpdesk hour</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      A migration isn't over when the data arrives — it's over when <b>people can work in peace</b>.
+      The tickets are rolling in! For each incident, pick the right solution. (+10 ⭐ if you nail it first try —
+      wrong guesses are free, this is how we learn.)
+    </div>
+    <div id="tzone">
+      ${tickets.map((tk,i)=>`
+        <div class="ticket" id="tk${i}" style="display:block">
+          <div class="tx" style="margin-bottom:8px"><b>🎟️ ${tk.t}</b><small>— ${tk.who}</small></div>
+          <div class="choices" style="margin-top:4px">
+            ${tk.opts.map((op,j)=>`
+              <button class="choice" id="tk${i}o${j}" style="padding:10px 14px;font-size:13.5px" onclick="solve(${i},${j},event)">${op.o}</button>`).join('')}
+          </div>
+          <div class="verdict" id="tk${i}v" style="margin-top:8px"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+
+function solve(i,j,e){
+  const tk=tickets[i];
+  const card=document.getElementById('tk'+i);
+  if(card.classList.contains('done'))return;
+  const btn=document.getElementById('tk'+i+'o'+j);
+  if(tk.opts[j].ok){
+    card.classList.add('done');
+    tk.opts.forEach((op,k)=>{
+      const b=document.getElementById('tk'+i+'o'+k);
+      b.disabled=true;
+      if(k===j)b.classList.add('good');
+    });
+    if(firstTry[i]===undefined){ addScore(10,e.clientX,e.clientY); }
+    else { addScore(5,e.clientX,e.clientY); }
+    const v=document.getElementById('tk'+i+'v');
+    v.innerHTML=`<div class="say" data-who="SOLVED ✓" style="margin:12px 0 0">${tk.ex}</div>`;
+    v.style.display='block';
+    tdone++;
+    if(tdone===tickets.length) finale();
+  } else {
+    firstTry[i]=false;
+    btn.classList.add('bad');
+    btn.disabled=true;
+    setTimeout(()=>btn.classList.remove('bad'),450);
+  }
+}
+function finale(){
+  for(let i=0;i<40;i++){
+    const c=document.createElement('div');c.className='confetti';
+    c.textContent=["🎉","⭐","☁️","🎊","✨"][i%5];
+    c.style.left=Math.random()*100+'vw';
+    c.style.animationDuration=(2+Math.random()*2.5)+'s';
+    c.style.animationDelay=(Math.random()*0.8)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),5500);
+  }
+  const MAX=445;
+  let rank="Cloud Rookie 🐣", msg="You finished the mission — next time, hunt for more stars!";
+  if(score>=400){rank="Migration Legend 🏆";msg="Flawless! You can give the next presentation yourself.";}
+  else if(score>=330){rank="Master of Moves 🛠️";msg="Very solid! You understood exactly how a migration flows.";}
+  else if(score>=240){rank="Cloud Pilot ✈️";msg="Nice work! Play again and catch all the good decisions.";}
+  level=8;refreshMap();
+  document.getElementById('lvl7').classList.add('done');
+  document.getElementById('finale').innerHTML=`
+    <div class="center" style="margin-top:10px">
+      <h2>🎉 Mission accomplished!</h2>
+      <div class="rank-big">${rank}</div>
+      <div style="font-family:var(--mono);font-weight:600;color:var(--muted)">SCORE: ${score} / ~${MAX} ⭐</div>
+      <p class="muted" style="margin:10px auto;max-width:520px">${msg}</p>
+      <div class="say tip" data-who="REMEMBER" style="text-align:left;margin:22px auto 18px">
+        Every migration, big or small, follows the same steps:
+        <b>1)</b> find out what you have (and write it down!) → <b>2)</b> make a plan & pick your tools →
+        <b>3)</b> prepare the ground → <b>4)</b> test with a few → <b>5)</b> move in waves →
+        <b>6)</b> cut over when it's quiet, checking every detail → <b>7)</b> verify, fix the Monday surprises,
+        and keep the old cloud as a safety net. And always, always: <b>talk to people beforehand</b>. 📣
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn blue" onclick="location.reload()">↺ Play again</button>
+        <a class="btn green" href="../index.html#contact">Run this live with your team →</a>
+      </div>
+    </div>`;
+}
+
+const RENDER=[L0,L1,L2,L3,L4,L5,L6,L7];
+refreshMap();
+L0();
+</script>
+</body>
+</html>

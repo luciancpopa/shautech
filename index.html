@@ -302,6 +302,28 @@
   .gauge .bar{height:4px;border-radius:3px;background:var(--line-2);margin-top:.6rem;overflow:hidden}
   .gauge .bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:3px;transition:width 1.2s var(--ease)}
 
+  /* ============ labs ============ */
+  .labs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:clamp(16px,2.5vw,28px)}
+  .lab-card{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:transform .3s var(--ease),border-color .3s,box-shadow .3s}
+  .lab-card:hover{transform:translateY(-4px);border-color:rgba(77,159,255,.5);box-shadow:0 24px 60px -28px var(--glow)}
+  .lab-bar{display:flex;align-items:center;gap:.7rem;padding:.8rem 1.1rem;border-bottom:1px solid var(--line);background:rgba(255,255,255,.015)}
+  .lab-bar .dots{display:flex;gap:.45rem}
+  .lab-bar .dots i{width:11px;height:11px;border-radius:50%;background:var(--line-2)}
+  .lab-bar .dots i:first-child{background:#2a3340}
+  .lab-file{font-family:"JetBrains Mono",monospace;font-size:.76rem;color:var(--muted)}
+  .lab-live{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--accent-soft);display:inline-flex;align-items:center;gap:.45em}
+  .lab-live .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2.4s infinite}
+  .lab-body{padding:1.4rem 1.4rem 1.5rem;display:flex;flex-direction:column;flex:1}
+  .lab-name{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:clamp(1.4rem,2.3vw,1.8rem);letter-spacing:-.02em;margin:.5rem 0 .55rem;line-height:1.08}
+  .lab-desc{color:var(--muted);font-size:.98rem;max-width:52ch}
+  .lab-go{margin-top:auto;padding-top:1.3rem;font-family:"JetBrains Mono",monospace;font-weight:600;font-size:.9rem;color:var(--accent-soft);display:inline-flex;align-items:center;gap:.6em}
+  .lab-go .arr{transition:transform .25s var(--ease)}
+  .lab-card:hover .lab-go .arr{transform:translateX(4px)}
+  .lab-card:hover .svc-tags span{border-color:var(--line-2)}
+  .labs-note{margin-top:clamp(24px,3.5vw,40px);color:var(--muted)}
+  .labs-note a{color:var(--accent-soft);font-family:"JetBrains Mono",monospace;font-size:.9rem;border-bottom:1px solid rgba(77,159,255,.4);padding-bottom:2px;transition:color .2s,border-color .2s}
+  .labs-note a:hover{color:var(--text);border-color:var(--accent)}
+
   /* ============ section frame ============ */
   section{position:relative;z-index:1;padding-block:clamp(60px,9vw,130px)}
   /* low-key seam between consecutive sections — hairline that fades at the edges,
@@ -635,6 +657,7 @@
     <nav class="nav-links" aria-label="Primary">
       <a href="#services">Services</a>
       <a href="#platform">Platform</a>
+      <a href="#labs">Labs</a>
       <a href="#team">Team</a>
       <a href="#process">Process</a>
       <a href="#why">Why us</a>
@@ -654,6 +677,7 @@
   <button class="mobile-close" id="mobileClose" aria-label="Close menu">✕</button>
   <a href="#services">Services</a>
   <a href="#platform">Platform</a>
+  <a href="#labs">Labs</a>
   <a href="#team">Team</a>
   <a href="#process">Process</a>
   <a href="#why">Why us</a>
@@ -854,6 +878,49 @@
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ============ LABS ============ -->
+  <section id="labs">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2 class="sec-title">Learn by <em>playing</em>.</h2>
+        <p class="sec-lead">shautech labs — the interactive simulators from our customer workshops. You make the calls, you see the consequences. Play them right here: no signup, no slides, no jargon.</p>
+      </div>
+
+      <div class="labs-grid">
+        <a class="lab-card reveal" href="labs/migration-simulator.html">
+          <div class="lab-bar" aria-hidden="true">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="lab-file">labs/migration-simulator</span>
+            <span class="lab-live"><span class="dot"></span>playable</span>
+          </div>
+          <div class="lab-body">
+            <span class="svc-code">LAB 01 · TENANT-TO-TENANT MIGRATION</span>
+            <h3 class="lab-name">Operation «Moving Clouds»</h3>
+            <p class="lab-desc">Move a whole company to a new cloud in 7 levels — discovery, planning, the pilot, the waves, the Saturday-night cutover and the Monday helpdesk hour. If you can click, you can migrate.</p>
+            <div class="svc-tags"><span>7 levels</span><span>~15 min</span><span>for non-techies too</span><span class="pow">› also run as a live workshop</span></div>
+            <span class="lab-go">Play it now <span class="arr">→</span></span>
+          </div>
+        </a>
+        <a class="lab-card reveal" href="labs/security-simulator.html">
+          <div class="lab-bar" aria-hidden="true">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="lab-file">labs/security-simulator</span>
+            <span class="lab-live"><span class="dot"></span>playable</span>
+          </div>
+          <div class="lab-body">
+            <span class="svc-code">LAB 02 · SECURITY INCIDENT RESPONSE</span>
+            <h3 class="lab-name">Breach Day</h3>
+            <p class="lab-desc">Monday, 09:02 — a pixel-perfect phishing mail lands in the boss's inbox. Spot the tells, follow the trail in the logs, contain the damage, survive the copycat storm and beat the 72-hour GDPR clock.</p>
+            <div class="svc-tags"><span>7 levels</span><span>~15 min</span><span>based on real incidents</span><span class="pow">› also run as a live workshop</span></div>
+            <span class="lab-go">Play it now <span class="arr">→</span></span>
+          </div>
+        </a>
+      </div>
+
+      <p class="labs-note reveal">Want one of these played live with your whole team — on a scenario built around <i>your</i> environment? <a href="#contact">Book a workshop →</a></p>
     </div>
   </section>
 

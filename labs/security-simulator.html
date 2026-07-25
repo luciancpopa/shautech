@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breach Day — shautech labs</title>
+<meta name="description" content="Breach Day — an interactive security incident simulator by shautech. A phishing mail lands Monday 9 AM: detect, investigate, contain and recover, level by level." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0B0D;
+    --bg-2:#0d0f13;
+    --panel:#101317;
+    --panel-2:#15181f;
+    --line:rgba(255,255,255,0.08);
+    --line-2:rgba(255,255,255,0.14);
+    --text:#F4F6F8;
+    --muted:#98A0AA;
+    --muted-2:#646C76;
+    --accent:#4D9FFF;
+    --accent-soft:#7CBBFF;
+    --accent-ink:#04132B;
+    --glow:rgba(77,159,255,0.30);
+    --crit:#FF7A7A;
+    --warn:#FFB65C;
+    --r:14px;
+    --ease:cubic-bezier(.2,.7,.2,1);
+    /* game aliases (JS references these names) */
+    --blue:var(--accent);
+    --green:#5FD68F;
+    --green-ink:#06180D;
+    --amber:var(--warn);
+    --red:var(--crit);
+    --ink:var(--text);
+    --ink-soft:var(--muted);
+    --card:var(--panel);
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:"Hanken Grotesk",system-ui,sans-serif;
+    color:var(--text);
+    background:var(--bg);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* faint control-panel grid + glow, same as the main site — glow runs red while under attack */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+            mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+    opacity:.5;
+  }
+  body::after{
+    content:"";position:fixed;top:-20%;right:-10%;width:60vw;height:60vw;z-index:0;
+    pointer-events:none;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,122,122,.16) 0%,transparent 60%);
+    filter:blur(40px);opacity:.6;transition:background 1.2s var(--ease);
+  }
+  body.secure::after{background:radial-gradient(circle,var(--glow) 0%,transparent 60%);}
+  body.night::after{background:radial-gradient(circle,rgba(138,134,255,.20) 0%,transparent 60%);}
+  ::selection{background:var(--accent);color:var(--accent-ink)}
+  a{color:inherit;text-decoration:none}
+
+  /* ambient threat flow — attacker on the left, your tenant on the right */
+  #secbg{
+    position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(55% 46% at -10% 52%,rgba(255,122,122,.07),transparent 70%),
+      radial-gradient(55% 46% at 110% 48%,rgba(77,159,255,.07),transparent 70%);
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important;} }
+
+  /* ---------- TOP BAR : LEVEL MAP ---------- */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:40;
+    background:rgba(10,11,13,.85);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+    padding:10px 18px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .logo{font-family:var(--mono);font-weight:700;font-size:1rem;letter-spacing:-.01em;display:inline-flex;align-items:center;white-space:nowrap;}
+  .logo .mark{
+    display:inline-grid;place-items:center;width:1.5em;height:1.5em;margin-right:.5em;
+    border:1.5px solid var(--accent);border-radius:6px;color:var(--accent);font-size:.82em;
+  }
+  .logo .lab{color:var(--muted);font-weight:500;}
+  .sim-name{font-family:var(--mono);font-size:.72rem;color:var(--muted-2);letter-spacing:.02em;white-space:nowrap;}
+  @media(max-width:860px){.sim-name{display:none;}}
+  .lvlmap{display:flex;gap:6px;flex:1;justify-content:center;flex-wrap:wrap;}
+  .lvl{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-family:var(--mono);font-size:9px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--muted-2);min-width:56px;
+  }
+  .lvl .bubble{
+    width:32px;height:32px;border-radius:9px;
+    background:var(--panel);border:1px solid var(--line-2);
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+    transition:all .25s var(--ease);
+  }
+  .lvl.now{color:var(--accent-soft);}
+  .lvl.now .bubble{border-color:var(--accent);transform:scale(1.12);box-shadow:0 0 14px var(--glow),0 0 0 1px var(--accent);}
+  .lvl.done{color:var(--muted);}
+  .lvl.done .bubble{background:rgba(77,159,255,.10);border-color:var(--accent);}
+  .lvl.done .bubble::after{content:"✓";color:var(--accent-soft);font-weight:700;font-family:var(--mono);}
+  .lvl.done .bubble em{display:none;}
+  .hud{display:flex;gap:10px;align-items:center;}
+  .pill{
+    font-family:var(--mono);font-size:13px;font-weight:600;
+    background:var(--panel-2);color:var(--muted);
+    border:1px solid var(--line-2);
+    padding:7px 13px;border-radius:20px;
+    transition:transform .15s;
+  }
+  .pill b{color:var(--accent-soft);}
+
+  /* ---------- STAGE ---------- */
+  .stage{
+    position:absolute;top:96px;bottom:0;left:0;right:0;
+    overflow-y:auto;z-index:1;
+    padding:26px clamp(16px,5vw,70px) 40px;
+  }
+  .screen{max-width:880px;margin:0 auto;animation:pop .4s var(--ease) both;}
+  @keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98);}to{opacity:1;transform:none;}}
+
+  .badge{
+    display:inline-flex;align-items:center;gap:.6em;
+    font-family:var(--mono);font-size:.74rem;font-weight:500;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    margin-bottom:14px;
+  }
+  .badge::before{content:"//";color:var(--crit);letter-spacing:0;}
+  body.secure .badge::before{color:var(--accent);}
+  h1{font-family:"Space Grotesk",sans-serif;font-size:clamp(28px,4.6vw,44px);line-height:1.08;margin-bottom:10px;letter-spacing:-.02em;font-weight:700;}
+  h2{font-family:"Space Grotesk",sans-serif;font-size:clamp(21px,3.2vw,30px);margin-bottom:8px;letter-spacing:-.015em;font-weight:600;}
+  .say{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:16px 18px 14px;font-size:15px;line-height:1.55;color:var(--text);
+    position:relative;margin:18px 0 14px;
+    box-shadow:0 10px 30px -18px rgba(0,0,0,.8);
+    max-width:680px;
+  }
+  .say::before{
+    content:attr(data-who);
+    position:absolute;top:-10px;left:14px;
+    font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--panel-2);border:1px solid var(--accent);color:var(--accent-soft);
+    padding:2px 9px;border-radius:6px;
+  }
+  .say.tip::before{border-color:var(--green);color:var(--green);}
+  .say.alert::before{border-color:var(--crit);color:var(--crit);}
+  .say b{color:var(--text);}
+  .muted{color:var(--muted);font-size:14px;line-height:1.55;max-width:660px;}
+
+  .btn{
+    font-family:var(--mono);font-size:.92rem;font-weight:600;letter-spacing:.02em;
+    display:inline-flex;align-items:center;gap:.6em;
+    background:transparent;color:var(--text);border:1px solid var(--line-2);
+    padding:.8em 1.3em;border-radius:10px;cursor:pointer;
+    transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .25s,border-color .25s,color .25s;
+    white-space:normal;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent-soft);transform:translateY(-2px);}
+  .btn.blue{background:var(--accent);color:var(--accent-ink);border-color:transparent;}
+  .btn.blue:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px var(--glow),0 0 0 1px var(--accent-soft);color:var(--accent-ink);}
+  .btn.green{background:var(--green);color:var(--green-ink);border-color:transparent;}
+  .btn.green:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px rgba(95,214,143,.4),0 0 0 1px var(--green);color:var(--green-ink);}
+  .btn.small{font-size:.8rem;padding:.6em 1.1em;border-radius:9px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn:focus-visible,.clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  /* toast +points */
+  .float-pts{
+    position:fixed;font-family:var(--mono);font-weight:700;font-size:18px;color:var(--green);
+    pointer-events:none;z-index:99;animation:rise .9s ease-out forwards;
+    text-shadow:0 0 12px rgba(95,214,143,.6);
+  }
+  @keyframes rise{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-46px);}}
+
+  /* ---------- LEVEL 1 : THE SUSPICIOUS EMAIL ---------- */
+  .mailwin{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    overflow:hidden;max-width:680px;margin-top:16px;
+    box-shadow:0 10px 30px -18px rgba(0,0,0,.8);
+  }
+  .mw-bar{display:flex;align-items:center;gap:.7rem;padding:.8rem 1.1rem;border-bottom:1px solid var(--line);background:rgba(255,255,255,.015);}
+  .mw-bar .dots{display:flex;gap:.45rem;}
+  .mw-bar .dots i{width:11px;height:11px;border-radius:50%;background:var(--line-2);}
+  .mw-bar .dots i:first-child{background:#2a3340;}
+  .mw-bar .name{font-family:var(--mono);font-size:.76rem;color:var(--muted);}
+  .mw-head{padding:12px 18px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12.5px;line-height:2;color:var(--muted);}
+  .mw-head b{color:var(--text);font-weight:600;}
+  .mw-body{padding:16px 18px 18px;font-size:14.5px;line-height:1.8;}
+  .flag{
+    display:inline;font:inherit;background:none;border:none;color:inherit;cursor:pointer;
+    border-bottom:1px dashed rgba(255,255,255,.28);padding:0 2px;
+    transition:background .15s;
+  }
+  .flag:hover{background:rgba(255,182,92,.12);}
+  .flag.hit{
+    background:rgba(255,122,122,.14);outline:1px solid var(--crit);border-radius:4px;
+    border-bottom:none;cursor:default;
+  }
+  .flag.hit::after{content:" ⚑";color:var(--crit);}
+  .attach-chip{
+    display:inline-flex;align-items:center;gap:.5em;margin-top:10px;
+    font-family:var(--mono);font-size:12px;color:var(--muted);
+    background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;padding:6px 12px;
+  }
+  .inv{
+    margin-top:16px;background:var(--panel-2);border:1px dashed var(--line-2);
+    border-radius:12px;padding:12px 16px;font-family:var(--mono);font-size:13px;
+    min-height:44px;color:var(--muted);line-height:1.7;max-width:680px;
+  }
+  .inv b{color:var(--text);}
+  .inv .fl{color:var(--crit);}
+
+  /* ---------- LEVEL 2 + 7 : DECISIONS / TICKETS ---------- */
+  .choices{display:grid;gap:12px;margin-top:14px;max-width:640px;}
+  .choice{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:14px 16px;cursor:pointer;text-align:left;font-family:inherit;color:var(--text);
+    font-size:14.5px;transition:transform .2s var(--ease),border-color .2s;
+  }
+  .choice:hover{transform:translateX(4px);border-color:var(--accent);}
+  .choice b{display:block;font-size:15px;margin-bottom:2px;}
+  .choice small{color:var(--muted);}
+  .choice.good{background:rgba(95,214,143,.08);border-color:var(--green);}
+  .choice.meh{background:rgba(255,182,92,.08);border-color:var(--warn);}
+  .choice.bad{background:rgba(255,122,122,.08);border-color:var(--crit);}
+  .choice:disabled{cursor:default;transform:none;}
+  .verdict{margin-top:12px;font-size:14px;line-height:1.5;display:none;max-width:640px;}
+  .warnnote{
+    margin-top:10px;background:rgba(255,182,92,.07);border:1px dashed rgba(255,182,92,.45);
+    border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.45;color:#E9C89B;
+  }
+  .warnnote b{color:var(--warn);}
+  .ticket{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:12px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:center;
+    flex-wrap:wrap;
+  }
+  .ticket .tx{flex:1;min-width:200px;font-size:14px;}
+  .ticket .tx b{display:block;font-size:14.5px;}
+  .ticket .tx small{color:var(--muted);}
+  .ticket.done{background:rgba(95,214,143,.05);border-color:var(--green);}
+
+  /* ---------- LEVEL 3 : TIMELINE HUNT ---------- */
+  .ev{
+    display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:12px 16px;margin-bottom:10px;cursor:pointer;font-family:inherit;color:var(--text);
+    transition:transform .2s var(--ease),border-color .2s;
+  }
+  .ev:hover{transform:translateX(4px);border-color:var(--accent);}
+  .ev .tm{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted-2);min-width:46px;padding-top:2px;}
+  .ev .ico{font-size:20px;}
+  .ev .tx{flex:1;}
+  .ev .tx b{display:block;font-size:14.5px;}
+  .ev .tx .detail{display:none;color:var(--muted);font-size:13.5px;margin-top:4px;line-height:1.5;}
+  .ev.open{border-color:var(--crit);background:rgba(255,122,122,.05);cursor:default;}
+  .ev.open:hover{transform:none;}
+  .ev.open .tm{color:var(--crit);}
+  .ev.open .tx .detail{display:block;}
+
+  /* ---------- LEVEL 4 : CONTAINMENT BOARD ---------- */
+  .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:16px;}
+  .act{
+    display:flex;gap:10px;align-items:flex-start;text-align:left;font-family:inherit;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:10px;
+    padding:12px 14px;font-size:13.5px;cursor:pointer;line-height:1.45;color:var(--muted);
+    transition:transform .2s var(--ease),border-color .2s;
+  }
+  .act:hover{transform:translateY(-2px);border-color:var(--accent);}
+  .act b{display:block;color:var(--text);font-size:14px;}
+  .act.done{background:rgba(95,214,143,.07);border-color:var(--green);cursor:default;}
+  .act.done:hover{transform:none;}
+  .act.done b::after{content:" ✓";color:var(--green);}
+  .act.nope{animation:shake .4s;border-color:var(--crit);background:rgba(255,122,122,.07);}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+
+  /* ---------- LEVEL 5 : PHISH STORM ARCADE ---------- */
+  .arena{
+    position:relative;height:340px;margin-top:16px;
+    background:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px),
+      linear-gradient(180deg,var(--panel-2),var(--bg-2));
+    background-size:48px 48px,48px 48px,100% 100%;
+    border:1px solid var(--line-2);border-radius:var(--r);overflow:hidden;
+  }
+  .side-lbl{
+    position:absolute;top:12px;font-family:var(--mono);font-size:11px;font-weight:600;
+    text-align:center;width:110px;color:var(--muted);
+  }
+  .side-lbl small{color:var(--muted-2);}
+  .side-lbl .c{font-size:44px;display:block;line-height:1.2;}
+  .lbl-src{left:8px;} .lbl-src .c{filter:drop-shadow(0 0 18px rgba(255,122,122,.5));}
+  .lbl-dst{right:8px;} .lbl-dst .c{filter:drop-shadow(0 0 18px var(--glow));}
+  .mailcard{
+    position:absolute;z-index:5;max-width:190px;text-align:left;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:10px;
+    padding:8px 11px;font-family:var(--mono);font-size:11px;line-height:1.45;color:var(--text);
+    cursor:pointer;animation:bob 1.8s ease-in-out infinite;
+    box-shadow:0 8px 22px -10px rgba(0,0,0,.7);
+  }
+  .mailcard:hover{border-color:var(--accent);}
+  .mailcard i{color:var(--muted-2);font-style:normal;display:block;font-size:10px;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+  .mailcard.zap{animation:zap .5s ease-in forwards;pointer-events:none;border-color:var(--green);}
+  @keyframes zap{to{transform:scale(.25);opacity:0;}}
+  .mailcard.oops{border-color:var(--warn);color:var(--warn);pointer-events:none;}
+  .mailcard.fade{transition:opacity .8s;opacity:0;}
+  .bigbar{
+    position:absolute;bottom:12px;left:14px;right:14px;height:22px;
+    background:var(--bg);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;
+  }
+  .bigbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .3s;box-shadow:0 0 14px var(--glow);}
+  .bigbar span{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);
+    text-shadow:0 1px 3px rgba(0,0,0,.7);
+  }
+  .event-banner{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    background:rgba(255,182,92,.12);border:1px solid var(--warn);color:var(--text);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    font-weight:700;font-size:14px;
+    padding:10px 16px;border-radius:12px;
+    display:none;z-index:10;text-align:center;max-width:min(92%,460px);
+  }
+  .event-banner small{color:var(--muted);font-weight:400;}
+  .event-banner.ok{background:rgba(95,214,143,.12);border-color:var(--green);}
+  .event-banner .btn{margin-top:8px;}
+
+  /* ---------- LEVEL 6 : RECOVERY SWITCH ---------- */
+  .switch-zone{
+    display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:24px;
+  }
+  .big-switch{
+    width:130px;height:190px;background:var(--panel-2);border:1px solid var(--line-2);
+    border-radius:20px;position:relative;cursor:pointer;
+    font-family:inherit;transition:border-color .3s,box-shadow .3s;
+  }
+  .big-switch:hover{border-color:var(--accent);}
+  .big-switch.on{border-color:var(--green);box-shadow:0 0 24px rgba(95,214,143,.25);}
+  .big-switch .knob{
+    position:absolute;left:10px;right:10px;height:74px;top:96px;
+    background:var(--crit);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    color:#2A0E12;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.06em;
+    transition:top .35s cubic-bezier(.5,1.6,.5,1), background .35s, color .35s;
+  }
+  .big-switch.on .knob{top:12px;background:var(--green);color:var(--green-ink);}
+  .dns-line{font-family:var(--mono);font-size:13px;min-height:20px;color:var(--muted);text-align:center;}
+
+  /* ---------- FINALE ---------- */
+  .confetti{position:fixed;top:-20px;font-size:20px;z-index:98;animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);}}
+  .rank-big{
+    font-family:"Space Grotesk",sans-serif;font-size:clamp(30px,5vw,48px);font-weight:700;
+    color:var(--accent-soft);margin:8px 0;letter-spacing:-.02em;
+    text-shadow:0 0 30px var(--glow);
+  }
+
+  .center{text-align:center;}
+  .spacer{height:18px;}
+</style>
+</head>
+<body>
+
+<canvas id="secbg" aria-hidden="true"></canvas>
+
+<header id="topbar">
+  <a class="logo" href="../index.html" title="Back to shautech.com"><span class="mark">›</span>shautech<span class="lab">&nbsp;/ labs</span></a>
+  <span class="sim-name">// operation: breach-day</span>
+  <div class="lvlmap" id="lvlmap"></div>
+  <div class="hud"><div class="pill" id="scorePill">⭐ <b id="score">0</b></div></div>
+</header>
+
+<div class="stage" id="stage"><div class="screen" id="screen"></div></div>
+
+<script>
+/* ═══════════════ AMBIENT BACKGROUND : attacker → your tenant ═══════════════ */
+(()=>{
+  const cv=document.getElementById('secbg'), ctx=cv.getContext('2d');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SAMPLES=140, BLOCK=0.85;
+  let W=0,H=0,paths=[],parts=[],pulses=[],dashOff=0,last=0,raf=null,T=0,flash=0;
+  let state='phish', shieldOn=false;
+
+  /* what the wire carries per incident phase; hostile packets run red and get
+     stopped at the shield once containment is active */
+  const STATES={
+    phish: {glyphs:['mail'],                 hostile:true,  dir:1},
+    urls:  {glyphs:['site'],                 hostile:true,  dir:1},
+    attach:{glyphs:['bit','one','zero'],     hostile:true,  dir:1},
+    creds: {glyphs:['key'],                  hostile:true,  dir:1},
+    exfil: {glyphs:['mail','bit','one','zero'],hostile:true,dir:-1},
+    storm: {glyphs:['mail'],                 hostile:true,  dir:1, fast:true},
+    clean: {glyphs:['lock','check','mail','bit'],hostile:false,dir:1}
+  };
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  window.SECBG={
+    set(t){
+      if(!STATES[t]||t===state)return;
+      state=t;
+      const st=STATES[t];
+      parts.forEach(p=>{p.k=pick(st.glyphs);p.dir=st.dir;});
+    },
+    shield(on){ shieldOn=on; }
+  };
+
+  const pal=()=>document.body.classList.contains('night')
+    ? {trail:'138,134,255', threat:'255,122,122', alt:'95,214,143', head:'#C6C2FF', threatHead:'#FFB3B3', trace:'rgba(154,148,255,.055)'}
+    : {trail:'77,159,255',  threat:'255,122,122', alt:'95,214,143', head:'#BFDCFF', threatHead:'#FFB3B3', trace:'rgba(124,187,255,.055)'};
+
+  const rack=()=>{
+    const rw=44, rh=Math.min(H*0.52,380), ry=(H-rh)/2;
+    return {rw,rh,ry, x0:12, x1:W-12-rw, ax:12+rw+2, bx:W-12-rw-2};
+  };
+  function rr(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+  function drawRacks(c){
+    const g=rack();
+    [{x:g.x0,label:'ATTACKER · UNKNOWN',dst:false},{x:g.x1,label:'YOUR TENANT',dst:true}].forEach(r=>{
+      ctx.save();
+      ctx.strokeStyle='rgba(255,255,255,.10)';
+      ctx.fillStyle='rgba(16,19,23,.55)';
+      rr(r.x,g.ry,g.rw,g.rh,10);ctx.fill();ctx.stroke();
+      const rows=Math.floor((g.rh-24)/24);
+      for(let i=0;i<rows;i++){
+        for(let j=0;j<2;j++){
+          const tw=Math.sin(T*1.8+i*1.7+j*2.6+(r.dst?3:0))*0.5+0.5;
+          ctx.fillStyle=r.dst
+            ? `rgba(${c.trail},${(0.08+tw*0.30).toFixed(3)})`
+            : `rgba(${c.threat},${(0.08+tw*0.24).toFixed(3)})`;
+          ctx.fillRect(r.x+10+j*15, g.ry+16+i*24, 9, 4);
+        }
+      }
+      ctx.translate(r.dst ? r.x-8 : r.x+g.rw+14, g.ry+g.rh/2);
+      ctx.rotate(-Math.PI/2);
+      ctx.font='600 9px "JetBrains Mono",monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(152,160,170,.45)';
+      ctx.fillText(r.label.split('').join(' '),0,0);
+      ctx.restore();
+    });
+  }
+  function drawShield(c){
+    if(!shieldOn)return;
+    const g=rack();
+    const rgb = state==='clean' ? c.alt : c.trail;
+    ctx.save();
+    ctx.strokeStyle=`rgba(${rgb},${(0.28+flash*0.5).toFixed(3)})`;
+    ctx.lineWidth=2;
+    ctx.shadowBlur=16;ctx.shadowColor=`rgba(${rgb},.8)`;
+    ctx.beginPath();
+    ctx.ellipse(g.bx+14, H/2, 44, g.rh*0.58, 0, Math.PI*0.55, Math.PI*1.45);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function cubic(p0,p1,p2,p3,t){
+    const u=1-t;
+    return {x:u*u*u*p0.x+3*u*u*t*p1.x+3*u*t*t*p2.x+t*t*t*p3.x,
+            y:u*u*u*p0.y+3*u*u*t*p1.y+3*u*t*t*p2.y+t*t*t*p3.y};
+  }
+  function buildPaths(){
+    paths=[];
+    const g=rack(), lanes=6;
+    for(let i=0;i<lanes;i++){
+      const ya=g.ry+g.rh*(0.08+0.84*i/(lanes-1));
+      const yb=g.ry+g.rh*(0.08+0.84*Math.random());
+      const p0={x:g.ax,y:ya}, p3={x:g.bx,y:yb};
+      const p1={x:W*(0.30+Math.random()*0.08), y:ya+(Math.random()*2-1)*H*0.20};
+      const p2={x:W*(0.62+Math.random()*0.08), y:yb+(Math.random()*2-1)*H*0.20};
+      const pts=[];
+      for(let s=0;s<=SAMPLES;s++) pts.push(cubic(p0,p1,p2,p3,s/SAMPLES));
+      const line=new Path2D();
+      pts.forEach((p,k)=>k?line.lineTo(p.x,p.y):line.moveTo(p.x,p.y));
+      paths.push({pts,line});
+    }
+  }
+  const posOn=(path,t)=>{
+    const f=Math.min(Math.max(t,0),1)*SAMPLES;
+    const i=Math.floor(f), j=Math.min(i+1,SAMPLES), k=f-i;
+    const a=path.pts[i], b=path.pts[j];
+    return {x:a.x+(b.x-a.x)*k, y:a.y+(b.y-a.y)*k};
+  };
+  function seedParticles(){
+    const st=STATES[state];
+    const n=Math.max(20,Math.min(42,Math.round(W/36)));
+    parts=Array.from({length:n},()=>({
+      p:Math.floor(Math.random()*paths.length),
+      t:Math.random(),
+      v:0.045+Math.random()*0.075,
+      s:1.2+Math.random()*1.5,
+      k:pick(st.glyphs),
+      dir:st.dir
+    }));
+  }
+  /* wireframe glyphs, drawn around (0,0) at scale s */
+  function glyph(k,x,y,s,rgb,head){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.strokeStyle=`rgba(${rgb},.9)`;
+    ctx.fillStyle=`rgba(${rgb},.13)`;
+    ctx.lineWidth=1;
+    ctx.shadowBlur=8;ctx.shadowColor=`rgba(${rgb},.8)`;
+    switch(k){
+      case 'mail':{
+        const w=3.4*s,h=2.2*s;
+        ctx.beginPath();ctx.rect(-w/2,-h/2,w,h);ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-w/2,-h/2);ctx.lineTo(0,h*0.14);ctx.lineTo(w/2,-h/2);ctx.stroke();
+        break;}
+      case 'bit':{
+        const w=1.7*s;
+        ctx.globalAlpha=.85;ctx.fillStyle=head;
+        ctx.fillRect(-w/2,-w/2,w,w);
+        break;}
+      case 'one': case 'zero':{
+        ctx.font=`600 ${Math.max(8,4.5*s)}px "JetBrains Mono",monospace`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.globalAlpha=.8;ctx.fillStyle=head;
+        ctx.fillText(k==='one'?'1':'0',0,0);
+        break;}
+      case 'key':{
+        ctx.beginPath();ctx.arc(-1.2*s,0,0.9*s,0,7);ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-0.3*s,0);ctx.lineTo(2*s,0);
+        ctx.moveTo(1.2*s,0);ctx.lineTo(1.2*s,0.7*s);
+        ctx.moveTo(1.8*s,0);ctx.lineTo(1.8*s,0.85*s);
+        ctx.stroke();
+        break;}
+      case 'lock':{
+        const w=2.6*s,h=2*s;
+        ctx.beginPath();ctx.rect(-w/2,-0.1*s,w,h);ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.arc(0,-0.1*s,0.8*s,Math.PI,0);ctx.stroke();
+        break;}
+      case 'check':{
+        ctx.strokeStyle=head;ctx.lineWidth=1.5;
+        ctx.beginPath();
+        ctx.moveTo(-1.2*s,0.1*s);ctx.lineTo(-0.3*s,1*s);ctx.lineTo(1.4*s,-1*s);
+        ctx.stroke();
+        break;}
+      case 'site':{
+        const r=1.8*s;
+        ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(r,0);ctx.stroke();
+        ctx.beginPath();ctx.ellipse(0,0,r*0.45,r,0,0,7);ctx.stroke();
+        break;}
+      default:{
+        ctx.globalAlpha=.8;ctx.fillStyle=head;
+        ctx.beginPath();ctx.arc(0,0,s,0,7);ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  function resize(){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;
+    cv.width=W*dpr;cv.height=H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    buildPaths();seedParticles();
+    if(reduced) draw(0);
+  }
+  function draw(dt){
+    T+=dt;flash=Math.max(0,flash-dt*1.2);
+    ctx.clearRect(0,0,W,H);
+    const c=pal(), st=STATES[state];
+    drawRacks(c);
+    drawShield(c);
+    /* faint circuit traces with a slow dash crawl */
+    dashOff-=7*dt;
+    ctx.save();
+    ctx.strokeStyle=c.trace;ctx.lineWidth=1;
+    ctx.setLineDash([2,7]);ctx.lineDashOffset=dashOff;
+    paths.forEach(p=>ctx.stroke(p.line));
+    ctx.restore();
+    /* packets in flight */
+    for(const pt of parts){
+      const speed=pt.v*(st.fast?1.7:1);
+      pt.t+=speed*dt*pt.dir;
+      if(pt.dir===1 && st.hostile && shieldOn && pt.t>=BLOCK){
+        /* stopped at the shield */
+        const hit=posOn(paths[pt.p],BLOCK);
+        pulses.push({x:hit.x,y:hit.y,r:2,a:0.35,rgb:c.threat});
+        flash=Math.min(flash+0.4,1);
+        pt.t=0;pt.p=Math.floor(Math.random()*paths.length);
+        pt.k=pick(st.glyphs);
+        continue;
+      }
+      if(pt.dir===1 && pt.t>=1){ /* arrived */
+        const end=posOn(paths[pt.p],1);
+        if(Math.random()<0.5) pulses.push({x:end.x,y:end.y,r:2,a:0.30,rgb:st.hostile?c.threat:c.alt});
+        pt.t=0;pt.p=Math.floor(Math.random()*paths.length);
+        pt.v=0.045+Math.random()*0.075;
+        pt.k=pick(st.glyphs);
+      }
+      if(pt.dir===-1 && pt.t<=0){ /* exfiltrated to the attacker */
+        const end=posOn(paths[pt.p],0);
+        if(Math.random()<0.5) pulses.push({x:end.x,y:end.y,r:2,a:0.30,rgb:c.threat});
+        pt.t=1;pt.p=Math.floor(Math.random()*paths.length);
+        pt.v=0.045+Math.random()*0.075;
+        pt.k=pick(st.glyphs);
+      }
+      const path=paths[pt.p];
+      const rgb=st.hostile?c.threat:(pt.k==='check'?c.alt:c.trail);
+      const head=st.hostile?c.threatHead:(pt.k==='check'?'#A5EFC4':c.head);
+      for(let k=5;k>=1;k--){ /* fading tail */
+        const q=posOn(path,pt.t-pt.dir*k*0.011);
+        ctx.beginPath();
+        ctx.arc(q.x,q.y,Math.max(pt.s*0.7*(1-k*0.13),.2),0,7);
+        ctx.fillStyle=`rgba(${rgb},${0.16*(1-k/6)})`;
+        ctx.fill();
+      }
+      const hp=posOn(path,pt.t);
+      glyph(pt.k,hp.x,hp.y,pt.s,rgb,head);
+    }
+    /* impact / arrival pulses */
+    pulses=pulses.filter(p=>p.a>0.01);
+    for(const p of pulses){
+      p.r+=34*dt;p.a-=0.5*dt;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.strokeStyle=`rgba(${p.rgb},${Math.max(p.a,0)})`;
+      ctx.lineWidth=1;
+      ctx.stroke();
+    }
+  }
+  function loop(now){
+    const dt=Math.min((now-last)/1000||0,0.05);
+    last=now;
+    draw(dt);
+    raf=requestAnimationFrame(loop);
+  }
+  window.addEventListener('resize',resize);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){cancelAnimationFrame(raf);raf=null;}
+    else if(!reduced && !raf){last=performance.now();raf=requestAnimationFrame(loop);}
+  });
+  resize();
+  if(!reduced) raf=requestAnimationFrame(loop);
+})();
+
+/* ═══════════════ CORE ═══════════════ */
+let score = 0;
+let level = 0;
+const LEVELS = [
+  {icon:"🎬", name:"Start"},
+  {icon:"🔎", name:"Detect"},
+  {icon:"🚨", name:"Triage"},
+  {icon:"🔬", name:"Investigate"},
+  {icon:"🚧", name:"Contain"},
+  {icon:"🌊", name:"Storm"},
+  {icon:"🛡️", name:"Recover"},
+  {icon:"🎓", name:"Harden"}
+];
+const mapEl = document.getElementById('lvlmap');
+LEVELS.forEach((l,i)=>{
+  const d=document.createElement('div');
+  d.className='lvl';d.id='lvl'+i;
+  d.innerHTML=`<div class="bubble"><em>${l.icon}</em></div><span>${l.name}</span>`;
+  mapEl.appendChild(d);
+});
+function refreshMap(){
+  LEVELS.forEach((l,i)=>{
+    const el=document.getElementById('lvl'+i);
+    el.classList.toggle('now', i===level);
+    el.classList.toggle('done', i<level);
+  });
+}
+/* keep the stage clear of the header, whatever height it wraps to */
+function fitStage(){
+  document.getElementById('stage').style.top=(document.getElementById('topbar').offsetHeight+6)+'px';
+}
+window.addEventListener('resize',fitStage);
+fitStage();
+function addScore(n, x, y){
+  score+=n;
+  document.getElementById('score').textContent=score;
+  const pill=document.getElementById('scorePill');
+  pill.style.transform='scale(1.15)';setTimeout(()=>pill.style.transform='scale(1)',150);
+  if(x!==undefined){
+    const f=document.createElement('div');f.className='float-pts';f.textContent='+'+n;
+    f.style.left=x+'px';f.style.top=y+'px';document.body.appendChild(f);
+    setTimeout(()=>f.remove(),900);
+  }
+}
+const screen = document.getElementById('screen');
+function show(html){
+  screen.style.animation='none';screen.offsetHeight;screen.style.animation='';
+  screen.innerHTML=html;
+  document.body.classList.toggle('night', level===6);
+  document.querySelector('.stage').scrollTop=0;
+  refreshMap();
+}
+function goto(n){ level=n; RENDER[n](); }
+
+/* ═══════════════ L0 : INTRO ═══════════════ */
+function L0(){
+  show(`
+    <div class="badge">LEVEL 0 · MONDAY, 09:02</div>
+    <h1>Something phishy just landed<br>in the inbox 🎣</h1>
+    <div class="say alert" data-who="THE BOSS">
+      Hey… quick question. I got an email from <b>"Microsoft Support"</b> saying my mailbox
+      gets deleted in 2 hours unless I verify my password. I clicked the link and, well…
+      typed it in. It looked <i>completely</i> real. That's… fine, right? …Right? 😅
+    </div>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Welcome to <b>Breach Day</b> at PixelSoft. (Yes — the same team from the migration adventure. Trouble follows them.)
+      What the boss just described is a <b>phishing attack</b>, and those typed-in credentials are now in someone
+      else's hands. No panic: incidents are won with a <b>plan</b>, not with adrenaline —
+      detect, investigate, contain, clean up, recover, learn. Step by step, just like last time.
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="goto(1)">Take the incident! →</button>
+  `);
+}
+
+/* ═══════════════ L1 : SPOT THE PHISH ═══════════════ */
+const flags=[
+  {t:"The sender address", ex:"«micros0ft-helpdesk.com» — with a ZERO. The display name says Microsoft; the actual domain says scam. Always read the part after the @.", flow:"phish"},
+  {t:"Panic + a deadline", ex:"«URGENT», «2 hours», ALL CAPS. Fear and time pressure switch off careful thinking — that's the whole trick. Real providers don't threaten to delete your mailbox by lunch.", flow:"phish"},
+  {t:"The generic greeting", ex:"«Dear valued user» — they don't know your name, because this exact mail went to thousands of people.", flow:"phish"},
+  {t:"The broken grammar", ex:"«Please to verify you account» — big companies employ proofreaders. Attackers often don't. Odd phrasing is a gift: accept it.", flow:"phish"},
+  {t:"The link", ex:"«portal-micr0soft-secure.com» is NOT microsoft.com. Hover before you click — the true destination shows up. A lookalike domain is the #1 tell.", flow:"urls"},
+  {t:"The attachment", ex:"A «mailbox_backup.html» file — an HTML attachment that opens a fake login page right on your computer. Unexpected attachments from strangers: never open them.", flow:"attach"}
+];
+let flagsFound=0;
+function L1(){
+  flagsFound=0;
+  show(`
+    <div class="badge">LEVEL 1 · DETECT 🔎</div>
+    <h2>Spot the phish</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Here's the exact email the boss received. It fooled him — but it wouldn't have fooled someone
+      who knows the tells. Find and click all <b>6 red flags</b>. (+10 ⭐ each)
+    </div>
+    <div class="mailwin">
+      <div class="mw-bar">
+        <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+        <span class="name">inbox — boss@pixelsoft.com</span>
+      </div>
+      <div class="mw-head">
+        FROM&nbsp;&nbsp;&nbsp;<b>Microsoft Support</b> &lt;<button class="flag" id="fl0" onclick="flagHit(0,event)">security-alert@micros0ft-helpdesk.com</button>&gt;<br>
+        TO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boss@pixelsoft.com<br>
+        SUBJECT&nbsp;<button class="flag" id="fl1" onclick="flagHit(1,event)">URGENT!!! Your mailbox will be DELETED in 2 hours</button>
+      </div>
+      <div class="mw-body">
+        <button class="flag" id="fl2" onclick="flagHit(2,event)">Dear valued user,</button><br><br>
+        We detected unusual activity on your mailbox. <button class="flag" id="fl3" onclick="flagHit(3,event)">Please to verify you account immediately</button>
+        or your mailbox will be permanently deleted and all emails lost forever.<br><br>
+        👉 Verify here: <button class="flag" id="fl4" onclick="flagHit(4,event)" style="color:var(--accent-soft)">https://portal-micr0soft-secure.com/verify</button><br>
+        <button class="flag attach-chip" id="fl5" onclick="flagHit(5,event)">📎 mailbox_backup.html (2 KB)</button><br><br>
+        Thank you for your cooperation,<br>
+        <span class="muted">The IT Team</span>
+      </div>
+    </div>
+    <div class="inv" id="flaglog">🔎 <b>Red flags found: 0/6</b> — click the suspicious parts of the email above.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l1next" style="display:none" onclick="goto(2)">All flags found! To triage →</button>
+  `);
+}
+function flagHit(i,e){
+  const el=document.getElementById('fl'+i);
+  if(el.classList.contains('hit'))return;
+  el.classList.add('hit');
+  flagsFound++;
+  SECBG.set(flags[i].flow);
+  addScore(10,e.clientX,e.clientY);
+  const log=document.getElementById('flaglog');
+  log.innerHTML=`🔎 <b>Red flags found: ${flagsFound}/6</b><br><span class="fl">⚑ ${flags[i].t}</span> — ${flags[i].ex}`;
+  if(flagsFound===flags.length){
+    log.innerHTML=`🔎 <b>All 6 flags found!</b> One golden rule covers most of them: <b>slow down</b>.
+      Phishing only works at high speed — the moment you pause and read, the costume falls apart.`;
+    document.getElementById('l1next').style.display='inline-flex';
+  }
+}
+
+/* ═══════════════ L2 : TRIAGE DECISIONS ═══════════════ */
+const decisions=[
+  {q:"The boss clicked AND typed his password. Your very first move?",
+   opts:[
+     {t:"Reset his password & kill every active session 🔑", s:"Make the stolen credentials worthless, right now.", v:"good", pts:10,
+      fb:"Exactly. Every minute those credentials work, the attacker is reading email as the boss. Revoke sessions too — a password change alone doesn't kick out someone already logged in. (+10 ⭐)"},
+     {t:"Send a company-wide warning email 📣", s:"Warn everyone before somebody else clicks.", v:"meh", pts:5,
+      fb:"Good instinct, wrong order. While you're wordsmithing the announcement, the attacker is inside. Lock the door FIRST, then warn people. (+5 ⭐)"},
+     {t:"Unplug the server and the Wi-Fi 🔌", s:"No network, no hacker. Problem solved?", v:"bad", pts:0,
+      fb:"Dramatic! But the mailbox lives in the cloud — pulling office cables stops YOUR business, not the attacker, who is connecting from somewhere else entirely. (0 ⭐)"}
+   ]},
+  {q:"Is it just the boss? How do you find out?",
+   opts:[
+     {t:"Search the logs: who received it, who clicked, who signed in 🔍", s:"Facts from the systems, not from memory.", v:"good", pts:10,
+      fb:"Scope first! The same mail went to 14 people. Message trace shows who received it, sign-in logs show who got harvested. Facts beat feelings during an incident. (+10 ⭐)"},
+     {t:"Ask everyone to raise a hand if they clicked 🙋", s:"Honesty poll in the hallway.", v:"meh", pts:5,
+      fb:"People are embarrassed to admit clicking — you'll get silence and half-truths. Ask anyway (kindly!), but verify in the logs. (+5 ⭐)"},
+     {t:"Assume it's only him — nobody else said anything 🤷", s:"No news is good news, right?", v:"bad", pts:0,
+      fb:"The quiet clickers are the dangerous ones. «Nobody said anything» is exactly what a spreading incident sounds like. (0 ⭐)"}
+   ]},
+  {q:"Who needs to know, right now?",
+   opts:[
+     {t:"Management + whoever handles your security — calm and factual 📋", s:"Short briefing: what happened, what you're doing.", v:"good", pts:10,
+      fb:"Yes. Decision-makers must hear it from you, early, without drama. If personal data might be involved, this also starts the compliance clock — more on that later tonight. (+10 ⭐)"},
+     {t:"Everyone, subject: «WE HAVE BEEN HACKED!!!» 🔥", s:"Total transparency, maximum volume.", v:"meh", pts:5,
+      fb:"Transparency yes, panic no. That subject line generates 50 helpdesk calls and 3 rumors per hour. Inform people — with instructions, not sirens. (+5 ⭐)"},
+     {t:"Nobody. Fix it quietly, tell no one 🤫", s:"What they don't know can't scare them.", v:"bad", pts:0,
+      fb:"Silence feels safe and ages terribly. If personal data leaked, staying quiet can even be illegal (GDPR says 72 hours). Secrets and incidents don't mix. (0 ⭐)"}
+   ]}
+];
+let di=0;
+function L2(){
+  di=0;
+  SECBG.set('creds');
+  show(`
+    <div class="badge">LEVEL 2 · TRIAGE 🚨</div>
+    <h2>First moves matter most</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      The first hour of an incident decides how the whole week goes.
+      Three quick calls to make — choose wisely!
+    </div>
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d=decisions[di];
+  document.getElementById('dzone').innerHTML=`
+    <h2 style="font-size:19px;margin-top:14px">Decision ${di+1}/${decisions.length}: ${d.q}</h2>
+    <div class="choices">
+      ${d.opts.map((o,i)=>`
+        <button class="choice" id="ch${i}" onclick="pick(${i},event)">
+          <b>${o.t}</b><small>${o.s}</small>
+        </button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none"></button>
+  `;
+}
+function pick(i,e){
+  const d=decisions[di], o=d.opts[i];
+  d.opts.forEach((x,j)=>{
+    const el=document.getElementById('ch'+j);
+    el.disabled=true;
+    if(j===i) el.classList.add(o.v);
+  });
+  if(o.pts>0) addScore(o.pts,e.clientX,e.clientY);
+  const v=document.getElementById('verdict');
+  v.innerHTML=`<div class="say" data-who="${o.v==='good'?'NICE':'HMM'}">${o.fb}</div>`;
+  v.style.display='block';
+  const btn=document.getElementById('dnext');
+  btn.style.display='inline-flex';
+  if(di<decisions.length-1){ btn.textContent='Next decision →'; btn.onclick=()=>{di++;renderDecision();}; }
+  else { btn.textContent='One more thing: pick your magnifying glass →'; btn.onclick=renderToolbox; }
+}
+const tools=[
+  {t:"🧭 The built-in security tools", s:"Microsoft Defender & friends — already in many M365 licenses.",
+   fb:"Great default: alerts, message trace, sign-in logs and quarantine actions are already there — many companies just never open the console. Today you will. (+10 ⭐)"},
+  {t:"🗼 A SIEM — the control tower", s:"Microsoft Sentinel or similar: every log, one screen.",
+   fb:"The control tower: all logs in one place, hunting queries, automation. Overkill for a tiny office, priceless once you have real infrastructure. (+10 ⭐)"},
+  {t:"📞 Call in specialists", s:"A security partner / MSSP who does this every week.",
+   fb:"Zero shame in this one — during an incident, speed beats pride. The best setups combine it: your tools + someone on speed-dial who's seen this movie before. (+10 ⭐)"}
+];
+function renderToolbox(){
+  document.getElementById('dzone').innerHTML=`
+    <h2 style="font-size:19px;margin-top:14px">What do we investigate WITH? 🔬</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Like the migration toolbox: there's no wrong answer, only what fits your size, budget and team. Choose one!
+    </div>
+    <div class="choices">
+      ${tools.map((o,i)=>`
+        <button class="choice" id="tl${i}" onclick="pickTool(${i},event)">
+          <b>${o.t}</b><small>${o.s}</small>
+        </button>`).join('')}
+    </div>
+    <div class="verdict" id="tverdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="tnext" style="display:none" onclick="goto(3)">Toolbox ready! Follow the trail →</button>
+  `;
+}
+function pickTool(i,e){
+  tools.forEach((x,j)=>{
+    const el=document.getElementById('tl'+j);
+    el.disabled=true;
+    if(j===i) el.classList.add('good');
+  });
+  addScore(10,e.clientX,e.clientY);
+  const v=document.getElementById('tverdict');
+  v.innerHTML=`<div class="say" data-who="NICE">${tools[i].fb}</div>`;
+  v.style.display='block';
+  document.getElementById('tnext').style.display='inline-flex';
+}
+
+/* ═══════════════ L3 : THE TIMELINE HUNT ═══════════════ */
+const events=[
+  {tm:"09:02", ico:"📨", t:"The phishing mail is delivered", flow:"phish",
+   d:"Message trace shows it landed in 14 inboxes, not just the boss's. The attacker bought the whole team a ticket."},
+  {tm:"09:06", ico:"🖱️", t:"The boss clicks the link", flow:"urls",
+   d:"The fake login page was pixel-perfect — logo, colors, even a little loading spinner. Nobody should feel stupid for falling for this."},
+  {tm:"09:07", ico:"🔑", t:"Credentials entered", flow:"creds",
+   d:"Username and password, hand-delivered. From this second, the attacker can log in as the boss from anywhere on Earth."},
+  {tm:"09:11", ico:"🌍", t:"Sign-in from another continent", flow:"creds",
+   d:"The logs show it plainly: office sign-in at 9:05, foreign sign-in at 9:11. Unless the boss owns a private supersonic jet, that's «impossible travel» — a classic alarm."},
+  {tm:"09:14", ico:"📥", t:"A new inbox rule appears", flow:"exfil",
+   d:"Rule name: blank. Action: «delete every incoming reply». Why? So when victims respond «is this really you?», the boss never sees the question. Attackers cover their tracks with your own settings."},
+  {tm:"09:18", ico:"📤", t:"200 emails sent to customers", flow:"exfil",
+   d:"The same scam, now sent FROM the boss's real address to customers who trust it. This is why speed matters: every minute uncontained, the blast radius grows."}
+];
+let evDone=0;
+function L3(){
+  evDone=0;
+  show(`
+    <div class="badge">LEVEL 3 · INVESTIGATE 🔬</div>
+    <h2>Follow the trail</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      The logs never lie. Click each event to reconstruct what actually happened,
+      minute by minute. (+10 ⭐ per event)
+    </div>
+    ${events.map((ev,i)=>`
+      <button class="ev clickable" id="ev${i}" onclick="openEv(${i},event)">
+        <span class="tm">${ev.tm}</span>
+        <span class="ico">${ev.ico}</span>
+        <span class="tx"><b>${ev.t}</b><span class="detail">${ev.d}</span></span>
+      </button>`).join('')}
+    <div id="evVerdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="goto(4)">Picture is clear. Contain it! →</button>
+  `);
+}
+function openEv(i,e){
+  const el=document.getElementById('ev'+i);
+  if(el.classList.contains('open'))return;
+  el.classList.add('open');
+  evDone++;
+  SECBG.set(events[i].flow);
+  addScore(10,e.clientX,e.clientY);
+  if(evDone===events.length){
+    document.getElementById('evVerdict').innerHTML=`
+      <div class="say alert" data-who="SCOPE CHECK">
+        And your Level-2 instinct pays off: the log search finds <b>one more victim</b> —
+        Mrs. Mia also entered her password ("the page asked so nicely"). 🙈
+        Two compromised accounts, one malicious rule, 200 outbound scam mails. Now we know
+        exactly what we're fighting. Time to slam the doors.
+      </div>`;
+    document.getElementById('l3next').style.display='inline-flex';
+  }
+}
+
+/* ═══════════════ L4 : CONTAINMENT BOARD ═══════════════ */
+const actions=[
+  {t:"🔑 Reset passwords & revoke sessions", d:"For the boss AND Mrs. Mia — both compromised accounts.", ok:true,
+   ex:"Both accounts locked down. The attacker's stolen keys just stopped working — mid-session."},
+  {t:"📥 Delete the malicious inbox rule", d:"The «delete all replies» rule the attacker planted.", ok:true,
+   ex:"Rule removed. Replies flow again — including 12 customers asking «was that email really from you?»"},
+  {t:"🧹 Purge the phish from all 14 inboxes", d:"Remove it everywhere, so nobody else can click it.", ok:true,
+   ex:"One search-and-destroy later, the bait is gone from every mailbox. Can't click what isn't there."},
+  {t:"⛔ Block the sender & the fake site", d:"Blocklist the domain and the lookalike login URL.", ok:true,
+   ex:"Both blocked at the gateway. If anyone clicks an old copy from their phone, the door is bricked up."},
+  {t:"💻 Isolate Mrs. Mia's laptop", d:"She also opened the attachment — quarantine the machine from the network.", ok:true,
+   ex:"The laptop is cut off while it gets checked. If the attachment left a surprise behind, it's now in a sealed box."},
+  {t:"🔥 Format every computer in the building", d:"Scorched earth. Total certainty.", ok:false,
+   ex:"Whoa — that destroys the evidence, the business day, and everyone's patience, while the actual problem (stolen cloud credentials) doesn't live on the laptops."},
+  {t:"🌐 Turn off the internet for everyone", d:"No internet, no hacker.", ok:false,
+   ex:"The attacker connects to the CLOUD, not to your office router. This only disconnects the defenders."},
+  {t:"🛒 Buy the «PC Cleaner Pro» from that popup", d:"It says it removes 100% of hackers!", ok:false,
+   ex:"That popup is another scam — attackers love selling «cures» during incidents. Congratulations, you almost got phished twice in one day."}
+];
+let actDone=0;
+function L4(){
+  actDone=0;
+  show(`
+    <div class="badge">LEVEL 4 · CONTAIN 🚧</div>
+    <h2>Slam the doors</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Containment = stop the bleeding, keep the evidence. Five of these actions are right —
+      find them all. Wrong ones cost nothing but pride. (+10 ⭐ each)
+    </div>
+    <div class="actions">
+      ${actions.map((a,i)=>`
+        <button class="act clickable" id="act${i}" onclick="doAct(${i},event)">
+          <span><b>${a.t}</b>${a.d}</span>
+        </button>`).join('')}
+    </div>
+    <div class="inv" id="actLog">🚧 <b>Containment: 0/5</b> — pick your moves.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="goto(5)">Contained! …wait, what's that? →</button>
+  `);
+}
+function doAct(i,e){
+  const a=actions[i], el=document.getElementById('act'+i);
+  if(el.classList.contains('done')||el.disabled)return;
+  if(a.ok){
+    el.classList.add('done');
+    actDone++;
+    if(actDone===1){ SECBG.shield(true); } /* first containment action raises the shield */
+    addScore(10,e.clientX,e.clientY);
+    document.getElementById('actLog').innerHTML=`🚧 <b>Containment: ${actDone}/5</b> — ✓ ${a.ex}`;
+    if(actDone===5){
+      document.getElementById('actLog').innerHTML=`🚧 <b>Contained!</b> Look at the background: the shield is up, and the red traffic is bouncing off. The attacker's access is gone — and all the evidence is preserved.`;
+      document.getElementById('l4next').style.display='inline-flex';
+    }
+  } else {
+    el.classList.add('nope');el.disabled=true;
+    document.getElementById('actLog').innerHTML=`🚧 <b>Containment: ${actDone}/5</b> — ✗ ${a.ex}`;
+    setTimeout(()=>el.classList.remove('nope'),500);
+  }
+}
+
+/* ═══════════════ L5 : PHISH STORM ARCADE ═══════════════ */
+const PHISH=[
+  "⚠ Your password expires in 1 HOUR — verify now",
+  "🎁 You won an iPhone 17!!! Claim today",
+  "📦 Parcel held at customs — pay €1.99",
+  "💳 Payroll update: re-enter your bank details",
+  "🔐 Micr0soft: unusual sign-in, verify HERE",
+  "🆘 CEO: buy gift cards, urgent & confidential"
+];
+const LEGIT=[
+  "📄 Invoice #4482 — the paper supplier",
+  "🗓️ HR: holiday calendar for August",
+  "📝 Meeting notes — Monday standup",
+  "💬 Customer question about your quote"
+];
+let zapped=0, STORM_TARGET=12, stormTimer=null, stormEventFired=false, stormLive=false, cardSeq=0;
+function L5(){
+  zapped=0;stormEventFired=false;stormLive=true;cardSeq=0;
+  SECBG.set('storm');
+  show(`
+    <div class="badge">LEVEL 5 · THE SECOND WAVE 🌊</div>
+    <h2>The copycat storm</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Word got out that PixelSoft bites — now every scammer wants a turn, and the whole team is
+      forwarding you suspicious mails. <b>Quarantine the phish</b> (+5 ⭐), but read first:
+      some of these are real business. Legit mail must get through!
+    </div>
+    <div class="arena" id="arena">
+      <div class="side-lbl lbl-src"><span class="c">👾</span>ATTACKERS<br><small>(persistent)</small></div>
+      <div class="side-lbl lbl-dst"><span class="c">🛡️</span>YOUR TENANT<br><small>(defended)</small></div>
+      <div class="event-banner" id="eventBanner"></div>
+      <div class="bigbar"><i id="bigFill"></i><span id="bigLabel">0 / ${STORM_TARGET} quarantined</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="goto(6)">Storm weathered! To recovery →</button>
+  `);
+  stormTimer=setInterval(spawnCard,1100);
+  spawnCard();spawnCard();
+}
+function spawnCard(){
+  if(!stormLive)return;
+  const arena=document.getElementById('arena');
+  if(!arena){clearInterval(stormTimer);return;}
+  if(arena.querySelectorAll('.mailcard:not(.zap):not(.oops)').length>=3)return;
+  const isPhish=Math.random()<0.65;
+  const subj=isPhish?PHISH[Math.floor(Math.random()*PHISH.length)]:LEGIT[Math.floor(Math.random()*LEGIT.length)];
+  const card=document.createElement('button');
+  card.className='mailcard clickable';
+  card.id='mc'+(cardSeq++);
+  card.innerHTML=`<i>new message</i>${subj}`;
+  card.style.left=(16+Math.random()*44)+'%';
+  card.style.top=(16+Math.random()*52)+'%';
+  card.onclick=(e)=>{
+    if(!stormLive||card.classList.contains('zap')||card.classList.contains('oops'))return;
+    if(isPhish){
+      card.classList.add('zap');
+      addScore(5,e.clientX,e.clientY);
+      zapped++;
+      updateStormBar();
+      setTimeout(()=>card.remove(),520);
+      if(!stormEventFired && zapped===Math.floor(STORM_TARGET/2)) stormEvent();
+      if(zapped>=STORM_TARGET) endStorm();
+    } else {
+      card.classList.add('oops');
+      card.innerHTML=`<i>checked ✓</i>That one's legit — let it through!`;
+      setTimeout(()=>{card.classList.add('fade');setTimeout(()=>card.remove(),850);},1200);
+    }
+  };
+  arena.appendChild(card);
+  if(!isPhish){ /* real mail moves on by itself if you leave it alone */
+    setTimeout(()=>{
+      if(card.isConnected && !card.classList.contains('oops')){
+        card.classList.add('fade');setTimeout(()=>card.remove(),850);
+      }
+    },5200);
+  }
+}
+function updateStormBar(){
+  const p=Math.min(100,Math.round(zapped/STORM_TARGET*100));
+  document.getElementById('bigFill').style.width=p+'%';
+  document.getElementById('bigLabel').textContent=`${zapped} / ${STORM_TARGET} quarantined`;
+}
+function stormEvent(){
+  stormEventFired=true;stormLive=false;
+  document.querySelectorAll('.mailcard').forEach(c=>c.style.opacity=.25);
+  const b=document.getElementById('eventBanner');
+  b.classList.remove('ok');
+  b.style.display='block';
+  b.innerHTML=`🙋 Rudy appears at your desk: "I think I clicked one of these…"<br>
+    <small>He came and TOLD you. That's a security culture win — never punish the messenger.</small><br>
+    <button class="btn small" onclick="rudyReset(event)">🔑 Reset his password & revoke sessions</button>`;
+}
+function rudyReset(e){
+  addScore(10,e.clientX,e.clientY);
+  const b=document.getElementById('eventBanner');
+  b.classList.add('ok');
+  b.innerHTML='✓ Rudy is safe. Because he reported fast, the attacker had 4 minutes, not 4 hours.';
+  setTimeout(()=>{b.style.display='none';b.classList.remove('ok');stormLive=true;
+    document.querySelectorAll('.mailcard').forEach(c=>c.style.opacity=1);},1600);
+}
+function endStorm(){
+  stormLive=false;clearInterval(stormTimer);
+  document.querySelectorAll('.mailcard').forEach(c=>c.remove());
+  document.getElementById('bigLabel').textContent='storm weathered ✓';
+  document.getElementById('l5next').style.display='inline-flex';
+}
+
+/* ═══════════════ L6 : RECOVERY NIGHT ═══════════════ */
+let recStep=0, recIdx=0;
+const recSteps=[
+  {ico:"🕵️", t:"Hunt for leftover backdoors", d:"Attackers rarely leave through the door they came in. Check for: extra MFA devices they registered, app passwords, forwarding rules on OTHER mailboxes, strange app permissions granted.",
+   w:"The sneakiest trick: the attacker adds THEIR OWN authenticator app to the boss's account. Password reset? They don't care — they approve the login themselves. Check registered MFA methods!"},
+  {ico:"🔑", t:"Re-issue clean credentials", d:"Boss and Mrs. Mia get fresh passwords and re-register their MFA — done together with them, identity verified in person.",
+   w:"Never reset a password to «Welcome123» and email it. And verify it's really them asking — attackers love calling the helpdesk pretending to be locked-out employees."},
+  {ico:"📨", t:"Restore normal mail flow", d:"Release the false positives from quarantine, re-enable what was frozen. The business breathes again.",
+   w:"Check the quarantine before emptying it — in today's panic, a real customer invoice got swept up too. There's always one."},
+  {ico:"🧾", t:"The GDPR question", d:"The attacker read mailboxes and mailed 200 customers. Personal data was involved — so document everything, and if there's a risk to people's rights, the authority must be notified within 72 hours.",
+   w:"The 72-hour clock starts when you BECOME AWARE of the breach — this morning, 09:30-ish. Documenting as you go (you did!) makes this step paperwork instead of archaeology."},
+  {ico:"📞", t:"Tell the affected customers", d:"A short, honest note to the 200 recipients: what happened, what you did, what they should do (don't click, delete it, call us with questions).",
+   w:"Honest and boring beats silent and mysterious. Customers forgive an incident handled well — they don't forgive finding out from someone else."},
+  {ico:"💾", t:"Preserve the evidence", d:"Export the sign-in logs, the message trace, the timeline, screenshots of the rule. Zip it, date it, store it.",
+   w:"Logs expire! Default retention can be surprisingly short. Export today what you might need in three months — future-you (or an insurer, or an authority) will ask."},
+  {ico:"😴", t:"Stand down", d:"22:41. Both accounts clean, mail flowing, customers informed, evidence archived. Incident: closed. Go home.",
+   w:"Before you leave: put the lessons-learned meeting in the calendar for THIS week. Memory of an incident has a half-life of about four days."}
+];
+function L6(){
+  recStep=0;recIdx=0;
+  show(`
+    <div class="badge">LEVEL 6 · RECOVER 🛡️</div>
+    <h2>Monday, 9 PM. The office is dark. You're still here. 🌙</h2>
+    <p class="muted">The attack is contained — but <b>contained is not finished</b>. Tonight we make sure the attacker
+    left nothing behind, the paperwork is right, and tomorrow starts like a normal Tuesday.
+    Flip the switch to begin the cleanup shift.</p>
+    <div class="switch-zone">
+      <button class="big-switch clickable" id="bigSwitch" onclick="flip()" aria-label="Begin recovery">
+        <div class="knob" id="knob">ALERT</div>
+      </button>
+      <div class="dns-line" id="recLine">The tenant is still in alert mode. Flip it when you're ready to close this out. 😤</div>
+    </div>
+    <div id="recZone" style="max-width:680px;margin:20px auto 0"></div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="goto(7)">Incident closed! One last morning →</button></div>
+  `);
+}
+function flip(){
+  if(recStep>0)return;
+  recStep=1;
+  const sw=document.getElementById('bigSwitch');
+  sw.classList.add('on');
+  document.getElementById('knob').textContent='SECURE';
+  SECBG.set('clean');
+  document.body.classList.add('secure');
+  addScore(20,innerWidth/2,innerHeight/2);
+  document.getElementById('recLine').textContent='Watch the background: the shield holds, and clean traffic flows again. Now the checklist ↓';
+  renderRec(0);
+}
+function renderRec(i){
+  recIdx=i;
+  const s=recSteps[i];
+  const doneList=recSteps.slice(0,i).map(x=>
+    `<div style="font-family:var(--mono);font-size:12px;color:var(--green);margin-bottom:5px">✓ ${x.ico} ${x.t}</div>`).join('');
+  document.getElementById('recZone').innerHTML=`
+    ${doneList}
+    <div class="say" data-who="STEP ${i+1} / ${recSteps.length}" style="margin-top:${i>0?'16px':'4px'}">
+      <b style="font-size:16px">${s.ico} ${s.t}</b><br>
+      <span style="font-size:14.5px">${s.d}</span>
+      <div class="warnnote"><b>⚠ Pay attention:</b> ${s.w}</div>
+      ${i<recSteps.length-1
+        ? `<div style="margin-top:12px"><button class="btn small blue" onclick="recNext(event)">Next step →</button></div>`
+        : ``}
+    </div>`;
+  if(i===recSteps.length-1) document.getElementById('l6next').style.display='inline-flex';
+}
+function recNext(e){
+  addScore(5,e.clientX,e.clientY);
+  renderRec(recIdx+1);
+}
+
+/* ═══════════════ L7 : HARDENING + FINAL ═══════════════ */
+const tickets=[
+  {t:"«So… was this all my fault?»", who:"THE BOSS, quietly, with coffee",
+   opts:[
+     {o:"Yes. We've prepared a small ceremony of shame", ok:false},
+     {o:"No — anyone can be phished. Good systems assume clicks WILL happen and limit the damage", ok:true},
+     {o:"We'll never speak of this again", ok:false}
+   ],
+   ex:"Blameless is the only culture that works. Shame teaches people to hide clicks — and a hidden click is how a bad Monday becomes a catastrophic Friday. Rudy reported his in minutes BECAUSE nobody gets punished."},
+  {t:"«How do we make a stolen password worthless?»", who:"VLAD, taking notes",
+   opts:[
+     {o:"Change all passwords every week, forever", ok:false},
+     {o:"MFA for everyone — ideally phishing-resistant, so there's no code to steal", ok:true},
+     {o:"Longer passwords. Much, much longer", ok:false}
+   ],
+   ex:"Multi-factor authentication is THE single biggest upgrade: a stolen password alone stops working. Prefer app-based or passkey methods over SMS — and remember today's lesson: attackers who get in will try to enroll their own MFA."},
+  {t:"«Can we just block sign-ins from strange places?»", who:"VLAD, on a roll",
+   opts:[
+     {o:"Yes — conditional access: rules like «only our countries, only healthy devices, MFA for anything unusual»", ok:true},
+     {o:"Ban the internet outside office hours", ok:false},
+     {o:"No, sign-ins cannot be controlled, it's the wild west", ok:false}
+   ],
+   ex:"Conditional access is the bouncer at the door: the 09:11 foreign sign-in would have been challenged or blocked automatically — before you even finished your coffee."},
+  {t:"«How will I recognize the next one?»", who:"MRS. MIA, notebook ready",
+   opts:[
+     {o:"Read this 40-page security PDF, there's a quiz Friday", ok:false},
+     {o:"Short, regular practice — plus one big shiny REPORT button in the mail app", ok:true},
+     {o:"Forward everything suspicious to the boss", ok:false}
+   ],
+   ex:"Five minutes of practice monthly beats a yearly lecture. And the report button matters more than the training: you don't need everyone to spot every phish — you need ONE person to report it fast."},
+  {t:"«What if next time they encrypt everything and ask for money?»", who:"ANNA, asking the scary one",
+   opts:[
+     {o:"Backups — tested ones, with a copy the attacker can't reach, and a restore drill on the calendar", ok:true},
+     {o:"We'd pay quickly and hope they're honest hackers", ok:false},
+     {o:"That only happens to big companies", ok:false}
+   ],
+   ex:"Ransomware's only true antidote is a backup that works and can't be deleted by the same stolen account. «Tested» is the key word — an untested backup is a wish, not a plan."},
+  {t:"«Which expensive security product should we buy now?»", who:"THE BOSS, wallet half-open",
+   opts:[
+     {o:"All of them. If it blinks, buy it", ok:false},
+     {o:"First TUNE what we already own — alerts on, logs kept, MFA enforced. Then talk about gaps", ok:true},
+     {o:"None, we're clearly experts now", ok:false}
+   ],
+   ex:"Most companies already pay for security features nobody switched on. Today's entire incident was visible in tools PixelSoft already had — the difference was someone finally looking."},
+  {t:"«How do we know it's actually over?»", who:"VLAD, still suspicious (good)",
+   opts:[
+     {o:"It feels over. Vibes are good", ok:false},
+     {o:"Keep watching: sign-in logs and alerts get a daily glance for the next few weeks", ok:true},
+     {o:"We'll know when something breaks", ok:false}
+   ],
+   ex:"Attackers sometimes wait for the dust to settle and try their leftover access. Elevated watchfulness for a few weeks is how you catch the encore before it starts."},
+  {t:"Last one: what do we WRITE DOWN?", who:"YOU, closing the laptop",
+   opts:[
+     {o:"Nothing — it's all seared into our memories forever", ok:false},
+     {o:"A one-page incident report + a runbook: «when this happens again, do these steps in this order»", ok:true},
+     {o:"A dramatic company novel, published quarterly", ok:false}
+   ],
+   ex:"The report proves what happened (insurers and auditors will ask). The runbook is the real treasure: next time, anyone on the team can run today's playbook — calmly, in order, without a hero."}
+];
+let tdone=0;
+let firstTry={};
+function L7(){
+  tdone=0;firstTry={};
+  show(`
+    <div class="badge">LEVEL 7 · HARDEN 🎓</div>
+    <h2>Tuesday morning: the lessons-learned hour</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      An incident you don't learn from is just damage. An incident you DO learn from is a security upgrade
+      someone else paid for. The team has questions — give them the right answers. (+10 ⭐ first try,
+      wrong guesses are free.)
+    </div>
+    <div id="tzone">
+      ${tickets.map((tk,i)=>`
+        <div class="ticket" id="tk${i}" style="display:block">
+          <div class="tx" style="margin-bottom:8px"><b>🎟️ ${tk.t}</b><small>— ${tk.who}</small></div>
+          <div class="choices" style="margin-top:4px">
+            ${tk.opts.map((op,j)=>`
+              <button class="choice" id="tk${i}o${j}" style="padding:10px 14px;font-size:13.5px" onclick="solve(${i},${j},event)">${op.o}</button>`).join('')}
+          </div>
+          <div class="verdict" id="tk${i}v" style="margin-top:8px"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+
+function solve(i,j,e){
+  const tk=tickets[i];
+  const card=document.getElementById('tk'+i);
+  if(card.classList.contains('done'))return;
+  const btn=document.getElementById('tk'+i+'o'+j);
+  if(tk.opts[j].ok){
+    card.classList.add('done');
+    tk.opts.forEach((op,k)=>{
+      const b=document.getElementById('tk'+i+'o'+k);
+      b.disabled=true;
+      if(k===j)b.classList.add('good');
+    });
+    if(firstTry[i]===undefined){ addScore(10,e.clientX,e.clientY); }
+    else { addScore(5,e.clientX,e.clientY); }
+    const v=document.getElementById('tk'+i+'v');
+    v.innerHTML=`<div class="say" data-who="SOLVED ✓" style="margin:12px 0 0">${tk.ex}</div>`;
+    v.style.display='block';
+    tdone++;
+    if(tdone===tickets.length) finale();
+  } else {
+    firstTry[i]=false;
+    btn.classList.add('bad');
+    btn.disabled=true;
+    setTimeout(()=>btn.classList.remove('bad'),450);
+  }
+}
+function finale(){
+  for(let i=0;i<40;i++){
+    const c=document.createElement('div');c.className='confetti';
+    c.textContent=["🎉","⭐","🛡️","🎊","✨"][i%5];
+    c.style.left=Math.random()*100+'vw';
+    c.style.animationDuration=(2+Math.random()*2.5)+'s';
+    c.style.animationDelay=(Math.random()*0.8)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),5500);
+  }
+  const MAX=410;
+  let rank="Security Rookie 🐣", msg="You survived Breach Day — replay it and hunt for more stars!";
+  if(score>=370){rank="SOC Legend 🏆";msg="Flawless response! You can run the next tabletop exercise yourself.";}
+  else if(score>=300){rank="Cyber Sentinel 🛡️";msg="Very sharp! You understood exactly how an incident is fought.";}
+  else if(score>=220){rank="Threat Hunter 🔦";msg="Solid work! Another run and you'll catch every right call.";}
+  level=8;refreshMap();
+  document.getElementById('lvl7').classList.add('done');
+  document.getElementById('finale').innerHTML=`
+    <div class="center" style="margin-top:10px">
+      <h2>🎉 Breach Day: survived!</h2>
+      <div class="rank-big">${rank}</div>
+      <div style="font-family:var(--mono);font-weight:600;color:var(--muted)">SCORE: ${score} / ~${MAX} ⭐</div>
+      <p class="muted" style="margin:10px auto;max-width:520px">${msg}</p>
+      <div class="say tip" data-who="REMEMBER" style="text-align:left;margin:22px auto 18px">
+        Every incident, big or small, follows the same playbook:
+        <b>1)</b> spot it (slow down — read the sender, the link, the pressure) →
+        <b>2)</b> triage: lock accounts FIRST, then talk → <b>3)</b> investigate in the logs, not from memory →
+        <b>4)</b> contain: revoke, purge, block, isolate — and keep the evidence →
+        <b>5)</b> expect the second wave → <b>6)</b> recover: hunt backdoors, mind the 72-hour GDPR clock, tell people honestly →
+        <b>7)</b> harden: MFA, conditional access, backups, practice. And the golden culture rule:
+        <b>never punish the person who reports a click</b>. 🙋
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn blue" onclick="location.reload()">↺ Play again</button>
+        <a class="btn green" href="../index.html#contact">Run this live with your team →</a>
+      </div>
+    </div>`;
+}
+
+const RENDER=[L0,L1,L2,L3,L4,L5,L6,L7];
+refreshMap();
+L0();
+</script>
+</body>
+</html>
