@@ -86,4 +86,4 @@ Baseline site created and rebranded by Lucian. Listed here for context.
 
 ---
 
-_Last updated: 2026-07-05_
+_Last updated: 2026-07-26_
