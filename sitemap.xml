@@ -7,6 +7,18 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://www.shautech.com/labs/</loc>
+    <lastmod>2026-08-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.shautech.com/pulse/</loc>
+    <lastmod>2026-08-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://www.shautech.com/labs/migration-simulator.html</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>monthly</changefreq>
@@ -27,6 +39,12 @@
   <url>
     <loc>https://www.shautech.com/labs/conditional-access-simulator.html</loc>
     <lastmod>2026-07-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.shautech.com/labs/entra-lifecycle-simulator.html</loc>
+    <lastmod>2026-08-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

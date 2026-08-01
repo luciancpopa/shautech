@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Revolving Door — shautech labs</title>
+<meta name="description" content="The Revolving Door — an interactive Entra ID identity-lifecycle simulator by shautech. Joiners, movers, leavers: hunt the ghost accounts, fix onboarding, survive redundancy day, and automate the door so nobody keeps a key after handing back the badge." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0B0D;
+    --bg-2:#0d0f13;
+    --panel:#101317;
+    --panel-2:#15181f;
+    --line:rgba(255,255,255,0.08);
+    --line-2:rgba(255,255,255,0.14);
+    --text:#F4F6F8;
+    --muted:#98A0AA;
+    --muted-2:#646C76;
+    --accent:#4D9FFF;
+    --accent-soft:#7CBBFF;
+    --accent-ink:#04132B;
+    --glow:rgba(77,159,255,0.30);
+    --crit:#FF7A7A;
+    --warn:#FFB65C;
+    --r:14px;
+    --ease:cubic-bezier(.2,.7,.2,1);
+    --blue:var(--accent);
+    --green:#5FD68F;
+    --green-ink:#06180D;
+    --amber:var(--warn);
+    --red:var(--crit);
+    --ink:var(--text);
+    --ink-soft:var(--muted);
+    --card:var(--panel);
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:"Hanken Grotesk",system-ui,sans-serif;
+    color:var(--text);
+    background:var(--bg);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+            mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+    opacity:.5;
+  }
+  body::after{
+    content:"";position:fixed;top:-20%;right:-10%;width:60vw;height:60vw;z-index:0;
+    pointer-events:none;border-radius:50%;
+    background:radial-gradient(circle,var(--glow) 0%,transparent 60%);
+    filter:blur(40px);opacity:.6;transition:background 1.2s var(--ease);
+  }
+  body.night::after{background:radial-gradient(circle,rgba(138,134,255,.20) 0%,transparent 60%);}
+  ::selection{background:var(--accent);color:var(--accent-ink)}
+  a{color:inherit;text-decoration:none}
+
+  /* ambient flow — the identity conveyor: joiners in, leavers out */
+  #cabg{
+    position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(55% 46% at -10% 52%,rgba(95,214,143,.06),transparent 70%),
+      radial-gradient(55% 46% at 110% 48%,rgba(255,122,122,.06),transparent 70%);
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important;} }
+
+  /* ---------- TOP BAR ---------- */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:40;
+    background:rgba(10,11,13,.85);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+    padding:10px 18px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .logo{font-family:var(--mono);font-weight:700;font-size:1rem;letter-spacing:-.01em;display:inline-flex;align-items:center;white-space:nowrap;}
+  .logo .mark{
+    display:inline-grid;place-items:center;width:1.5em;height:1.5em;margin-right:.5em;
+    border:1.5px solid var(--accent);border-radius:6px;color:var(--accent);font-size:.82em;
+  }
+  .logo .lab{color:var(--muted);font-weight:500;}
+  .sim-name{font-family:var(--mono);font-size:.72rem;color:var(--muted-2);letter-spacing:.02em;white-space:nowrap;}
+  @media(max-width:860px){.sim-name{display:none;}}
+  .lvlmap{display:flex;gap:6px;flex:1;justify-content:center;flex-wrap:wrap;}
+  .lvl{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-family:var(--mono);font-size:9px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--muted-2);min-width:56px;
+  }
+  .lvl .bubble{
+    width:32px;height:32px;border-radius:9px;
+    background:var(--panel);border:1px solid var(--line-2);
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+    transition:all .25s var(--ease);
+  }
+  .lvl.now{color:var(--accent-soft);}
+  .lvl.now .bubble{border-color:var(--accent);transform:scale(1.12);box-shadow:0 0 14px var(--glow),0 0 0 1px var(--accent);}
+  .lvl.done{color:var(--muted);}
+  .lvl.done .bubble{background:rgba(77,159,255,.10);border-color:var(--accent);}
+  .lvl.done .bubble::after{content:"✓";color:var(--accent-soft);font-weight:700;font-family:var(--mono);}
+  .lvl.done .bubble em{display:none;}
+  .hud{display:flex;gap:10px;align-items:center;}
+  .pill{
+    font-family:var(--mono);font-size:13px;font-weight:600;
+    background:var(--panel-2);color:var(--muted);
+    border:1px solid var(--line-2);
+    padding:7px 13px;border-radius:20px;
+    transition:transform .15s;
+  }
+  .pill b{color:var(--accent-soft);}
+
+  /* ---------- STAGE ---------- */
+  .stage{
+    position:absolute;top:96px;bottom:0;left:0;right:0;
+    overflow-y:auto;z-index:1;
+    padding:26px clamp(16px,5vw,70px) 40px;
+  }
+  .screen{max-width:880px;margin:0 auto;animation:pop .4s var(--ease) both;}
+  @keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98);}to{opacity:1;transform:none;}}
+
+  .badge{
+    display:inline-flex;align-items:center;gap:.6em;
+    font-family:var(--mono);font-size:.74rem;font-weight:500;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    margin-bottom:14px;
+  }
+  .badge::before{content:"//";color:var(--accent);letter-spacing:0;}
+  h1{font-family:"Space Grotesk",sans-serif;font-size:clamp(28px,4.6vw,44px);line-height:1.08;margin-bottom:10px;letter-spacing:-.02em;font-weight:700;}
+  h2{font-family:"Space Grotesk",sans-serif;font-size:clamp(21px,3.2vw,30px);margin-bottom:8px;letter-spacing:-.015em;font-weight:600;}
+  .say{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:16px 18px 14px;font-size:15px;line-height:1.55;color:var(--text);
+    position:relative;margin:18px 0 14px;
+    box-shadow:0 10px 30px -18px rgba(0,0,0,.8);
+    max-width:680px;
+  }
+  .say::before{
+    content:attr(data-who);
+    position:absolute;top:-10px;left:14px;
+    font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--panel-2);border:1px solid var(--accent);color:var(--accent-soft);
+    padding:2px 9px;border-radius:6px;
+  }
+  .say.tip::before{border-color:var(--green);color:var(--green);}
+  .say.alert::before{border-color:var(--crit);color:var(--crit);}
+  .say b{color:var(--text);}
+  .muted{color:var(--muted);font-size:14px;line-height:1.55;max-width:660px;}
+
+  .btn{
+    font-family:var(--mono);font-size:.92rem;font-weight:600;letter-spacing:.02em;
+    display:inline-flex;align-items:center;gap:.6em;
+    background:transparent;color:var(--text);border:1px solid var(--line-2);
+    padding:.8em 1.3em;border-radius:10px;cursor:pointer;
+    transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .25s,border-color .25s,color .25s;
+    white-space:normal;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent-soft);transform:translateY(-2px);}
+  .btn.blue{background:var(--accent);color:var(--accent-ink);border-color:transparent;}
+  .btn.blue:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px var(--glow),0 0 0 1px var(--accent-soft);color:var(--accent-ink);}
+  .btn.green{background:var(--green);color:var(--green-ink);border-color:transparent;}
+  .btn.green:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px rgba(95,214,143,.4),0 0 0 1px var(--green);color:var(--green-ink);}
+  .btn.small{font-size:.8rem;padding:.6em 1.1em;border-radius:9px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn:focus-visible,.clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .float-pts{
+    position:fixed;font-family:var(--mono);font-weight:700;font-size:18px;color:var(--green);
+    pointer-events:none;z-index:99;animation:rise .9s ease-out forwards;
+    text-shadow:0 0 12px rgba(95,214,143,.6);
+  }
+  @keyframes rise{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-46px);}}
+
+  /* ---------- LEVEL 1 : GHOST HUNT ---------- */
+  .office{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:12px;margin-top:18px;
+  }
+  .obj{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:14px 8px;text-align:center;cursor:pointer;user-select:none;
+    transition:transform .2s var(--ease),border-color .2s,box-shadow .2s;
+    font-family:inherit;color:var(--text);
+  }
+  .obj:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 10px 26px -14px var(--glow);}
+  .obj .ico{font-size:34px;display:block;margin-bottom:6px;}
+  .obj .nm{font-size:12.5px;font-weight:600;}
+  .obj.found{background:rgba(77,159,255,.07);border-color:var(--accent);cursor:default;}
+  .obj.found:hover{transform:none;box-shadow:none;}
+  .obj.found .nm::after{content:" ✓";color:var(--accent-soft);}
+  .inv{
+    margin-top:16px;background:var(--panel-2);border:1px dashed var(--line-2);
+    border-radius:12px;padding:12px 16px;font-family:var(--mono);font-size:13px;
+    min-height:44px;color:var(--muted);line-height:1.7;max-width:680px;
+  }
+  .inv b{color:var(--text);}
+
+  /* ---------- LEVEL 2 + 4 + 7 : DECISIONS / TICKETS ---------- */
+  .choices{display:grid;gap:12px;margin-top:14px;max-width:640px;}
+  .choice{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:14px 16px;cursor:pointer;text-align:left;font-family:inherit;color:var(--text);
+    font-size:14.5px;transition:transform .2s var(--ease),border-color .2s;
+  }
+  .choice:hover{transform:translateX(4px);border-color:var(--accent);}
+  .choice b{display:block;font-size:15px;margin-bottom:2px;}
+  .choice small{color:var(--muted);}
+  .choice.good{background:rgba(95,214,143,.08);border-color:var(--green);}
+  .choice.meh{background:rgba(255,182,92,.08);border-color:var(--warn);}
+  .choice.bad{background:rgba(255,122,122,.08);border-color:var(--crit);}
+  .choice:disabled{cursor:default;transform:none;}
+  .verdict{margin-top:12px;font-size:14px;line-height:1.5;display:none;max-width:640px;}
+  .warnnote{
+    margin-top:10px;background:rgba(255,182,92,.07);border:1px dashed rgba(255,182,92,.45);
+    border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.45;color:#E9C89B;
+  }
+  .warnnote b{color:var(--warn);}
+  .ticket{
+    background:var(--panel);border:1px solid var(--line-2);border-radius:12px;
+    padding:12px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:center;
+    flex-wrap:wrap;
+  }
+  .ticket .tx{flex:1;min-width:200px;font-size:14px;}
+  .ticket .tx b{display:block;font-size:14.5px;}
+  .ticket .tx small{color:var(--muted);}
+  .ticket.done{background:rgba(95,214,143,.05);border-color:var(--green);}
+  /* verdict buttons for scenarios */
+  .vrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .vbtn{
+    font-family:var(--mono);font-size:.78rem;font-weight:600;letter-spacing:.03em;
+    background:var(--panel-2);color:var(--text);border:1px solid var(--line-2);
+    padding:.55em 1em;border-radius:8px;cursor:pointer;
+    transition:transform .2s var(--ease),border-color .2s;
+  }
+  .vbtn:hover{transform:translateY(-2px);border-color:var(--accent);}
+  .vbtn:disabled{cursor:default;transform:none;}
+  .vbtn.good{background:rgba(95,214,143,.12);border-color:var(--green);color:var(--green);}
+  .vbtn.bad{background:rgba(255,122,122,.12);border-color:var(--crit);color:var(--crit);}
+
+  /* ---------- LEVEL 3 : MOVER BOARD ---------- */
+  .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:16px;}
+  .act{
+    display:flex;gap:10px;align-items:flex-start;text-align:left;font-family:inherit;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:10px;
+    padding:12px 14px;font-size:13.5px;cursor:pointer;line-height:1.45;color:var(--muted);
+    transition:transform .2s var(--ease),border-color .2s;
+  }
+  .act:hover{transform:translateY(-2px);border-color:var(--accent);}
+  .act b{display:block;color:var(--text);font-size:14px;}
+  .act.done{background:rgba(95,214,143,.07);border-color:var(--green);cursor:default;}
+  .act.done:hover{transform:none;}
+  .act.done b::after{content:" ✓";color:var(--green);}
+  .act.nope{animation:shake .4s;border-color:var(--crit);background:rgba(255,122,122,.07);}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+
+  /* ---------- LEVEL 5 : LEAVER RUSH ARCADE ---------- */
+  .arena{
+    position:relative;height:340px;margin-top:16px;
+    background:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px),
+      linear-gradient(180deg,var(--panel-2),var(--bg-2));
+    background-size:48px 48px,48px 48px,100% 100%;
+    border:1px solid var(--line-2);border-radius:var(--r);overflow:hidden;
+  }
+  .side-lbl{
+    position:absolute;top:12px;font-family:var(--mono);font-size:11px;font-weight:600;
+    text-align:center;width:110px;color:var(--muted);
+  }
+  .side-lbl small{color:var(--muted-2);}
+  .side-lbl .c{font-size:44px;display:block;line-height:1.2;}
+  .lbl-src{left:8px;} .lbl-src .c{filter:drop-shadow(0 0 18px rgba(255,182,92,.45));}
+  .lbl-dst{right:8px;} .lbl-dst .c{filter:drop-shadow(0 0 18px var(--glow));}
+  .mailcard{
+    position:absolute;z-index:5;max-width:205px;text-align:left;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:10px;
+    padding:8px 11px;font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--text);
+    cursor:pointer;animation:bob 1.8s ease-in-out infinite;
+    box-shadow:0 8px 22px -10px rgba(0,0,0,.7);
+  }
+  .mailcard:hover{border-color:var(--accent);}
+  .mailcard i{color:var(--muted-2);font-style:normal;display:block;font-size:9.5px;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+  .mailcard.zap{animation:zap .5s ease-in forwards;pointer-events:none;border-color:var(--green);}
+  @keyframes zap{to{transform:scale(.25);opacity:0;}}
+  .mailcard.oops{border-color:var(--warn);color:var(--warn);pointer-events:none;}
+  .mailcard.fade{transition:opacity .8s;opacity:0;}
+  .mailcard.proc{border-color:var(--green);pointer-events:none;animation:none;}
+  .mailcard.proc i{color:var(--green);}
+  .mailcard.ghosted{
+    border-color:var(--crit);animation:flicker 1.1s ease-in-out infinite;
+    box-shadow:0 0 18px rgba(255,122,122,.25);
+  }
+  .mailcard.ghosted i{color:var(--crit);}
+  @keyframes flicker{0%,100%{opacity:1;}50%{opacity:.55;}}
+  .rushclock{
+    position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;
+    font-family:var(--mono);font-size:12px;font-weight:700;color:var(--warn);
+    background:rgba(16,19,23,.7);border:1px solid var(--line-2);
+    padding:4px 12px;border-radius:8px;
+  }
+  .bigbar{
+    position:absolute;bottom:12px;left:14px;right:14px;height:22px;
+    background:var(--bg);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;
+  }
+  .bigbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .3s;box-shadow:0 0 14px var(--glow);}
+  .bigbar span{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);
+    text-shadow:0 1px 3px rgba(0,0,0,.7);
+  }
+  .event-banner{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    background:rgba(255,182,92,.12);border:1px solid var(--warn);color:var(--text);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    font-weight:700;font-size:14px;
+    padding:10px 16px;border-radius:12px;
+    display:none;z-index:10;text-align:center;max-width:min(92%,460px);
+  }
+  .event-banner small{color:var(--muted);font-weight:400;}
+  .event-banner.ok{background:rgba(95,214,143,.12);border-color:var(--green);}
+  .event-banner .btn{margin-top:8px;}
+
+  /* ---------- LEVEL 6 : AUTOMATION SWITCH ---------- */
+  .switch-zone{
+    display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:24px;
+  }
+  .big-switch{
+    width:130px;height:190px;background:var(--panel-2);border:1px solid var(--line-2);
+    border-radius:20px;position:relative;cursor:pointer;
+    font-family:inherit;transition:border-color .3s,box-shadow .3s;
+  }
+  .big-switch:hover{border-color:var(--accent);}
+  .big-switch.on{border-color:var(--green);box-shadow:0 0 24px rgba(95,214,143,.25);}
+  .big-switch .knob{
+    position:absolute;left:10px;right:10px;height:74px;top:96px;
+    background:var(--warn);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    color:#2A1A05;font-family:var(--mono);font-weight:700;font-size:11.5px;letter-spacing:.05em;
+    transition:top .35s cubic-bezier(.5,1.6,.5,1), background .35s, color .35s;
+  }
+  .big-switch.on .knob{top:12px;background:var(--green);color:var(--green-ink);}
+  .dns-line{font-family:var(--mono);font-size:13px;min-height:20px;color:var(--muted);text-align:center;}
+
+  /* ---------- FINALE ---------- */
+  .confetti{position:fixed;top:-20px;font-size:20px;z-index:98;animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);}}
+  .rank-big{
+    font-family:"Space Grotesk",sans-serif;font-size:clamp(30px,5vw,48px);font-weight:700;
+    color:var(--accent-soft);margin:8px 0;letter-spacing:-.02em;
+    text-shadow:0 0 30px var(--glow);
+  }
+
+  .center{text-align:center;}
+  .spacer{height:18px;}
+</style>
+</head>
+<body>
+
+<canvas id="cabg" aria-hidden="true"></canvas>
+
+<header id="topbar">
+  <a class="logo" href="../index.html" title="Back to shautech.com"><span class="mark">›</span>shautech<span class="lab">&nbsp;/ labs</span></a>
+  <span class="sim-name">// operation: revolving-door</span>
+  <div class="lvlmap" id="lvlmap"></div>
+  <div class="hud"><div class="pill" id="scorePill">⭐ <b id="score">0</b></div></div>
+</header>
+
+<div class="stage" id="stage"><div class="screen" id="screen"></div></div>
+
+<script>
+/* ═══════════════ AMBIENT BACKGROUND : the identity conveyor ═══════════════ */
+(()=>{
+  const cv=document.getElementById('cabg'), ctx=cv.getContext('2d');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const LANES=5;
+  let W=0,H=0,parts=[],pulses=[],dashOff=0,last=0,raf=null,T=0,lastSweep=0;
+  let ghostCount=4;
+  let mode='chaos'; /* 'chaos' → 'review' → 'clean' */
+
+  window.CABG={
+    mode(m){ if(['chaos','review','clean'].includes(m)) mode=m; }
+  };
+
+  const RACKS=[
+    {f:0.36,label:'SALES',rgb:'255,182,92'},
+    {f:0.52,label:'FINANCE',rgb:'77,159,255'},
+    {f:0.68,label:'IT',rgb:'95,214,143'}
+  ];
+  const geo=()=>{
+    const dw=42, dh=Math.min(H*0.5,360), dy=(H-dh)/2;
+    return {dw,dh,dy, xL:12, xR:W-12-dw, ax:12+dw+6, bx:W-12-dw-6};
+  };
+  function rr(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+  const laneY=(g,i)=>g.dy+g.dh*(0.12+0.76*i/(LANES-1));
+  const posOf=(g,p)=>({
+    x:g.ax+(g.bx-g.ax)*p.t,
+    y:laneY(g,p.lane)+Math.sin(p.t*7.5+p.ph)*5
+  });
+  function staleChance(){ return mode==='chaos'?0.30:(mode==='review'?0.10:0); }
+  function newPart(){
+    return {
+      t:0,
+      v:0.045+Math.random()*0.06,
+      lane:Math.floor(Math.random()*LANES),
+      ph:Math.random()*6.28,
+      s:1.3+Math.random()*1.3,
+      dept:Math.floor(Math.random()*RACKS.length),
+      rings:[],
+      got:[false,false,false],
+      stale:Math.random()<staleChance(),
+      rgb: mode==='clean' ? '95,214,143' : '124,187,255'
+    };
+  }
+  function seedParticles(){
+    const g=geo();
+    const n=Math.max(16,Math.min(36,Math.round(W/44)));
+    parts=Array.from({length:n},()=>{
+      const p=newPart();p.t=Math.random();
+      for(let ri=0;ri<RACKS.length;ri++){
+        const tR=((W*RACKS[ri].f)-g.ax)/(g.bx-g.ax);
+        if(p.t>=tR){
+          p.got[ri]=true;
+          if(ri===p.dept) p.rings.push(RACKS[ri].rgb);
+        }
+      }
+      return p;
+    });
+  }
+  function glyph(x,y,s,rgb){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.strokeStyle=`rgba(${rgb},.9)`;
+    ctx.lineWidth=1;
+    ctx.shadowBlur=8;ctx.shadowColor=`rgba(${rgb},.8)`;
+    ctx.beginPath();ctx.arc(0,-0.8*s,0.9*s,0,7);ctx.stroke();
+    ctx.beginPath();ctx.arc(0,1.9*s,1.8*s,Math.PI*1.18,Math.PI*1.82);ctx.stroke();
+    ctx.restore();
+  }
+  function drawLanes(g){
+    ctx.save();
+    ctx.strokeStyle='rgba(124,187,255,.05)';
+    ctx.lineWidth=1;
+    ctx.setLineDash([2,7]);ctx.lineDashOffset=dashOff;
+    for(let i=0;i<LANES;i++){
+      const y=laneY(g,i);
+      ctx.beginPath();ctx.moveTo(g.ax,y);ctx.lineTo(g.bx,y);ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawRacks(g){
+    for(let ri=0;ri<RACKS.length;ri++){
+      const r=RACKS[ri], x=W*r.f;
+      ctx.save();
+      ctx.strokeStyle=`rgba(${r.rgb},.12)`;
+      ctx.setLineDash([2,6]);
+      ctx.beginPath();ctx.moveTo(x,g.dy);ctx.lineTo(x,g.dy+g.dh);ctx.stroke();
+      ctx.setLineDash([]);
+      const cw=36,ch=30,cx=x-cw/2,cy=g.dy-ch-14;
+      ctx.strokeStyle='rgba(255,255,255,.10)';
+      ctx.fillStyle='rgba(16,19,23,.55)';
+      rr(cx,cy,cw,ch,7);ctx.fill();ctx.stroke();
+      for(let i=0;i<2;i++)for(let j=0;j<2;j++){
+        const tw=Math.sin(T*1.8+i*1.7+j*2.6+ri*3)*0.5+0.5;
+        ctx.fillStyle=`rgba(${r.rgb},${(0.10+tw*0.30).toFixed(3)})`;
+        ctx.fillRect(cx+7+j*12, cy+8+i*10, 9, 4);
+      }
+      ctx.font='600 9px "JetBrains Mono",monospace';
+      ctx.textAlign='center';ctx.textBaseline='top';
+      ctx.fillStyle=`rgba(${r.rgb},.5)`;
+      ctx.fillText(r.label,x,cy-12);
+      ctx.restore();
+    }
+  }
+  function drawDoors(g){
+    const rightCol = mode==='chaos'?'255,122,122':(mode==='review'?'255,182,92':'95,214,143');
+    const doors=[
+      {x:g.xL,label:'J O I N E R S',rgb:'95,214,143',right:false},
+      {x:g.xR,label:'L E A V E R S',rgb:rightCol,right:true}
+    ];
+    for(const d of doors){
+      ctx.save();
+      ctx.strokeStyle='rgba(255,255,255,.10)';
+      ctx.fillStyle='rgba(16,19,23,.55)';
+      rr(d.x,g.dy,g.dw,g.dh,10);ctx.fill();ctx.stroke();
+      /* revolving-door slats sweeping across */
+      for(let i=0;i<4;i++){
+        const ph=(T*0.35+i/4)%1;
+        const bx=d.x+5+ph*(g.dw-14);
+        ctx.fillStyle=`rgba(${d.rgb},${(0.08+0.24*Math.sin(ph*Math.PI)).toFixed(3)})`;
+        ctx.fillRect(bx,g.dy+10,4,g.dh-20);
+      }
+      ctx.translate(d.right? d.x-8 : d.x+g.dw+14, g.dy+g.dh/2);
+      ctx.rotate(-Math.PI/2);
+      ctx.font='600 9px "JetBrains Mono",monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle=`rgba(${d.rgb},.55)`;
+      ctx.fillText(d.label,0,0);
+      ctx.restore();
+    }
+  }
+  const ghostPos=(g,i)=>({
+    x:g.xR-26-(i%3)*26,
+    y:g.dy+g.dh-16-Math.floor(i/3)*28
+  });
+  function drawGhosts(g){
+    for(let i=0;i<ghostCount;i++){
+      const p=ghostPos(g,i);
+      const a=0.35+0.22*Math.sin(T*2.6+i*1.7);
+      ctx.save();ctx.globalAlpha=Math.max(a,0.1);
+      glyph(p.x,p.y,1.6,'255,122,122');
+      ctx.restore();
+    }
+  }
+  function resize(){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    W=innerWidth;H=innerHeight;
+    cv.width=W*dpr;cv.height=H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    seedParticles();
+    if(reduced) draw(0);
+  }
+  function draw(dt){
+    T+=dt;dashOff-=10*dt;
+    ctx.clearRect(0,0,W,H);
+    const g=geo();
+    drawLanes(g);drawRacks(g);drawDoors(g);drawGhosts(g);
+    /* the review sweep : ghosts get cleaned up */
+    if(mode!=='chaos' && ghostCount>0 && T-lastSweep>(mode==='clean'?0.8:1.6)){
+      lastSweep=T;
+      ghostCount--;
+      const p=ghostPos(g,ghostCount);
+      pulses.push({x:p.x,y:p.y,r:2,a:0.4,rgb:'95,214,143'});
+    }
+    for(const p of parts){
+      p.t+=p.v*dt;
+      /* ring pickups at the department racks */
+      for(let ri=0;ri<RACKS.length;ri++){
+        if(p.got[ri]) continue;
+        const tR=((W*RACKS[ri].f)-g.ax)/(g.bx-g.ax);
+        if(p.t>=tR){
+          p.got[ri]=true;
+          /* stale accounts hoard rings — over-permissioned! */
+          if(ri===p.dept || p.stale){
+            p.rings.push(RACKS[ri].rgb);
+            const pos=posOf(g,p);
+            pulses.push({x:pos.x,y:pos.y,r:2,a:0.28,rgb:RACKS[ri].rgb});
+          }
+        }
+      }
+      /* stale accounts never reach the exit — they pile up as ghosts */
+      if(p.stale && p.t>=0.86){
+        if(ghostCount<9) ghostCount++;
+        const pos=posOf(g,p);
+        pulses.push({x:pos.x,y:pos.y,r:3,a:0.4,rgb:'255,122,122'});
+        Object.assign(p,newPart());
+        continue;
+      }
+      /* clean exit : dissolve at the leavers door */
+      if(p.t>=1){
+        const pos=posOf(g,p);
+        pulses.push({x:pos.x,y:pos.y,r:2,a:0.30,rgb: mode==='clean'?'95,214,143':'124,187,255'});
+        Object.assign(p,newPart());
+        continue;
+      }
+      const rgb=(p.stale && p.t>0.65)?'255,122,122':p.rgb;
+      const pos=posOf(g,p);
+      for(let k=4;k>=1;k--){
+        const q=posOf(g,{t:Math.max(p.t-k*0.012,0),lane:p.lane,ph:p.ph});
+        ctx.beginPath();
+        ctx.arc(q.x,q.y,Math.max(p.s*0.6*(1-k*0.15),.2),0,7);
+        ctx.fillStyle=`rgba(${rgb},${(0.14*(1-k/5)).toFixed(3)})`;
+        ctx.fill();
+      }
+      for(let i=0;i<p.rings.length;i++){
+        ctx.beginPath();
+        ctx.arc(pos.x,pos.y,p.s*2.3+i*2.6,0,7);
+        ctx.strokeStyle=`rgba(${p.rings[i]},.5)`;
+        ctx.lineWidth=1;
+        ctx.stroke();
+      }
+      glyph(pos.x,pos.y,p.s,rgb);
+    }
+    pulses=pulses.filter(p=>p.a>0.01);
+    for(const p of pulses){
+      p.r+=34*dt;p.a-=0.5*dt;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.strokeStyle=`rgba(${p.rgb},${Math.max(p.a,0)})`;
+      ctx.lineWidth=1;
+      ctx.stroke();
+    }
+  }
+  function loop(now){
+    const dt=Math.min((now-last)/1000||0,0.05);
+    last=now;
+    draw(dt);
+    raf=requestAnimationFrame(loop);
+  }
+  window.addEventListener('resize',resize);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){cancelAnimationFrame(raf);raf=null;}
+    else if(!reduced && !raf){last=performance.now();raf=requestAnimationFrame(loop);}
+  });
+  resize();
+  if(!reduced) raf=requestAnimationFrame(loop);
+})();
+
+/* ═══════════════ CORE ═══════════════ */
+let score = 0;
+let level = 0;
+const LEVELS = [
+  {icon:"🎬", name:"Start"},
+  {icon:"👻", name:"Ghosts"},
+  {icon:"🌱", name:"Joiner"},
+  {icon:"🔀", name:"Mover"},
+  {icon:"⚖️", name:"Review"},
+  {icon:"🏃", name:"Leavers"},
+  {icon:"⚙️", name:"Automate"},
+  {icon:"🛡️", name:"Govern"}
+];
+const mapEl = document.getElementById('lvlmap');
+LEVELS.forEach((l,i)=>{
+  const d=document.createElement('div');
+  d.className='lvl';d.id='lvl'+i;
+  d.innerHTML=`<div class="bubble"><em>${l.icon}</em></div><span>${l.name}</span>`;
+  mapEl.appendChild(d);
+});
+function refreshMap(){
+  LEVELS.forEach((l,i)=>{
+    const el=document.getElementById('lvl'+i);
+    el.classList.toggle('now', i===level);
+    el.classList.toggle('done', i<level);
+  });
+}
+function fitStage(){
+  document.getElementById('stage').style.top=(document.getElementById('topbar').offsetHeight+6)+'px';
+}
+window.addEventListener('resize',fitStage);
+fitStage();
+function addScore(n, x, y){
+  score+=n;
+  document.getElementById('score').textContent=score;
+  const pill=document.getElementById('scorePill');
+  pill.style.transform='scale(1.15)';setTimeout(()=>pill.style.transform='scale(1)',150);
+  if(x!==undefined){
+    const f=document.createElement('div');f.className='float-pts';f.textContent='+'+n;
+    f.style.left=x+'px';f.style.top=y+'px';document.body.appendChild(f);
+    setTimeout(()=>f.remove(),900);
+  }
+}
+const screen = document.getElementById('screen');
+function show(html){
+  screen.style.animation='none';screen.offsetHeight;screen.style.animation='';
+  screen.innerHTML=html;
+  document.body.classList.toggle('night', level===6);
+  document.querySelector('.stage').scrollTop=0;
+  refreshMap();
+}
+function goto(n){ level=n; RENDER[n](); }
+
+/* ═══════════════ L0 : INTRO ═══════════════ */
+function L0(){
+  show(`
+    <div class="badge">LEVEL 0 · THE DOOR THAT NEVER CLOSES</div>
+    <h1>People come. People go.<br>Their accounts… stay. 👻</h1>
+    <div class="say" data-who="THE BOSS">
+      Weird one for you. Accounting just got an out-of-office reply from <b>Dan</b>.
+      Dan left the company <b>eight months ago</b>. Why does Dan still have email?
+      And… hold on. The log says he <b>signed in on Tuesday</b>?!
+    </div>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Meet the <b>ghost account</b> — and relax, every company has them. Every person who joins,
+      changes jobs, or leaves spins the same revolving door. Identity people call it
+      <b>Joiner – Mover – Leaver</b>. When the door works, access appears on day one, changes when
+      the job changes, and dies the day the badge is handed back. When it doesn't… you get Dan.
+      Look at the background: accounts flow in at <b>JOINERS</b>, pick up colored access rings at the
+      departments, and should dissolve at <b>LEAVERS</b>. See the red ones piling up at the exit?
+      Those are ghosts. Let's go hunting. 🔦
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="goto(1)">Show me the ghosts →</button>
+  `);
+}
+
+/* ═══════════════ L1 : THE GHOST HUNT ═══════════════ */
+const objects=[
+  {ico:"👻", nm:"Dan's account", found:"Left 8 months ago. Status: <b>Active</b>. Password: still works. Mailbox, files, VPN — all reachable. Nobody told IT, and the door never closed. This is the single most common finding in any identity audit."},
+  {ico:"🗒️", nm:"Sticky note", found:"The shared-mailbox password — office@ — on paper, known by everyone who EVER worked here… including the ones who left. A shared password never leaves with the person. Shared mailboxes shouldn't have a password people type at all — access is granted to each person's own account."},
+  {ico:"🧰", nm:"consultant-mike", found:"The contractor finished his project last spring — and is still an <b>Owner</b> on three SharePoint sites. External accounts need an expiry date set on day one, not a memory of one."},
+  {ico:"🤖", nm:"svc-backup (2018)", found:"A service account with <b>Global Admin</b> and a password nobody dares change because «something might break». Highest privilege + oldest password + no owner = the jackpot for an attacker."},
+  {ico:"📱", nm:"Dan's old phone", found:"Dan's number is STILL registered as his second factor — and Dan still has the phone. MFA approval codes going to an ex-employee's pocket. Offboarding must clean up sign-in methods too, not just the password."},
+  {ico:"🧩", nm:"23 group memberships", found:"Dan is still in Finance-Approvers, VPN-Users, and 21 more. Groups GRANT access — disable the account but keep the groups, and a single re-enable brings everything back at once."}
+];
+let foundCount=0;
+function L1(){
+  foundCount=0;
+  show(`
+    <div class="badge">LEVEL 1 · THE GHOST HUNT 👻</div>
+    <h2>Six things hiding in your own admin center</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      This is a mock-up of your admin console. Six problems, hiding in plain sight —
+      click each one to expose it. Every ghost teaches a rule. (+10 ⭐ each)
+    </div>
+    <div class="office">
+      ${objects.map((o,i)=>`
+        <button class="obj clickable" id="obj${i}" onclick="discover(${i},event)">
+          <span class="ico">${o.ico}</span><span class="nm">${o.nm}</span>
+        </button>`).join('')}
+    </div>
+    <div class="inv" id="inv">🔦 <b>Ghosts found: 0/6</b> — click to inspect.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l1next" style="display:none" onclick="goto(2)">Ghosts logged! Now do joiners right →</button>
+  `);
+}
+function discover(i,e){
+  const el=document.getElementById('obj'+i);
+  if(el.classList.contains('found'))return;
+  el.classList.add('found');
+  foundCount++;
+  addScore(10,e.clientX,e.clientY);
+  document.getElementById('inv').innerHTML='🔦 <b>Ghost '+foundCount+'/'+objects.length+':</b> '+objects[i].found;
+  if(foundCount===objects.length){
+    document.getElementById('inv').innerHTML='🔦 <b>All six found.</b> Notice: none of these were «hacks». They were all just… nobody\'s job. The fix isn\'t another security tool — it\'s a LIFECYCLE: every account gets a beginning, a middle, and a guaranteed end. Next stop: the beginning.';
+    document.getElementById('l1next').style.display='inline-flex';
+  }
+}
+
+/* ═══════════════ L2 : JOINER DAY ═══════════════ */
+const decisions=[
+  {q:"How does Maria's account get created?",
+   opts:[
+     {t:"Provisioned from the HR record 🤝", s:"HR enters Maria once — Entra creates the account automatically, with a start date.", v:"good", pts:10,
+      fb:"HR-driven provisioning: the HR system is the single source of truth. The account exists before day one, name spelled right, department set — and the SAME wire later handles her move and, one day, her exit. One entry, whole lifecycle. (+10 ⭐)"},
+     {t:"IT creates it by hand from the welcome email 👨‍💻", s:"Works every time. Well, most times.", v:"meh", pts:5,
+      fb:"Works for 10 people. Then someone's on holiday, a surname gets typo'd, and a new starter spends day one watching other people work. Manual means «someone must remember» — and Level 1 showed you what remembering looks like. (+5 ⭐)"},
+     {t:"She can share Bogdan's login the first week 🤷", s:"Team players share, right?", v:"bad", pts:0,
+      fb:"Shared logins destroy accountability forever: every action is now «Bogdan… or Maria… or whoever». And that password is known by two people for the rest of time. Auditors have a special face for this one. (0 ⭐)"}
+   ]},
+  {q:"What access does Maria get?",
+   opts:[
+     {t:"The «Sales starter pack» — role-based groups 📦", s:"What a salesperson needs, defined once, granted in one move.", v:"good", pts:10,
+      fb:"Role-based access: decide WHAT the role needs once, put it in groups, and every joiner, mover and leaver becomes a clean group operation. Auditable, repeatable, boring — the good kind of boring. (+10 ⭐)"},
+     {t:"Copy whatever her colleague Radu has 🖨️", s:"He does the same job, so… same access?", v:"bad", pts:0,
+      fb:"Radu has SIX YEARS of accumulated crust: a project from 2021, an admin right «for that one migration», two mystery groups. Copy-the-last-guy duplicates every mistake ever made — it's the #1 way access sprawl breeds. (0 ⭐)"},
+     {t:"Grant broadly now, trim it later ✂️", s:"Better too much than a ticket, no?", v:"meh", pts:5,
+      fb:"«Later» is doing a lot of work in that sentence. Access is easy to grant and painful to remove — nobody ever files a ticket saying «I have too much access». Start minimal; adding is the cheap direction. (+5 ⭐)"}
+   ]},
+  {q:"How does she get her Microsoft 365 license?",
+   opts:[
+     {t:"The Sales group carries the license 🎫", s:"Join the group → get the license. Leave it → give it back.", v:"good", pts:10,
+      fb:"Group-based licensing: joiners get licensed the second they land in the group, and leavers hand the seat back automatically when they're removed. No spreadsheet, no paying for ghosts. (+10 ⭐)"},
+     {t:"Assign it manually, track in a spreadsheet 📊", s:"The spreadsheet is very color-coded.", v:"meh", pts:5,
+      fb:"The spreadsheet starts lying within a month — and every ghost from Level 1 was probably still holding a paid license. Manual licensing is how you pay monthly rent for people who left. (+5 ⭐)"},
+     {t:"Buy the biggest license for everyone 💸", s:"Simplest possible policy!", v:"bad", pts:0,
+      fb:"Simple, yes — and you're now paying premium per month for warehouse staff who need email and one Teams channel. License right-sizing usually funds the entire identity project by itself. (0 ⭐)"}
+   ]},
+  {q:"MFA — when does Maria set it up?",
+   opts:[
+     {t:"Day one, at the welcome desk, with a Temporary Access Pass 🔐", s:"A short-lived pass to register her authenticator before lunch.", v:"good", pts:10,
+      fb:"A Temporary Access Pass is a time-limited code that lets Maria enroll her authenticator app on day one — no password-only window, no «I'll do it later». The account is born protected. (+10 ⭐)"},
+     {t:"Email her the instructions, she'll register when prompted 📧", s:"People read onboarding emails… eventually.", v:"meh", pts:5,
+      fb:"That leaves a password-only account for days or weeks — and attackers specifically hunt the gap between «account created» and «MFA registered». Fresh accounts are the soft ones. (+5 ⭐)"},
+     {t:"Skip MFA the first month — less friction for the newbie 🙅", s:"Let her settle in first.", v:"bad", pts:0,
+      fb:"Backwards: a brand-new account with a just-issued password is at its MOST vulnerable in week one. Day one isn't too early for MFA — it's the last safe moment. (0 ⭐)"}
+   ]},
+  {q:"And the basics — email lists, intranet, the right Teams?",
+   opts:[
+     {t:"Automatic: «department = Sales» sorts her in by itself 🪄", s:"Dynamic groups read her profile and do the rest.", v:"good", pts:10,
+      fb:"Dynamic groups run on rules over attributes — department, country, job title. HR set «Sales», so the Sales groups claim her automatically. And when that attribute ever CHANGES… the access follows. Remember this one. 😏 (+10 ⭐)"},
+     {t:"A checklist of 14 groups the admin adds by hand ✅", s:"The checklist has never failed. Yet.", v:"meh", pts:5,
+      fb:"A checklist works until the day it doesn't — and 14 manual adds today are 14 manual REMOVES someday. Guess which half ever happens. (+5 ⭐)"},
+     {t:"She can request each access when she hits a wall 🧱", s:"Builds initiative!", v:"bad", pts:0,
+      fb:"Death by a thousand tickets: week one spent begging for doors, helpdesk drowning, and her manager approving things he doesn't understand. Birthright access should be… a birthright. (0 ⭐)"}
+   ]}
+];
+let di=0;
+function L2(){
+  di=0;
+  show(`
+    <div class="badge">LEVEL 2 · JOINER DAY 🌱</div>
+    <h2>HR says: «Maria starts Monday»</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      The best time to prevent a ghost is the day the account is born.
+      Five calls to make before Monday — the strong answer pays best. (+10 ⭐)
+    </div>
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d=decisions[di];
+  document.getElementById('dzone').innerHTML=`
+    <h2 style="font-size:19px;margin-top:14px">Decision ${di+1}/${decisions.length}: ${d.q}</h2>
+    <div class="choices">
+      ${d.opts.map((o,i)=>`
+        <button class="choice" id="ch${i}" onclick="pick(${i},event)">
+          <b>${o.t}</b><small>${o.s}</small>
+        </button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none"></button>
+  `;
+}
+function pick(i,e){
+  const d=decisions[di], o=d.opts[i];
+  d.opts.forEach((x,j)=>{
+    const el=document.getElementById('ch'+j);
+    el.disabled=true;
+    if(j===i) el.classList.add(o.v);
+  });
+  if(o.pts>0) addScore(o.pts,e.clientX,e.clientY);
+  const v=document.getElementById('verdict');
+  v.innerHTML=`<div class="say" data-who="${o.v==='good'?'NICE':'HMM'}">${o.fb}</div>`;
+  v.style.display='block';
+  const btn=document.getElementById('dnext');
+  btn.style.display='inline-flex';
+  if(di<decisions.length-1){ btn.textContent='Next decision →'; btn.onclick=()=>{di++;renderDecision();}; }
+  else { btn.textContent='Maria is live! Six months later… →'; btn.onclick=()=>goto(3); }
+}
+
+/* ═══════════════ L3 : THE MOVER BOARD ═══════════════ */
+const actions=[
+  {t:"➖ Remove the Sales starter-pack group", d:"CRM, pipeline site, sales mailbox — out with the group.", ok:true,
+   ex:"Group out = CRM, pipeline site and the sales mailbox out, all in ONE move. This is exactly why the starter pack was a group and not 14 hand-picked permissions."},
+  {t:"➖ Reclaim the Sales CRM license", d:"She'll never open it again — and it bills monthly.", ok:true,
+   ex:"Seats cost money every month. With group-based licensing this happens by itself the second she leaves the Sales group — the license follows the group."},
+  {t:"➖ Remove her from Sales-Deals shared mailbox", d:"Live negotiations are not Finance reading material.", ok:true,
+   ex:"A Finance employee reading live sales negotiations is a compliance incident that's just waiting for an auditor to find it. Old-team mailboxes go first."},
+  {t:"➕ Update her profile: department = Finance", d:"New department, new manager — in the directory.", ok:true,
+   ex:"The attribute IS the steering wheel: dynamic groups read «Finance» and re-home her automatically. In a mature setup, this one field-change does most of the other steps for you."},
+  {t:"➕ Add the Finance starter-pack group", d:"ERP, reports folder, the Finance Teams channel.", ok:true,
+   ex:"The Finance role's needs, defined once, granted in one move — same trick as her joiner day, pointed at the new job."},
+  {t:"➕ Assign the Finance apps license", d:"The tools of the new trade.", ok:true,
+   ex:"In a group-based setup this rides along with the Finance group automatically. Join the group, the license follows — nothing to remember."},
+  {t:"🧷 Keep her Sales access too — just in case", d:"She might help the old team sometimes?", ok:false,
+   ex:"⚠ ACCESS CREEP. This is exactly how 6-year veterans end up able to open half the company: every move keeps a little «just in case» pile, and nobody ever asks «why does she STILL have that?» — until an audit, or an attacker, finds the pile. If she truly must cover for Sales: separate grant, with an expiry date, reviewed."},
+  {t:"🗑️ Delete the account, make a fresh Finance one", d:"Clean slate! What could be cleaner?", ok:false,
+   ex:"She'd lose her mailbox, OneDrive, Teams history and every «remember me» on the planet — and IT gains a day of rework. Movers KEEP their identity; only the ACCESS moves. One person, one account, for their whole journey."}
+];
+let actDone=0;
+function L3(){
+  actDone=0;
+  show(`
+    <div class="badge">LEVEL 3 · THE MOVER 🔀</div>
+    <h2>Maria moves: Sales → Finance</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Promotions and transfers are where access silently piles up. Build Maria's move:
+      <b>REMOVE</b> the three things Sales gave her, <b>ADD</b> the three things Finance needs —
+      and dodge the two classics on the board. (+10 ⭐ each)
+    </div>
+    <div class="actions">
+      ${actions.map((a,i)=>`
+        <button class="act clickable" id="act${i}" onclick="doAct(${i},event)">
+          <span><b>${a.t}</b>${a.d}</span>
+        </button>`).join('')}
+    </div>
+    <div class="inv" id="actLog">🔀 <b>The move: 0/6</b> — what goes, what comes?</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="goto(4)">Clean move! Time for the quarterly review →</button>
+  `);
+}
+function doAct(i,e){
+  const a=actions[i], el=document.getElementById('act'+i);
+  if(el.classList.contains('done')||el.disabled)return;
+  if(a.ok){
+    el.classList.add('done');
+    actDone++;
+    addScore(10,e.clientX,e.clientY);
+    document.getElementById('actLog').innerHTML=`🔀 <b>The move: ${actDone}/6</b> — ✓ ${a.ex}`;
+    if(actDone===6){
+      document.getElementById('actLog').innerHTML=`🔀 <b>Clean move.</b> Old access gone, new access via groups, profile updated so automation can follow her. In real audits, movers — not leavers — are where the scariest permissions hide: the leaver at least LEAVES; the mover stays and accumulates.`;
+      document.getElementById('l3next').style.display='inline-flex';
+    }
+  } else {
+    el.classList.add('nope');el.disabled=true;
+    document.getElementById('actLog').innerHTML=`🔀 <b>The move: ${actDone}/6</b> — ✗ ${a.ex}`;
+    setTimeout(()=>el.classList.remove('nope'),500);
+  }
+}
+
+/* ═══════════════ L4 : ACCESS REVIEW VERDICTS ═══════════════ */
+const scen=[
+  {t:"intern-2024 · Helpdesk Admin role · internship ended 2 years ago", who:"ROW 1 · THE FORGOTTEN INTERN",
+   ans:2, why:"Nobody reviewed it because nobody was ever ASKED to — that's the whole disease. An access review puts this row in front of a human («does intern-2024 still need Helpdesk Admin?»), and in Entra the review can auto-remove access on a «deny» — or when nobody answers at all. Two years late beats never."},
+  {t:"The CFO · member of Finance-Approvers · approves payments weekly", who:"ROW 2 · THE OBVIOUS ONE",
+   ans:1, why:"Reviews aren't purges — the CFO approving payments is the system WORKING. A good review confirms the obvious rows fast, so human attention is spent where it belongs: on the weird ones."},
+  {t:"guest: k.miller#EXT# · member of «Project Falcon (M&A)» Teams site · nobody recognizes the name", who:"ROW 3 · THE MYSTERY GUEST",
+   ans:3, why:"Unknown guest + your most sensitive site = investigate BEFORE touching. Who invited them? When? Is the partnership still live? Entra guest access reviews ask the resource owner exactly this on a schedule — and auto-remove guests nobody vouches for."},
+  {t:"Maria · still in Sales-EU group · moved to Finance 6 months ago", who:"ROW 4 · SOUND FAMILIAR?",
+   ans:2, why:"Level 3's lesson, spotted in the wild: her move left residue. This is why reviews exist even when the mover process is good — they're the safety net that catches whatever the process missed."},
+  {t:"Vlad (IT) · Global Administrator · one of two named admins, activates the role just-in-time via PIM", who:"ROW 5 · THE MODEL CITIZEN",
+   ans:1, why:"Two named admins, role activated only when needed and only for a few hours (that's PIM — Privileged Identity Management) — this is the TEXTBOOK setup. Keep it, and use it as the bar every other privileged account gets measured against."},
+  {t:"svc-scanner service account · member of VPN-Users · no owner listed, no one knows why", who:"ROW 6 · THE ORPHAN ROBOT",
+   ans:3, why:"«No owner, nobody knows why» is never a KEEP — and it's dangerous to blind-REVOKE (what if payroll printing dies at month-end?). Flag it: find an owner, document what it does, THEN decide. Every account needs a human who answers for it."}
+];
+const VLABELS=["","✅ Keep","🗑️ Revoke","🚩 Flag"];
+let scDone=0, scFirst={};
+function L4(){
+  scDone=0;scFirst={};
+  show(`
+    <div class="badge">LEVEL 4 · THE ACCESS REVIEW ⚖️</div>
+    <h2>Quarterly review: you are the reviewer</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      An access review is a beautifully simple ritual: a human looks at a row of access and answers
+      «still needed?». Six rows landed on your desk this quarter — call
+      <b>KEEP</b>, <b>REVOKE</b> or <b>FLAG</b> on each. (+10 ⭐ first try)
+    </div>
+    ${scen.map((s,i)=>`
+      <div class="ticket" id="sc${i}" style="display:block">
+        <div class="tx" style="margin-bottom:4px"><b>📋 ${s.t}</b><small>— ${s.who}</small></div>
+        <div class="vrow">
+          ${[1,2,3].map(v=>`<button class="vbtn" id="sc${i}v${v}" onclick="verdict(${i},${v},event)">${VLABELS[v]}</button>`).join('')}
+        </div>
+        <div class="verdict" id="sc${i}x" style="margin-top:6px"></div>
+      </div>`).join('')}
+    <div class="inv" id="l4note" style="display:none"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="goto(5)">Review filed! Brace for redundancy day →</button>
+  `);
+}
+function verdict(i,v,e){
+  const s=scen[i], card=document.getElementById('sc'+i);
+  if(card.classList.contains('done'))return;
+  const btn=document.getElementById('sc'+i+'v'+v);
+  if(v===s.ans){
+    card.classList.add('done');
+    [1,2,3].forEach(k=>{
+      const b=document.getElementById('sc'+i+'v'+k);
+      b.disabled=true;
+      if(k===v)b.classList.add('good');
+    });
+    addScore(scFirst[i]===undefined?10:5,e.clientX,e.clientY);
+    const x=document.getElementById('sc'+i+'x');
+    x.innerHTML=`<div class="say" data-who="VERDICT ✓" style="margin:8px 0 0">${s.why}</div>`;
+    x.style.display='block';
+    scDone++;
+    if(scDone===scen.length){
+      CABG.mode('review');
+      const note=document.getElementById('l4note');
+      note.style.display='block';
+      note.innerHTML='⚖️ <b>Review complete — decisions applied.</b> Look at the background: the ghost pile at the LEAVERS door is being swept away, one by one. That\'s «auto-apply results» — a review decision becomes an actual removal, automatically, no follow-up ticket.';
+      document.getElementById('l4next').style.display='inline-flex';
+    }
+  } else {
+    scFirst[i]=false;
+    btn.classList.add('bad');
+    btn.disabled=true;
+    setTimeout(()=>btn.classList.remove('bad'),450);
+  }
+}
+
+/* ═══════════════ L5 : LEAVER RUSH ARCADE ═══════════════ */
+const LEAVER_NAMES=[
+  "Andrei · Warehouse","Ioana · Support","Radu · Sales","Elena · Finance",
+  "Mihai · IT","Ana · Marketing","Dragoș · Logistics","Cristina · HR",
+  "Paul · Support","Diana · Legal","Ștefan · Sales","Laura · Ops"
+];
+const STAYER_NAMES=[
+  "Maria · Finance (just moved!)","Vlad · IT","Bogdan · Sales","Corina · Support"
+];
+let offboarded=0, RUSH_TARGET=12, rushTimer=null, rushEventFired=false, rushLive=false, rcSeq=0, clockMin=0, leaverIdx=0;
+function L5(){
+  offboarded=0;rushEventFired=false;rushLive=true;rcSeq=0;clockMin=0;leaverIdx=0;
+  show(`
+    <div class="badge">LEVEL 5 · LEAVER RUSH 🏃</div>
+    <h2>Redundancy day. 12 people leave at 17:00.</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      The hard part of leavers isn't knowing WHAT to do — it's doing it for <b>everyone, the same
+      evening, with zero misses</b>. Click each <b>LEAVER</b> to run the offboarding checklist (+5 ⭐).
+      Leave one waiting too long and it goes 👻 ghost (you can still catch it late, +2).
+      And don't offboard the people who are staying! 😅
+    </div>
+    <div class="arena" id="arena">
+      <div class="side-lbl lbl-src"><span class="c">📋</span>HR LIST<br><small>(12 last days today)</small></div>
+      <div class="side-lbl lbl-dst"><span class="c">🚪</span>THE EXIT<br><small>(clean &amp; final)</small></div>
+      <div class="rushclock" id="rushClock">🕐 17:00</div>
+      <div class="event-banner" id="eventBanner"></div>
+      <div class="bigbar"><i id="bigFill"></i><span id="bigLabel">0 / ${RUSH_TARGET} offboarded</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="goto(6)">Queue cleared! Never again by hand →</button>
+  `);
+  rushTimer=setInterval(tickRush,1000);
+  spawnCard();spawnCard();
+}
+function tickRush(){
+  clockMin++;
+  const el=document.getElementById('rushClock');
+  if(el) el.textContent='🕐 '+(17+Math.floor(clockMin/60))+':'+String(clockMin%60).padStart(2,'0');
+  spawnCard();
+}
+function spawnCard(){
+  if(!rushLive)return;
+  const arena=document.getElementById('arena');
+  if(!arena){clearInterval(rushTimer);return;}
+  if(arena.querySelectorAll('.mailcard:not(.zap):not(.oops)').length>=3)return;
+  const needLeavers = leaverIdx < RUSH_TARGET;
+  const isLeaver = needLeavers && Math.random()<0.75;
+  if(!isLeaver && !needLeavers && Math.random()<0.6) return;
+  const txt = isLeaver
+    ? LEAVER_NAMES[leaverIdx++ % LEAVER_NAMES.length]
+    : STAYER_NAMES[Math.floor(Math.random()*STAYER_NAMES.length)];
+  const card=document.createElement('button');
+  card.className='mailcard clickable';
+  card.id='rc'+(rcSeq++);
+  card.innerHTML=isLeaver
+    ? `<i>employee record</i>${txt}<br>· last day: TODAY 17:00`
+    : `<i>employee record</i>${txt}<br>· contract: active ✓`;
+  card.style.left=(16+Math.random()*44)+'%';
+  card.style.top=(16+Math.random()*48)+'%';
+  card.onclick=(e)=>{
+    if(!rushLive||card.dataset.done)return;
+    if(isLeaver){
+      card.dataset.done='1';
+      const late=card.classList.contains('ghosted');
+      card.classList.remove('ghosted');
+      card.classList.add('proc');
+      card.innerHTML='<i>offboarding…</i>⛔ sign-in blocked<br>🔑 sessions revoked<br>📬 mailbox → shared<br>💳 license reclaimed';
+      addScore(late?2:5,e.clientX,e.clientY);
+      offboarded++;
+      updateRushBar();
+      setTimeout(()=>{card.classList.add('zap');setTimeout(()=>card.remove(),520);},750);
+      if(!rushEventFired && offboarded===6) setTimeout(rushEvent,850);
+      if(offboarded>=RUSH_TARGET) setTimeout(endRush,900);
+    } else {
+      card.dataset.done='1';
+      card.classList.add('oops');
+      card.innerHTML='<i>checked ✓</i>Still employed! Check the list before pulling the plug. 😅';
+      setTimeout(()=>{card.classList.add('fade');setTimeout(()=>card.remove(),850);},1400);
+    }
+  };
+  arena.appendChild(card);
+  if(isLeaver){
+    setTimeout(()=>{
+      if(card.isConnected && !card.dataset.done && rushLive && !card.classList.contains('ghosted')){
+        card.classList.add('ghosted');
+        card.innerHTML='<i>👻 GHOST</i>'+txt+'<br>Still has working keys! Late is better than never — click!';
+      }
+    },6500);
+  } else {
+    setTimeout(()=>{
+      if(card.isConnected && !card.dataset.done){
+        card.classList.add('fade');setTimeout(()=>card.remove(),850);
+      }
+    },5600);
+  }
+}
+function updateRushBar(){
+  const p=Math.min(100,Math.round(offboarded/RUSH_TARGET*100));
+  document.getElementById('bigFill').style.width=p+'%';
+  document.getElementById('bigLabel').textContent=`${offboarded} / ${RUSH_TARGET} offboarded`;
+}
+function rushEvent(){
+  rushEventFired=true;rushLive=false;
+  document.querySelectorAll('.mailcard').forEach(c=>c.style.opacity=.25);
+  const b=document.getElementById('eventBanner');
+  b.classList.remove('ok');
+  b.style.display='block';
+  b.innerHTML=`😮‍💨 Six down — and that was the EASY half.<br>
+    <small>Real offboarding is ~20 steps per person: devices, badges, SaaS apps, door codes, keys…
+    On a 40-leaver day, checklists break. Humans miss. Ghosts spawn.</small><br>
+    <button class="btn small" onclick="betterWay(event)">There has to be a better way</button>`;
+}
+function betterWay(e){
+  addScore(10,e.clientX,e.clientY);
+  const b=document.getElementById('eventBanner');
+  b.classList.add('ok');
+  b.innerHTML='✓ There is — and you flip it on in the next level. First: clear this queue. Every miss becomes a ghost.';
+  setTimeout(()=>{b.style.display='none';b.classList.remove('ok');rushLive=true;
+    document.querySelectorAll('.mailcard').forEach(c=>c.style.opacity=1);},2200);
+}
+function endRush(){
+  rushLive=false;clearInterval(rushTimer);
+  document.querySelectorAll('.mailcard').forEach(c=>c.remove());
+  document.getElementById('bigLabel').textContent='queue cleared ✓';
+  document.getElementById('l5next').style.display='inline-flex';
+}
+
+/* ═══════════════ L6 : THE AUTOMATION NIGHT ═══════════════ */
+let autoOn=false, autoIdx=0;
+const autoSteps=[
+  {ico:"🌱", t:"Joiner: the account builds itself", d:"HR enters a start date; days before day one, a lifecycle workflow creates the account, drops the new hire into their role groups, and issues a Temporary Access Pass for the welcome desk. Maria's onboarding, replayed by a robot.",
+   w:"The workflow's trigger is HR data — the hire date on the record. If HR is sloppy with dates, the automation is sloppy with accounts. Garbage in, ghosts out."},
+  {ico:"🎫", t:"Birthright & licenses: the groups do the work", d:"Dynamic groups read the profile attributes; group-based licensing rides along. Nobody «gives» access anymore — the data grants it, the same way, every single time.",
+   w:"Test a dynamic-group rule before trusting it: one wrong expression and 40 strangers join Finance-Approvers at 2 AM. Always preview the membership first."},
+  {ico:"🔀", t:"Mover: the department field is the steering wheel", d:"HR flips Maria's department; the dynamic groups swap her starter packs, licenses follow, old access drains away. Level 3, performed in her sleep.",
+   w:"Watch the overlap window: for a few hours a mover can hold BOTH packs. For sensitive roles — finance, admin — make the old-access removal immediate, not «overnight»."},
+  {ico:"🌙", t:"Leaver: midnight, guaranteed", d:"On the last day, the leaver workflow fires: block sign-in, revoke every active session, strip the group memberships. Days later: reclaim the license, convert the mailbox to shared so the team keeps the mail. No memory required. No Dans.",
+   w:"Blocking sign-in does NOT kill sessions that are already open — the revoke-sessions step is the one that slams the doors already ajar. It's the step humans forget; the workflow can't."},
+  {ico:"🗝️", t:"Guardrails on the machine", d:"Every workflow run is logged, failures alert a human, and the break-glass emergency accounts are excluded from anything that disables anything. The machine is powerful — so it gets a fence.",
+   w:"An automation that disables accounts is also an outage with good intentions. Scope it tight, log everything, and review the run history weekly until you trust it."}
+];
+function L6(){
+  autoOn=false;autoIdx=0;
+  show(`
+    <div class="badge">LEVEL 6 · THE AUTOMATION NIGHT ⚙️</div>
+    <h2>Friday, 11 PM. The last manual offboarding — ever. 🌙</h2>
+    <p class="muted">Everything you did by hand this week — creating, moving, disabling — Entra can do
+    from HR data, on schedule, every time. The feature family is called <b>lifecycle workflows</b>.
+    Time to stop being the checklist. Flip it.</p>
+    <div class="switch-zone">
+      <button class="big-switch clickable" id="bigSwitch" onclick="flip()" aria-label="Switch the lifecycle to automated">
+        <div class="knob" id="knob">MANUAL</div>
+      </button>
+      <div class="dns-line" id="autoLine">Lifecycle: MANUAL — every step is someone's memory. Flip it. 😤</div>
+    </div>
+    <div id="autoZone" style="max-width:680px;margin:20px auto 0"></div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="goto(7)">Automated and calm! Last stop: governance →</button></div>
+  `);
+}
+function flip(){
+  if(autoOn)return;
+  autoOn=true;
+  const sw=document.getElementById('bigSwitch');
+  sw.classList.add('on');
+  document.getElementById('knob').textContent='AUTOMATED';
+  CABG.mode('clean');
+  addScore(20,innerWidth/2,innerHeight/2);
+  document.getElementById('autoLine').textContent='Watch the background: the flow runs green, ghosts dissolve at the door, nothing piles up. Now see what the machine actually does ↓';
+  renderAuto(0);
+}
+function renderAuto(i){
+  autoIdx=i;
+  const s=autoSteps[i];
+  const doneList=autoSteps.slice(0,i).map(x=>
+    `<div style="font-family:var(--mono);font-size:12px;color:var(--green);margin-bottom:5px">✓ ${x.ico} ${x.t}</div>`).join('');
+  document.getElementById('autoZone').innerHTML=`
+    ${doneList}
+    <div class="say" data-who="WORKFLOW ${i+1} / ${autoSteps.length}" style="margin-top:${i>0?'16px':'4px'}">
+      <b style="font-size:16px">${s.ico} ${s.t}</b><br>
+      <span style="font-size:14.5px">${s.d}</span>
+      <div class="warnnote"><b>⚠ Pay attention:</b> ${s.w}</div>
+      ${i<autoSteps.length-1
+        ? `<div style="margin-top:12px"><button class="btn small blue" onclick="autoNext(event)">Next workflow →</button></div>`
+        : ``}
+    </div>`;
+  if(i===autoSteps.length-1) document.getElementById('l6next').style.display='inline-flex';
+}
+function autoNext(e){
+  addScore(5,e.clientX,e.clientY);
+  renderAuto(autoIdx+1);
+}
+
+/* ═══════════════ L7 : GOVERNANCE TICKETS + FINAL ═══════════════ */
+const tickets=[
+  {t:"«We have 214 guest accounts. Marius, from an agency we dropped in 2023, can still open our files»", who:"SECURITY REVIEW, slide 4",
+   opts:[
+     {o:"Delete every guest tonight. Partners will understand", ok:false},
+     {o:"Guest access reviews with auto-removal: resource owners confirm their guests on a schedule — nobody vouches, access goes, automatically", ok:true},
+     {o:"Guests are harmless, they're external anyway", ok:false}
+   ],
+   ex:"Guests never expire on their own — someone invited them once, and the invitation outlived the relationship. Entra access reviews can ask each site or team owner «still yours?» periodically and automatically remove guests who are denied — or whose owner never answers. Set once, cleans forever."},
+  {t:"«svc-invoice runs the invoicing job. Its password is from 2019 and it's pasted in three scripts»", who:"THE AUDIT FINDING",
+   opts:[
+     {o:"Rotate it to a new password and paste THAT into the scripts", ok:false},
+     {o:"Move it to a managed identity — the workload proves who it is by itself; there is no password to steal, leak or forget", ok:true},
+     {o:"It's worked since 2019 — that's five years of proof it's fine", ok:false}
+   ],
+   ex:"Passwords in scripts get copied, committed to repos, and forgotten. A managed identity means the Azure workload authenticates AS itself — nothing to rotate, nothing to paste, nothing for an attacker to find. Where a managed identity can't reach, the fallback is a vaulted secret with automatic rotation — never a string in a script."},
+  {t:"«We have 340 Teams. 'Project Phoenix 2021' has 9 owners and its last message is from 2022»", who:"THE TEAMS JUNGLE",
+   opts:[
+     {o:"Mass-delete everything that looks old", ok:false},
+     {o:"Group expiration policy: unused groups email their owners for renewal — nobody claims them, they expire (with a 30-day restore window)", ok:true},
+     {o:"Storage is cheap, let them pile up", ok:false}
+   ],
+   ex:"Every dead Team is a pile of files with forgotten members and nine absentee owners. The expiration policy makes each group justify its existence to its OWN owners on a schedule — active teams renew automatically based on use; abandoned ones evaporate, recoverable for 30 days if someone screams."},
+  {t:"«The new cleanup workflow disables inactive accounts… and the break-glass account has been 'inactive' for 90 days»", who:"NEAR MISS OF THE MONTH",
+   opts:[
+     {o:"The automation knows best — if it gets disabled, it was unused anyway", ok:false},
+     {o:"Exclude the break-glass accounts explicitly from every disable/cleanup workflow — and alert loudly if anything ever touches them", ok:true},
+     {o:"Log into break-glass weekly so it looks active", ok:false}
+   ],
+   ex:"The emergency account is SUPPOSED to look inactive — that's its job. An eager cleanup almost disabled the exact account you'd need in a disaster. Rule: automations that disable things get explicit exclusion lists for emergency access, and ANY activity on break-glass fires an alarm. (And no — using emergency credentials weekly to game a filter is how they leak.)"},
+  {t:"«These quarterly access reviews… managers just click approve-all to make the email go away»", who:"REVIEW FATIGUE, month 6",
+   opts:[
+     {o:"Cancel the reviews, they're theater anyway", ok:false},
+     {o:"Shrink and assist: small scoped reviews (admins, guests, sensitive groups) + machine-assisted recommendations that pre-mark inactive users as «suggest deny»", ok:true},
+     {o:"Make them monthly so people take them seriously", ok:false}
+   ],
+   ex:"Approve-all fatigue is real — a 400-row review IS theater. The fix is smaller and smarter: review only the access that matters (privileged roles, guests, finance groups), and let Entra's recommendations pre-mark users with no sign-in in 30 days. A 10-row review with suggestions gets honest answers in five minutes."}
+];
+let tdone=0;
+let firstTry={};
+function L7(){
+  tdone=0;firstTry={};
+  show(`
+    <div class="badge">LEVEL 7 · GOVERNANCE 🛡️</div>
+    <h2>Keeping the door honest</h2>
+    <div class="say tip" data-who="YOUR GUIDE">
+      Automation handles the flow; <b>governance</b> handles the leftovers — guests, robots, dead Teams
+      and the automation itself. Five tickets from month two: each has a lazy answer, a brutal answer,
+      and a right answer. (+10 ⭐ first try)
+    </div>
+    <div id="tzone">
+      ${tickets.map((tk,i)=>`
+        <div class="ticket" id="tk${i}" style="display:block">
+          <div class="tx" style="margin-bottom:8px"><b>🎟️ ${tk.t}</b><small>— ${tk.who}</small></div>
+          <div class="choices" style="margin-top:4px">
+            ${tk.opts.map((op,j)=>`
+              <button class="choice" id="tk${i}o${j}" style="padding:10px 14px;font-size:13.5px" onclick="solve(${i},${j},event)">${op.o}</button>`).join('')}
+          </div>
+          <div class="verdict" id="tk${i}v" style="margin-top:8px"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+
+function solve(i,j,e){
+  const tk=tickets[i];
+  const card=document.getElementById('tk'+i);
+  if(card.classList.contains('done'))return;
+  const btn=document.getElementById('tk'+i+'o'+j);
+  if(tk.opts[j].ok){
+    card.classList.add('done');
+    tk.opts.forEach((op,k)=>{
+      const b=document.getElementById('tk'+i+'o'+k);
+      b.disabled=true;
+      if(k===j)b.classList.add('good');
+    });
+    if(firstTry[i]===undefined){ addScore(10,e.clientX,e.clientY); }
+    else { addScore(5,e.clientX,e.clientY); }
+    const v=document.getElementById('tk'+i+'v');
+    v.innerHTML=`<div class="say" data-who="SOLVED ✓" style="margin:12px 0 0">${tk.ex}</div>`;
+    v.style.display='block';
+    tdone++;
+    if(tdone===tickets.length) finale();
+  } else {
+    firstTry[i]=false;
+    btn.classList.add('bad');
+    btn.disabled=true;
+    setTimeout(()=>btn.classList.remove('bad'),450);
+  }
+}
+function finale(){
+  for(let i=0;i<40;i++){
+    const c=document.createElement('div');c.className='confetti';
+    c.textContent=["🎉","⭐","👻","🚪","✨"][i%5];
+    c.style.left=Math.random()*100+'vw';
+    c.style.animationDuration=(2+Math.random()*2.5)+'s';
+    c.style.animationDelay=(Math.random()*0.8)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),5500);
+  }
+  const MAX=390;
+  let rank="Ghost Bait 🐣", msg="The door still spins — replay and hunt for more stars!";
+  if(score>=350){rank="Lifecycle Legend 🏆";msg="Flawless! You could run the identity-lifecycle workshop yourself.";}
+  else if(score>=285){rank="Identity Architect 📐";msg="Sharp! You know exactly where ghosts come from — and how to stop the spawner.";}
+  else if(score>=210){rank="Ghost Hunter 🗝️";msg="Solid! One more run and you'll clear the leaver rush without a single ghost.";}
+  level=8;refreshMap();
+  document.getElementById('lvl7').classList.add('done');
+  document.getElementById('finale').innerHTML=`
+    <div class="center" style="margin-top:10px">
+      <h2>🎉 The door revolves — and closes!</h2>
+      <div class="rank-big">${rank}</div>
+      <div style="font-family:var(--mono);font-weight:600;color:var(--muted)">SCORE: ${score} / ~${MAX} ⭐</div>
+      <p class="muted" style="margin:10px auto;max-width:520px">${msg}</p>
+      <div class="say tip" data-who="REMEMBER" style="text-align:left;margin:22px auto 18px">
+        The revolving door, in one breath:
+        <b>1)</b> every account needs a beginning, a middle and a guaranteed end — joiner, mover, leaver →
+        <b>2)</b> joiners: HR is the source of truth, access lives in role groups, groups carry the licenses, MFA on day one →
+        <b>3)</b> movers: change the attribute, let dynamic groups swap the packs — and always REMOVE the old →
+        <b>4)</b> leavers: block sign-in, revoke sessions, reclaim, convert the mailbox — at midnight, by workflow, not by memory →
+        <b>5)</b> access reviews are the safety net: small, scoped, machine-assisted, auto-applied →
+        <b>6)</b> guests expire, groups expire, service accounts become managed identities →
+        <b>7)</b> break-glass stays outside every automation's reach.
+        A ghost isn't spooky — it's just a leaver nobody finished. 🚪
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn blue" onclick="location.reload()">↺ Play again</button>
+        <a class="btn green" href="../index.html#contact">Run this live with your team →</a>
+      </div>
+    </div>`;
+}
+
+const RENDER=[L0,L1,L2,L3,L4,L5,L6,L7];
+refreshMap();
+L0();
+</script>
+</body>
+</html>
