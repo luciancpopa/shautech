@@ -7,6 +7,19 @@ Repo: <https://github.com/luciancpopa/shautech> · Live: <https://www.shautech.c
 
 ---
 
+## 2026-08-01 — Lucian Popa
+
+Focus: **labs landing page**, **shautech pulse interactive demo**, and **lab 05 — identity lifecycle**.
+
+| # | Change | Where | Commit |
+|---|--------|-------|--------|
+| 1 | Added **`labs/index.html`** — standalone landing page for shautech labs at `/labs/` (was a 404): hero, "no signup / no slides / no jargon" strip, cards for all 5 sims, book-a-workshop CTA. Gives Labs a shareable URL for LinkedIn posts and prospects | Labs | `cd97c2e` |
+| 2 | Added **`pulse/index.html`** — interactive demo of the shautech pulse report at `/pulse/`: score animates to 82, 10 real-audit-style findings (legacy auth, admin MFA exclusions, missing DMARC, "Anyone" links…) expand to *what we saw / why it matters / the fix / CIS mapping*; "apply fix" buttons raise the score live, balanced so the last fix lands exactly on 100 → 🎉 banner + "get your tenant scored" CTA | Platform | `cd97c2e` |
+| 3 | Added **`labs/entra-lifecycle-simulator.html`** ("The Revolving Door"): 7-level Entra ID identity-lifecycle game — ghost-account hunt, joiner-day decisions, Sales→Finance mover board, KEEP/REVOKE/FLAG access reviews, redundancy-day leaver-rush arcade (missed leavers turn into red ghosts), MANUAL→AUTOMATED lifecycle-workflow switch, governance tickets. Canvas background is an identity conveyor: joiners door → department racks granting access rings → leavers door, with red ghost accounts piling up until progress sweeps them clean | Labs | `cd97c2e` |
+| 4 | Homepage wiring: **LAB 05 row** in the labs section, "all the labs live at shautech.com/labs" share link in the labs note, **"Try the demo report →"** ghost button in the platform section; sitemap entries for `/labs/`, `/pulse/` and the new sim | Home + sitemap | `cd97c2e` |
+
+---
+
 ## 2026-07-26 — Lucian Popa
 
 Focus: **shautech labs** — interactive workshop simulators, playable on the site.
@@ -89,4 +102,4 @@ Baseline site created and rebranded by Lucian. Listed here for context.
 
 ---
 
-_Last updated: 2026-07-26_
+_Last updated: 2026-08-01_
