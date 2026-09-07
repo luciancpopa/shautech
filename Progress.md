@@ -7,6 +7,18 @@ Repo: <https://github.com/luciancpopa/shautech> · Live: <https://www.shautech.c
 
 ---
 
+## 2026-09-07 — Lucian Popa
+
+Focus: **the 3D studio** — an immersive walk-through version of shautech, reachable from the homepage via a Matrix-style red pill.
+
+| # | Change | Where | Commit |
+|---|--------|-------|--------|
+| 1 | Added **`studio/`** — a Three.js 3D walk-through of the shautech studio at `/studio/`: arrival hall with reception, a corridor of doors for each chapter (services, Pulse, labs, team, process, contact), Lucian and Andrei as figures at the end of the hall, orbit/disassemble object controls, ambient sound toggle. Plain ES modules + a local `three.module.js`, no build step | Studio | `c158e57` |
+| 2 | Homepage **"Take the red pill"** capsule (glowing red pill, slow pulse, faster on hover) in the nav above 1200px, under the hero CTA ("Or see how deep the studio goes —"), and in the mobile menu; all link to `/studio/` | Home | `c158e57` |
+| 3 | Studio welcome poster ("shautech / THE STUDIO / COME ON IN") moved along the left wall so it sits between two pillars instead of behind one; sitemap entry for `/studio/` | Studio + sitemap | `c158e57` |
+
+---
+
 ## 2026-08-01 — Lucian Popa
 
 Focus: **labs landing page**, **shautech pulse interactive demo**, and **lab 05 — identity lifecycle**.
@@ -102,4 +114,4 @@ Baseline site created and rebranded by Lucian. Listed here for context.
 
 ---
 
-_Last updated: 2026-08-01_
+_Last updated: 2026-09-07_
