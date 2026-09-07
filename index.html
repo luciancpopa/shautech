@@ -591,6 +591,37 @@
     .console-body .ln{opacity:1;transform:none}
     .scroll-thread{display:none}
   }
+
+  /* ===== Red pill → 3D studio ===== */
+  .redpill{
+    --rp:#ff3b3b;--rp-2:#8a0f14;--rp-glow:rgba(255,59,59,.45);
+    font-family:"JetBrains Mono",monospace;font-weight:600;font-size:.82rem;letter-spacing:.04em;
+    display:inline-flex;align-items:center;gap:.65em;
+    padding:.55em .95em .55em .7em;border-radius:999px;
+    color:#ffd9d9;background:rgba(255,59,59,.06);border:1px solid rgba(255,59,59,.35);
+    text-decoration:none;white-space:nowrap;position:relative;
+    transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .25s,border-color .25s;
+  }
+  .redpill .cap{
+    width:26px;height:12px;border-radius:999px;flex:none;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,#ff7a7a 0%,var(--rp) 45%,var(--rp-2) 100%);
+    box-shadow:0 0 10px var(--rp-glow),inset 0 1px 0 rgba(255,255,255,.55);
+    transform:rotate(-18deg);animation:rp-pulse 2.6s ease-in-out infinite;
+  }
+  .redpill .cap::before{content:"";position:absolute;inset:0;left:50%;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 70%)}
+  .redpill .cap::after{content:"";position:absolute;top:2px;left:4px;width:7px;height:3px;border-radius:999px;background:rgba(255,255,255,.7)}
+  .redpill .lbl small{display:block;font-weight:500;font-size:.66em;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:.1em}
+  .redpill:hover{transform:translateY(-2px);background:rgba(255,59,59,.14);border-color:var(--rp);box-shadow:0 8px 28px -10px var(--rp-glow),0 0 0 1px rgba(255,59,59,.25)}
+  .redpill:hover .cap{animation-duration:.9s}
+  .redpill:focus-visible{outline:2px solid var(--rp);outline-offset:3px}
+  @keyframes rp-pulse{0%,100%{box-shadow:0 0 6px var(--rp-glow),inset 0 1px 0 rgba(255,255,255,.55)}50%{box-shadow:0 0 18px var(--rp-glow),0 0 34px rgba(255,59,59,.22),inset 0 1px 0 rgba(255,255,255,.55)}}
+  .redpill--nav{font-size:.78rem;padding:.5em .85em .5em .65em}
+  @media(min-width:1201px){.nav-right .avail{white-space:nowrap}}
+  @media(max-width:1200px){.redpill--nav{display:none}}
+  .hero-choice{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem 1.1rem;margin-top:1.4rem;color:var(--muted);font-size:.9rem}
+  .hero-choice .redpill{font-size:.88rem;padding:.62em 1.05em .62em .8em}
+  .mobile-menu .redpill{margin-top:1.2rem;width:100%;justify-content:center;font-size:1rem}
+  @media (prefers-reduced-motion:reduce){.redpill .cap{animation:none}}
 </style>
 </head>
 <body>
@@ -653,6 +684,7 @@
     </nav>
     <div class="nav-right">
       <span class="avail"><span class="dot"></span><span id="availTxt">Booking now</span></span>
+      <a href="studio/" class="redpill redpill--nav" title="Take the red pill: enter the 3D shautech studio"><span class="cap" aria-hidden="true"></span><span class="lbl">Red pill</span></a>
       <a href="#contact" class="btn btn-primary">Book a free call <span class="arr">→</span></a>
       <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false">
         <span></span><span></span><span></span>
@@ -671,6 +703,7 @@
   <a href="#why">Why us</a>
   <a href="#contact">Contact</a>
   <a href="#contact" class="btn btn-primary">Book a free call →</a>
+  <a href="studio/" class="redpill" title="Take the red pill: enter the 3D shautech studio"><span class="cap" aria-hidden="true"></span><span class="lbl">Take the red pill</span></a>
 </div>
 
 <main>
@@ -684,6 +717,10 @@
         <div class="hero-cta">
           <a href="#contact" class="btn btn-primary">Book a free call <span class="arr">→</span></a>
           <span class="note">Free 30-min discovery call · no pitch, no pressure</span>
+        </div>
+        <div class="hero-choice">
+          <span>Or see how deep the studio goes —</span>
+          <a href="studio/" class="redpill" title="Take the red pill: enter the 3D shautech studio"><span class="cap" aria-hidden="true"></span><span class="lbl"><small>Enter the 3D studio</small>Take the red pill</span></a>
         </div>
         <div class="hero-trust">
           <span>Full docs on every job</span>
