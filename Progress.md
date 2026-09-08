@@ -9,11 +9,12 @@ Repo: <https://github.com/luciancpopa/shautech> · Live: <https://www.shautech.c
 
 ## 2026-09-08 — Lucian Popa
 
-Focus: **studio fallback** — the 3D studio on browsers where WebGL is blocked.
+Focus: **studio fallback and declutter** — the 3D studio on browsers where WebGL is blocked, then a cleaner studio.
 
 | # | Change | Where | Commit |
 |---|--------|-------|--------|
 | 1 | Managed company browsers (3D APIs / GPU disabled by policy, VDI, remote desktop) showed the studio as a dark page with only text. The page now checks for WebGL before loading the engine; without it, a rendered still of the corridor (`assets/studio-poster.webp`, 43 KB) becomes the background, a notice explains why the 3D view is off, and the CTA/hints switch to chapter browsing. Same fallback for a failed engine load or a lost GL context. Offline build regenerated | Studio | `cc3c63a` |
+| 2 | Studio declutter: the receptionist is now blonde and her desk holds only the laptop and the phone (plant, pen cup, mug and notebook painted out of `reception-studio.png`); every room is emptied of desk, chairs, cabinets, exhibit and kiosk and gets one wall-sized screen (8.2 × 4.1 m) that shows the chapter's title, lead and key points, clickable for the full story; founder figures stay in the hallway only. Homepage: top-right nav red pill removed (hero and mobile-menu pills remain). Fallback poster re-rendered; offline build regenerated | Studio, Home | `7c75e57` |
 
 ---
 
