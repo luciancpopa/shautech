@@ -7,6 +7,16 @@ Repo: <https://github.com/luciancpopa/shautech> · Live: <https://www.shautech.c
 
 ---
 
+## 2026-09-08 — Lucian Popa
+
+Focus: **studio fallback** — the 3D studio on browsers where WebGL is blocked.
+
+| # | Change | Where | Commit |
+|---|--------|-------|--------|
+| 1 | Managed company browsers (3D APIs / GPU disabled by policy, VDI, remote desktop) showed the studio as a dark page with only text. The page now checks for WebGL before loading the engine; without it, a rendered still of the corridor (`assets/studio-poster.webp`, 43 KB) becomes the background, a notice explains why the 3D view is off, and the CTA/hints switch to chapter browsing. Same fallback for a failed engine load or a lost GL context. Offline build regenerated | Studio | `cc3c63a` |
+
+---
+
 ## 2026-09-07 — Lucian Popa
 
 Focus: **the 3D studio** — an immersive walk-through version of shautech, reachable from the homepage via a Matrix-style red pill.
@@ -114,4 +124,4 @@ Baseline site created and rebranded by Lucian. Listed here for context.
 
 ---
 
-_Last updated: 2026-09-07_
+_Last updated: 2026-09-08_
