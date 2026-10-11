@@ -7,6 +7,20 @@ Repo: <https://github.com/luciancpopa/shautech> · Live: <https://www.shautech.c
 
 ---
 
+## 2026-10-11 — Lucian Popa
+
+Focus: **the reinvented site** — new design ("from chaos to order"), original logo kept, labs rebuilt, three new labs, pulse demo rebuilt, studio retired.
+
+| # | Change | Where | Commit |
+|---|--------|-------|--------|
+| 1 | New homepage: boot sequence, chaos→order particle hero, before/after slider, services with live console, **pulse** section with sample report, **labs** section (featured migration + 7 cards), team, process, why us, results, contact. Original › logo kept in header and footer. Contact e-mail is now contact@shautech.com | Home | this commit |
+| 2 | All five labs rebuilt on a shared engine (`assets/js/lab-engine.js` + `assets/css/labs.css`): SVG icons instead of emoji, themed canvas scenes, professional copy, zero console errors, 375px support. Files renamed: `labs/migration.html`, `copilot.html`, `security.html`, `conditional-access.html`, `identity-lifecycle.html` | Labs | this commit |
+| 3 | Three new labs: **Restore Point** (ransomware recovery), **Patch Night** (Windows 11 / Intune rollout), **The Licence Hunt** (licence & cloud cost audit) | Labs | this commit |
+| 4 | Pulse demo report rebuilt on the new design system, all findings kept, no-JS fallback | Pulse | this commit |
+| 5 | Added `legal.html` (copyright, trademarks, privacy), `404.html`, Open Graph / canonical metadata, `.nojekyll`, updated `sitemap.xml` and `robots.txt`. Fonts self-hosted; the site makes zero external requests | Site-wide | this commit |
+| 6 | Removed the 3D `studio/` (WebGL-only, 6.5 MB; kept in git history and in the local snapshot), `backup-pre-comet/`, duplicate `team/` photos and the Google Fonts links | Site-wide | this commit |
+
+
 ## 2026-09-08 — Lucian Popa
 
 Focus: **studio fallback and declutter** — the 3D studio on browsers where WebGL is blocked, then a cleaner studio.

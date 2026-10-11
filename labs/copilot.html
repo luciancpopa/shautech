@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<!-- © 2026 shautech. All rights reserved. shautech labs — interactive workshop simulators. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Open Secrets — shautech labs</title>
+<meta name="description" content="Operation Open Secrets: a Microsoft 365 Copilot readiness simulator. Copilot does not leak data, it finds what was already leaked. Hunt the oversharing, label what matters, fix the shares and roll out AI properly.">
+<meta name="theme-color" content="#0A0B0D">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.shautech.com/labs/copilot.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="shautech labs">
+<meta property="og:title" content="Open Secrets — shautech labs">
+<meta property="og:description" content="Operation Open Secrets: a Microsoft 365 Copilot readiness simulator. Copilot does not leak data, it finds what was already leaked. Hunt the oversharing, label what matters, fix the shares and roll out AI properly.">
+<meta property="og:url" content="https://www.shautech.com/labs/copilot.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='34' fill='%230A0B0D'/%3E%3Crect x='30' y='30' width='120' height='120' rx='26' fill='none' stroke='%234D9FFF' stroke-width='10'/%3E%3Ctext x='90' y='122' font-family='ui-monospace,monospace' font-size='98' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="../assets/css/labs.css">
+<style>
+  /* lab-specific styles only (shared components live in labs.css) */
+
+  /* L0 — Copilot chat mock */
+  .chat{margin-top:16px;max-width:700px;padding:14px 16px;display:grid;gap:12px}
+  .chat__bar{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--line);padding-bottom:10px}
+  .chat__bar .ic{color:var(--violet)}
+  .msg{display:flex;gap:12px;align-items:flex-start}
+  .msg .bubble-tx{background:var(--panel2);border:1px solid var(--line2);border-radius:12px;padding:10px 14px;font-size:14.5px;line-height:1.5;max-width:560px}
+  .msg--user{flex-direction:row-reverse}
+  .msg--user .bubble-tx{background:rgba(77,159,255,.10);border-color:rgba(77,159,255,.35)}
+  .msg--ai .bubble-tx{border-color:rgba(154,140,255,.35)}
+  .avatar.avatar--ai{background:linear-gradient(145deg,#3B2F8F,#1C1650);border-color:rgba(154,140,255,.6);color:var(--violet)}
+  .avatar.avatar--ai .ic{width:18px;height:18px}
+  .msg .sheet{margin-top:10px}
+  .msg .sheet table{min-width:0}
+  .src{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--ink2);border:1px solid var(--line2);border-radius:999px;padding:4px 10px}
+  .src .ic{color:var(--red)}
+
+  /* L3 — label the files */
+  .fico{width:40px;height:40px;border-radius:10px;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center;color:var(--accent2);flex:none}
+  .fico .ic{width:20px;height:20px}
+  button.slot{background:transparent}
+  .slot.filled.c-pub{border-color:var(--mint);color:var(--mint);background:rgba(124,242,196,.08)}
+  .slot.filled.c-int{border-color:var(--accent);color:var(--accent2);background:rgba(77,159,255,.08)}
+  .slot.filled.c-conf{border-color:var(--red);color:var(--red);background:rgba(255,92,122,.08)}
+  .chip-btn.c-pub{border-color:var(--mint);color:var(--mint)}
+  .chip-btn.c-conf{border-color:var(--red);color:var(--red)}
+  .chip-btn.sel.c-pub{background:var(--mint);color:var(--mint-ink)}
+  .chip-btn.sel.c-conf{background:var(--red);color:#2A0E12}
+  .lbl-stack{position:sticky;top:0}
+  .userrow.shake{animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+  /* L4 — fix board */
+  button.card-sm{width:100%;text-align:left}
+  .card-sm:disabled{cursor:default}
+  .card-sm.done .ic{color:var(--mint)}
+  .card-sm.bad .ic{color:var(--red)}
+
+  /* L5 — prompt arcade: wide items carrying the prompt text */
+  .item.item--prompt{width:auto;max-width:290px;min-height:48px;height:auto;padding:8px 12px;display:flex;gap:9px;align-items:center;text-align:left;font-family:var(--mono);font-size:11.5px;line-height:1.35;color:var(--ink);border-radius:12px}
+  .item.item--prompt .ic{width:20px;height:20px;color:var(--accent2);flex:none}
+  .item.item--prompt.bad .ic{color:var(--red)}
+  .item.item--prompt.warn .ic{color:var(--amber)}
+  .item.item--prompt.dim{opacity:.25}
+  @media (max-width:640px){.item.item--prompt{max-width:210px;font-size:10.5px;padding:7px 10px}}
+
+  /* L6 — rollout checklist */
+  .done-line{font-family:var(--mono);font-size:12px;color:var(--mint);margin-bottom:6px;display:flex;gap:8px;align-items:center}
+</style>
+</head>
+<body>
+
+<canvas id="labbg" aria-hidden="true"></canvas>
+
+<header class="topbar" id="topbar">
+  <a class="logo" href="../index.html" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span><span class="logo__lab">/ labs</span></a>
+  <span class="sim-name" id="simName"></span>
+  <nav class="lvlmap" id="lvlmap" aria-label="Levels"></nav>
+  <div class="hud">
+    <div class="pill" id="scorePill" title="Points"><b id="score">0</b></div>
+    <a class="exit" href="index.html" title="All labs"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>all labs</span></a>
+  </div>
+</header>
+
+<main class="stage" id="stage"><div class="screen" id="screen" aria-live="polite"></div></main>
+
+<div class="nojs" id="nojs"><div class="box"><p class="badge">shautech labs</p><h2>This simulator needs JavaScript.</h2><p class="muted">It runs entirely in your browser, nothing is sent anywhere. Enable JavaScript, or <a href="index.html" style="color:var(--accent2)">go back to all labs</a>.</p></div></div>
+
+<script src="../assets/js/lab-engine.js"></script>
+<script>
+/* © 2026 shautech. Open Secrets (Microsoft 365 Copilot readiness) — game logic. */
+(function(){
+'use strict';
+const { icon, say, avatar, sev, scoreAt, addScore, show, goto, toast, mood, util } = Lab;
+const { esc, pick, $ } = util;
+const D = Lab.draw, C = Lab.colors;
+
+const reveal = id => { const el = document.getElementById(id); if (el) el.style.display = 'inline-flex'; };
+const setFixed = r => { if (Lab.scene) Lab.scene.set('fixed', Math.max(0, Math.min(1, r))); };
+
+/* ---------------- ambient scene ----------------
+   A Copilot "query" hub in the centre sends thin beams to document nodes around it.
+   Overshared documents are red; they turn mint as the player fixes them (s.fixed 0..1). */
+const N_DOCS = 12;
+const scene = {
+  state: { level: 0, mood: '', fixed: 0 },
+  init(s, W, H) {
+    const cx = W * 0.5, cy = H * 0.53;
+    const rx = Math.min(W * 0.40, 540), ry = Math.min(H * 0.33, 300);
+    s.hub = [cx, cy];
+    s.docs = [];
+    let riskRank = 0;
+    for (let i = 0; i < N_DOCS; i++) {
+      const a = -Math.PI / 2 + (i / N_DOCS) * Math.PI * 2 + 0.17;
+      const wob = 0.86 + 0.14 * ((i * 7) % 3) / 2;
+      const x = cx + Math.cos(a) * rx * wob, y = cy + Math.sin(a) * ry * wob;
+      const risky = i % 3 !== 1;                          // 8 of 12 are overshared
+      const mx = (cx + x) / 2, my = (cy + y) / 2;
+      const nx = -(y - cy), ny = (x - cx);                // perpendicular for a gentle bow
+      const len = Math.hypot(nx, ny) || 1, k = (i % 2 ? 1 : -1) * 0.18;
+      const c1 = [mx + nx / len * len * k, my + ny / len * len * k];
+      s.docs.push({ x, y, risky, rank: risky ? riskRank++ : -1, pts: D.curve(s.hub, c1, c1, [x, y], 36), glyph: i % 4 === 0 ? 'mail' : (i % 4 === 2 ? 'user' : 'file') });
+    }
+    s.riskyTotal = riskRank;
+    s.pk = [];
+    const n = Math.max(18, Math.min(34, Math.round(W / 40)));
+    for (let i = 0; i < n; i++) s.pk.push({ d: Math.floor(Math.random() * N_DOCS), t: Math.random(), v: 0.10 + Math.random() * 0.12, out: i % 2 === 0, s: 2.2 + Math.random() * 1.4 });
+  },
+  onChange(s, k, v) { if (k === 'mood' && v === 'calm') s.fixed = 1; },
+  draw(ctx, s, W, H, t, dt) {
+    if (!s.docs) return;
+    D.grid(ctx, W, H, 64, 'rgba(255,255,255,.025)');
+    const fixedN = Math.round(s.fixed * s.riskyTotal);
+    const speed = s.level === 5 ? 1.9 : (s.mood === 'night' ? 0.55 : 1);
+    const docCol = d => d.risky ? (d.rank < fixedN ? C.mint : C.red) : C.accent;
+    const [hx, hy] = s.hub;
+
+    /* beams */
+    ctx.save(); ctx.lineDashOffset = -t * 18;
+    s.docs.forEach(d => {
+      const col = docCol(d);
+      D.path(ctx, d.pts, Lab.rgba(col, d.risky && d.rank >= fixedN ? .20 : .13), 1, [3, 7]);
+    });
+    ctx.restore();
+
+    /* document nodes */
+    s.docs.forEach((d, i) => {
+      const col = docCol(d);
+      const pulse = 0.5 + 0.5 * Math.sin(t * 1.6 + i);
+      ctx.save(); ctx.globalAlpha = .10 + pulse * .06; ctx.fillStyle = col; D.rr(ctx, d.x - 16, d.y - 16, 32, 32, 9); ctx.fill(); ctx.restore();
+      ctx.save(); ctx.globalAlpha = .4; ctx.strokeStyle = Lab.rgba(col, .55); ctx.lineWidth = 1; D.rr(ctx, d.x - 16, d.y - 16, 32, 32, 9); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.globalAlpha = .6; D.glyph(ctx, d.glyph, d.x, d.y, 6, Lab.rgba(col, .9)); ctx.restore();
+      if (d.risky && d.rank >= fixedN) { ctx.save(); ctx.globalAlpha = .55 + pulse * .3; D.glowDot(ctx, d.x + 13, d.y - 13, 1.6, Lab.rgba(C.red, .9)); ctx.restore(); }
+    });
+
+    /* packets: violet queries outbound, answers inbound coloured by document state */
+    s.pk.forEach(p => {
+      p.t += p.v * dt * speed;
+      if (p.t >= 1) { p.t = 0; p.out = !p.out; p.d = Math.floor(Math.random() * N_DOCS); }
+      const d = s.docs[p.d];
+      const pos = D.posOn(d.pts, p.out ? p.t : 1 - p.t);
+      const col = p.out ? C.violet : docCol(d);
+      ctx.save(); ctx.globalAlpha = .75;
+      if (p.out) D.glowDot(ctx, pos[0], pos[1], 1.4, Lab.rgba(col, .9));
+      else D.glyph(ctx, 'bit', pos[0], pos[1], p.s, Lab.rgba(col, .9));
+      ctx.restore();
+    });
+
+    /* Copilot hub */
+    const spin = t * 0.35;
+    ctx.save();
+    ctx.globalAlpha = .12; ctx.fillStyle = C.violet; ctx.beginPath(); ctx.arc(hx, hy, 34, 0, 7); ctx.fill();
+    ctx.globalAlpha = .45; ctx.strokeStyle = Lab.rgba(C.violet, .7); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx, hy, 34, 0, 7); ctx.stroke();
+    ctx.setLineDash([2, 6]); ctx.lineDashOffset = -t * 12; ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(hx, hy, 46, 0, 7); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.translate(hx, hy); ctx.rotate(spin);
+    ctx.globalAlpha = .85; ctx.strokeStyle = Lab.rgba(C.violet, .95); ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * 13, Math.sin(a) * 13); }
+    for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * 6, Math.sin(a) * 6); }
+    ctx.stroke();
+    ctx.restore();
+    D.text(ctx, 'COPILOT', hx, hy + 64, { color: 'rgba(169,177,192,.55)', size: 10 });
+    const left = s.riskyTotal - fixedN;
+    D.text(ctx, left ? left + ' OVERSHARED' : 'TENANT READY', hx, hy + 78, { color: left ? Lab.rgba(C.red, .6) : Lab.rgba(C.mint, .7), size: 9, weight: 500 });
+  }
+};
+
+/* ---------------- shared state / timers ---------------- */
+const A = { timer: null, live: false, flagged: 0, slipped: 0, eventFired: false, lane: 0 };
+const LANES = () => innerWidth < 640 ? [33, 61] : [30, 50, 70];   // % from the arena top; one item per lane
+function stopArcade() { if (A.timer) { clearInterval(A.timer); A.timer = null; } A.live = false; }
+function enter(m) { stopArcade(); mood(m || ''); }
+
+/* ================= L0 : THE DEMO SHOCK ================= */
+function L0() {
+  enter();
+  show(`
+    ${Lab.badge('Level 0 · the demo shock', 'play')}
+    <h1>The boss wants <em>Copilot</em>.<br>By Monday.</h1>
+    ${say('the boss', 'I saw a demo at a conference. You type <i>“summarise this contract”</i> and it just does it. We are buying Microsoft 365 Copilot for everyone. Switch it on by Monday, yes? Great meeting.')}
+    <div class="panel chat" aria-label="Copilot chat, recorded in the demo tenant">
+      <div class="chat__bar">${icon('sparkles')} Copilot · demo tenant · recorded on stage</div>
+      <div class="msg msg--user">${avatar('DM', 200)}<div class="bubble-tx">Summarise everything about salaries.</div></div>
+      <div class="msg msg--ai"><span class="avatar avatar--ai" aria-hidden="true">${icon('sparkles')}</span>
+        <div class="bubble-tx">Certainly. Based on <b>salaries_2026.xlsx</b> on the HR site (shared with <b>Everyone</b>), here are all 48 salaries, sorted by amount:
+          <div class="sheet"><table>
+            <tr><th>Name</th><th>Role</th><th>Annual</th></tr>
+            <tr class="bad"><td>M. Ionescu</td><td>Managing director</td><td>184,000</td></tr>
+            <tr class="bad"><td>A. Weber</td><td>Head of sales</td><td>121,500</td></tr>
+            <tr class="bad"><td>R. Popescu</td><td>Finance lead</td><td>98,200</td></tr>
+            <tr><td colspan="3" class="small">… 45 more rows</td></tr>
+          </table></div>
+          <span class="src">${icon('file-lock')} 1 source · HR-Salaries / salaries_2026.xlsx · Everyone except external users</span>
+        </div>
+      </div>
+    </div>
+    ${say('your guide', 'That is the whole story of this mission. Copilot did not hack anything: it <b>respects permissions perfectly</b>. It searches Microsoft Graph with the permissions of whoever is asking. The problem is that those permissions were wrong for years and nobody noticed, because no human had time to read 12,000 files. Copilot has time. <b>Copilot does not leak data. It finds what was already leaked.</b> Let us get PixelSoft ready for it. Properly.', 'tip')}
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="L.goto(1)">${icon('arrow-right')}Challenge accepted</button>
+  `);
+}
+
+/* ================= L1 : THE OVERSHARING HUNT ================= */
+const objects = [
+  { ic: 'sheet', nm: 'The HR site', found: '“HR-Salaries” has been shared with <b>Everyone except external users</b> since 2019. Copilot would happily summarise it for the intern. The SharePoint data access governance report would have listed this site on page one.' },
+  { ic: 'link', nm: '“Anyone” links', found: '83 files carry anonymous <b>“Anyone with the link”</b> access, including the price list your competitor would love to read. Anyone links are not indexed for other users, but every forwarded link is a door with no lock.' },
+  { ic: 'user-x', nm: 'The ghost accounts', found: '3 ex-employees still have <b>enabled accounts</b> with access to everything. One of them works for a competitor now. Their Copilot would answer from your tenant.' },
+  { ic: 'folder', nm: 'The “final_FINAL” chaos', found: '9 copies of the same contract in 9 places, each with different permissions. Which one would Copilot quote? Exactly. Nobody knows, and the oldest copy is the one shared the widest.' },
+  { ic: 'hard-drive', nm: 'The 2016 archive site', found: 'An old project site, open to everyone, full of scanned IDs and contracts. Nobody remembered it exists. Copilot never forgets; an inactive-site policy would have flagged it years ago.' },
+  { ic: 'users', nm: 'External sharing', found: '37 folders still shared with former vendors, an old accountant and one mystery Gmail guest nobody recognises. Guests do not get Copilot, but your people can still be asked to “summarise what is in the vendor folder”.' }
+];
+let foundCount = 0;
+function L1() {
+  enter(); foundCount = 0;
+  show(`
+    ${Lab.badge('Level 1 · discover', 'search')}
+    <h2>Find what <em>Copilot</em> would find</h2>
+    ${say('your guide', 'Before switching Copilot on, we ask one question: <b>what can people already see that they should not?</b> That is exactly what Copilot will surface, politely and instantly. Walk the tenant: click each corner. (+10 per finding)', 'tip')}
+    <div class="grid grid--auto">
+      ${objects.map((o, i) => `
+        <button class="tile" id="obj${i}" onclick="L.discover(${i},event)">${icon(o.ic)}<span class="nm">${o.nm}</span></button>`).join('')}
+    </div>
+    <div class="inv" id="inv"><b>Findings:</b> none yet. Start clicking.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l1next" style="display:none" onclick="L.goto(2)">${icon('arrow-right')}Oversharing catalogued. Now decide</button>
+  `);
+}
+function discover(i, e) {
+  const el = document.getElementById('obj' + i);
+  if (!el || el.classList.contains('bad')) return;
+  el.classList.add('bad');
+  el.insertAdjacentHTML('beforeend', `<span class="ok-mark" style="color:var(--red)">${icon('flag')}</span>`);
+  foundCount++;
+  scoreAt(10, e);
+  Lab.patch('#inv', `<b>Finding ${foundCount}/${objects.length}:</b> ${objects[i].found}`);
+  if (foundCount === objects.length) {
+    Lab.patch('#inv', `<b>All 6 found.</b> Scary? A little. Normal? Completely: every tenant older than a year looks like this. The difference between companies is not whether this exists; it is whether someone looked before turning the AI loose on it.`);
+    reveal('l1next');
+    toast('Discovery complete', 'check-circle');
+  }
+}
+
+/* ================= L2 : DECISIONS ================= */
+const decisions = [
+  { q: '12,000 files, one you. Where do we start cleaning?',
+    opts: [
+      { t: 'Where it hurts most: HR, finance, contracts', s: 'Protect the crown jewels first, then work outward.', v: 'good', pts: 10,
+        fb: 'Right. Risk-first beats alphabetical. The party menu being public is fine; the salary sheet being public is a crisis. Rank by damage, not by folder name. (+10)' },
+      { t: 'All 12,000 files, one by one, A to Z', s: 'Thorough. Very, very thorough.', v: 'meh', pts: 5,
+        fb: 'Admirably complete. You would finish around retirement. Perfection is the enemy of Monday: prioritise, automate, iterate. (+5)' },
+      { t: 'Nowhere. Does Copilot not have filters?', s: 'Surely the AI knows what is sensitive.', v: 'bad', pts: 0,
+        fb: 'Copilot’s “filter” is your permissions. If those say the intern can read salaries, Copilot agrees. There is no magic layer that fixes years of oversharing. (0)' }
+    ] },
+  { q: 'Who decides what counts as “sensitive”?',
+    opts: [
+      { t: 'The data owners: each department, with IT enabling', s: 'HR knows HR data. Finance knows finance data.', v: 'good', pts: 10,
+        fb: 'Exactly. IT can find files; only their owners know which ones can hurt. IT builds the labels and the tooling, departments make the calls. (+10)' },
+      { t: 'IT decides everything, alone, at night', s: 'Fewer meetings, more spreadsheets.', v: 'meh', pts: 5,
+        fb: 'Faster, but IT guessing what is sensitive in legal contracts ends badly in both directions: locked-out lawyers or public payslips. (+5)' },
+      { t: 'Everything is secret. Lock it all down', s: 'Cannot leak what nobody can open.', v: 'bad', pts: 0,
+        fb: 'Also cannot work when nobody can open anything. Total lockdown lasts about four hours before the exceptions start, and the exceptions are worse than the original mess. (0)' }
+    ] },
+  { q: 'The boss still wants Copilot on Monday. You say…',
+    opts: [
+      { t: '“Monday: yes, for a pilot group, while we clean”', s: 'Ten people now, everyone in waves after. Restricted SharePoint Search on as a seatbelt.', v: 'good', pts: 10,
+        fb: 'The consultant’s answer: the boss hears “yes”, you get a controlled rollout. The pilot finds problems while the blast radius is ten curious people, not the whole company. And while cleanup runs, Restricted SharePoint Search limits Copilot’s org-wide results to a curated allow-list of sites (up to 100). A seatbelt, not a destination. (+10)' },
+      { t: '“Sure, everyone Monday, fingers crossed”', s: 'What is the worst that could happen?', v: 'bad', pts: 0,
+        fb: 'You have seen the HR site. The worst that could happen is a summarised salary sheet in the all-hands chat by 9:15. (0)' },
+      { t: '“Never. AI is too dangerous for us”', s: 'Just say no.', v: 'meh', pts: 5,
+        fb: 'Caution is healthy, but “never” does not stop AI. It sends people to free chatbots with company data and zero governance. Shadow AI is worse than governed AI. (+5)' }
+    ] }
+];
+const tools = [
+  { ic: 'shield-check', t: 'The built-in reports and Purview', s: 'SharePoint data access governance reports, Entra access reviews, Purview sensitivity labels and DLP. Already in the tenant.',
+    fb: 'The honest default: most of what you need for readiness is already licensed and switched off. The oversharing reports find the problem, Purview labels what matters, access reviews keep it clean. (+10)' },
+  { ic: 'chart', t: 'A dedicated governance tool', s: 'Purpose-built oversharing scanners and cleanup automation.',
+    fb: 'Great at scale: when it is 12 sites it is a weekend, when it is 1,200 sites you want automation with dashboards and scheduled re-scans. (+10)' },
+  { ic: 'briefcase', t: 'A partner-led readiness assessment', s: 'Someone who has done this before runs the discovery with you.',
+    fb: 'Speed and pattern-matching: a partner has seen fifty tenants’ worth of skeletons and knows exactly which closets to open first. Pairs nicely with either toolset. (+10)' }
+];
+let di = 0;
+function L2() {
+  enter(); di = 0;
+  show(`
+    ${Lab.badge('Level 2 · decide', 'list-check')}
+    <h2>The <em>readiness</em> plan</h2>
+    ${say('your guide', 'Now we know what is exposed. Three calls to make before anyone touches a rollout button, then pick your toolkit.', 'tip')}
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision() {
+  const d = decisions[di];
+  Lab.patch('#dzone', `
+    <h3 style="margin-top:14px">Decision ${di + 1}/${decisions.length}: ${d.q}</h3>
+    <div class="choices">
+      ${d.opts.map((o, i) => `<button class="choice" id="ch${i}" onclick="L.pick(${i},event)"><b>${o.t}</b><small>${o.s}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none" onclick="L.nextDecision()">${icon('arrow-right')}<span id="dnextTx">Next decision</span></button>
+  `);
+}
+function pickOpt(i, e) {
+  const d = decisions[di], o = d.opts[i];
+  d.opts.forEach((x, j) => { const el = document.getElementById('ch' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add(o.v); });
+  if (o.pts > 0) scoreAt(o.pts, e);
+  const v = document.getElementById('verdict');
+  if (v) { v.innerHTML = say(o.v === 'good' ? 'well judged' : 'hmm', o.fb, o.v === 'good' ? 'tip' : 'warn'); v.classList.add('show'); }
+  reveal('dnext');
+  const tx = document.getElementById('dnextTx');
+  if (tx) tx.textContent = di < decisions.length - 1 ? 'Next decision' : 'One more thing: pick your toolkit';
+}
+function nextDecision() {
+  if (di < decisions.length - 1) { di++; renderDecision(); }
+  else renderToolbox();
+}
+function renderToolbox() {
+  Lab.patch('#dzone', `
+    <h3 style="margin-top:14px">What do we clean up with?</h3>
+    ${say('your guide', 'Same rule as always: no wrong answers, only fit. Choose one.', 'tip')}
+    <div class="choices">
+      ${tools.map((o, i) => `<button class="choice" id="tl${i}" onclick="L.pickTool(${i},event)"><b>${icon(o.ic)} ${o.t}</b><small>${o.s}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="tverdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="tnext" style="display:none" onclick="L.goto(3)">${icon('arrow-right')}Toolkit chosen. To the labels</button>
+  `);
+}
+function pickTool(i, e) {
+  tools.forEach((x, j) => { const el = document.getElementById('tl' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add('good'); });
+  scoreAt(10, e);
+  const v = document.getElementById('tverdict');
+  if (v) { v.innerHTML = say('good fit', tools[i].fb, 'tip'); v.classList.add('show'); }
+  reveal('tnext');
+}
+
+/* ================= L3 : LABEL THE FILES ================= */
+const files = [
+  { ic: 'coffee', name: 'party-menu.pdf', small: 'The office party lunch menu. Sausages feature heavily.', ans: 'pub' },
+  { ic: 'sheet', name: 'salaries_2026.xlsx', small: 'Everyone’s pay, one tidy sheet.', ans: 'conf' },
+  { ic: 'file-text', name: 'acme-renewal.docx', small: 'Customer contract: prices, terms, signatures.', ans: 'conf' },
+  { ic: 'wrench', name: 'reset-your-password.docx', small: 'IT how-to guide for employees.', ans: 'int' },
+  { ic: 'globe', name: 'brochure-2026.pdf', small: 'Marketing brochure. It is literally on the website.', ans: 'pub' },
+  { ic: 'calendar', name: 'project-plan.xlsx', small: 'Internal migration project timeline.', ans: 'int' }
+];
+const CHIPS = [
+  { id: 'pub', label: 'PUBLIC', cls: 'c-pub' },
+  { id: 'int', label: 'INTERNAL', cls: 'c-int' },
+  { id: 'conf', label: 'CONFIDENTIAL', cls: 'c-conf' }
+];
+let chipSel = null, lblDone = 0;
+function L3() {
+  enter(); chipSel = null; lblDone = 0;
+  show(`
+    ${Lab.badge('Level 3 · label', 'tag')}
+    <h2>Teach the tenant what <em>matters</em></h2>
+    ${say('your guide', 'Sensitivity labels are sticky notes with superpowers: they travel with the file and can enforce encryption, block external sharing and tell Copilot what is off-limits. Copilot honours the label’s usage rights: if a Confidential label encrypts a file and you lack the right to extract from it, Copilot will not summarise it, and any answer inherits the strictest label among its sources. Pick a label, then click the file it belongs on. (+10 each; wrong guesses just bounce)', 'tip')}
+    <div class="prep-grid">
+      <div>
+        ${files.map((f, i) => `
+          <div class="userrow" id="fr${i}">
+            <span class="fico">${icon(f.ic)}</span>
+            <span class="who"><b class="mono">${f.name}</b><small>${f.small}</small></span>
+            <button class="slot" id="fs${i}" onclick="L.assignLbl(${i},event)" aria-label="Assign the selected label to ${f.name}">no label</button>
+          </div>`).join('')}
+      </div>
+      <div class="stack lbl-stack">
+        <div class="stack-lbl">Sensitivity labels</div>
+        ${CHIPS.map(c => `<button class="chip-btn ${c.cls}" id="chip-${c.id}" onclick="L.selChip('${c.id}')" aria-pressed="false">${icon('tag')}${c.label}</button>`).join('')}
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="L.goto(4)">${icon('arrow-right')}Everything labelled. Fix the shares</button>
+  `);
+}
+function selChip(id) {
+  document.querySelectorAll('.chip-btn').forEach(c => { c.classList.remove('sel'); c.setAttribute('aria-pressed', 'false'); });
+  const el = document.getElementById('chip-' + id);
+  if (el) { el.classList.add('sel'); el.setAttribute('aria-pressed', 'true'); }
+  chipSel = id;
+}
+function assignLbl(i, e) {
+  const f = files[i], slot = document.getElementById('fs' + i), row = document.getElementById('fr' + i);
+  if (!slot || !row) return;
+  if (chipSel === null) { toast('Pick a label first', 'tag'); return; }
+  if (slot.classList.contains('filled')) return;
+  const chip = CHIPS.find(c => c.id === f.ans);
+  if (chipSel === f.ans) {
+    slot.classList.add('filled', chip.cls);
+    slot.innerHTML = icon('tag') + ' ' + chip.label;
+    slot.disabled = true;
+    lblDone++;
+    scoreAt(10, e);
+    if (lblDone === files.length) { reveal('l3next'); toast('All six files labelled', 'check-circle'); }
+  } else {
+    row.classList.add('shake'); slot.classList.add('wrong');
+    setTimeout(() => { row.classList.remove('shake'); slot.classList.remove('wrong'); }, 450);
+  }
+}
+
+/* ================= L4 : FIX THE SHARES ================= */
+const actions = [
+  { col: 0, ic: 'lock', t: 'Make HR and Finance sites private', d: 'Access for the right groups only, never “Everyone except external users”.', ok: true,
+    ex: 'The salary sheet now answers only to HR. The intern’s Copilot suddenly knows a lot less. Perfect.' },
+  { col: 0, ic: 'link', t: 'Kill the “Anyone” links', d: 'Expire anonymous links tenant-wide; default new shares to “specific people”.', ok: true,
+    ex: '83 anonymous doors closed in one sharing-policy change. New shares now require choosing who, as they always should have.' },
+  { col: 0, ic: 'x-circle', t: 'Ban file sharing completely', d: 'Nobody shares anything, ever again.', ok: false,
+    ex: 'Day two: people email attachments to Gmail “just to get work done”. You have traded visible sharing for invisible sharing. Strictly worse.' },
+  { col: 1, ic: 'user-x', t: 'Evict the ghosts', d: 'Disable ex-employee accounts, review every guest and that mystery Gmail.', ok: true,
+    ex: 'Three ghosts busted and one very suspicious guest removed. Offboarding checklist updated so they never pile up again.' },
+  { col: 1, ic: 'refresh', t: 'Turn on access reviews', d: 'Owners re-confirm who needs access, every quarter, automatically.', ok: true,
+    ex: 'The cleanup now repeats itself: every quarter owners click through “does Bob still need this?”. Oversharing stops being an archaeology project.' },
+  { col: 1, ic: 'eye-off', t: 'Skip cleanup, only give Copilot to trusted people', d: 'Managers only. They would never misuse it.', ok: false,
+    ex: 'Trust is not the issue; their permissions are. A trusted manager asking an innocent question still surfaces the salary sheet if it is shared with Everyone.' },
+  { col: 2, ic: 'hard-drive', t: 'Archive the 2016 graveyard', d: 'Old sites: confirm with owners, then archive or delete.', ok: true,
+    ex: 'The scanned-IDs site is gone from Copilot’s reach. Data you no longer hold is data that cannot be surfaced. Minimisation is underrated.' },
+  { col: 2, ic: 'x', t: 'Delete everything older than a year', d: 'Old files, old problems. Gone.', ok: false,
+    ex: 'Including contracts you are legally required to keep for ten years? Retention is a policy conversation, not a bulk-delete button.' }
+];
+const COLS = ['Sharing', 'People', 'Lifecycle'];
+const ACT_GOOD = actions.filter(a => a.ok).length;
+let actDone = 0;
+function L4() {
+  enter(); actDone = 0;
+  show(`
+    ${Lab.badge('Level 4 · fix', 'share')}
+    <h2>Close what is <em>open</em></h2>
+    ${say('your guide', `Labels tell us what matters; now we fix who can reach it. ${ACT_GOOD} of these cards are the right moves. Watch the background as you go: every fix turns another red document mint. (+10 each)`, 'tip')}
+    <div class="board">
+      ${COLS.map((c, ci) => `
+        <div class="col"><h4>${c}</h4>
+          ${actions.map((a, i) => a.col === ci ? `<button class="card-sm" id="act${i}" onclick="L.doAct(${i},event)">${icon(a.ic)}<span><b>${a.t}</b><small>${a.d}</small></span></button>` : '').join('')}
+        </div>`).join('')}
+    </div>
+    <div class="inv" id="actLog"><b>Cleanup: 0/${ACT_GOOD}</b>. Pick your fixes.<div class="meter"><i id="actMeter"></i></div></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="L.goto(5)">${icon('arrow-right')}Tenant tidied. Test the prompts</button>
+  `);
+}
+function doAct(i, e) {
+  const a = actions[i], el = document.getElementById('act' + i);
+  if (!el || el.disabled) return;
+  el.disabled = true;
+  if (a.ok) {
+    el.classList.add('done');
+    actDone++;
+    setFixed(actDone / ACT_GOOD);
+    scoreAt(10, e);
+    const done = actDone === ACT_GOOD;
+    Lab.patch('#actLog', done
+      ? `<b>Cleanup complete.</b> The crown jewels are gated, the anonymous links are dead and the ghosts are gone. One more guardrail for the pilot: a Purview DLP policy for Copilot that keeps Confidential-labelled content out of its answers until owners re-check it. Not perfect, no tenant ever is, but Copilot-ready. Let us prove it.<div class="meter"><i style="width:100%"></i></div>`
+      : `<b>Cleanup: ${actDone}/${ACT_GOOD}</b>. ${icon('check')} ${a.ex}<div class="meter"><i style="width:${Math.round(actDone / ACT_GOOD * 100)}%"></i></div>`);
+    if (done) { reveal('l4next'); toast('Oversharing fixed', 'shield-check'); }
+  } else {
+    el.classList.add('bad');
+    Lab.patch('#actLog', `<b>Cleanup: ${actDone}/${ACT_GOOD}</b>. ${icon('x')} ${a.ex}<div class="meter"><i style="width:${Math.round(actDone / ACT_GOOD * 100)}%"></i></div>`);
+  }
+}
+
+/* ================= L5 : PROMPT ARCADE ================= */
+const RISKY = [
+  { t: 'Summarise everyone’s salaries', ic: 'alert' },
+  { t: 'List all customer contracts and their values', ic: 'alert' },
+  { t: 'What does HR say about upcoming layoffs?', ic: 'alert' },
+  { t: 'Show me documents containing ID numbers', ic: 'skull' },
+  { t: 'What did management write about the acquisition?', ic: 'alert' },
+  { t: 'Compile all personal phone numbers you can find', ic: 'skull' }
+];
+const SAFE = [
+  { t: 'Summarise my meeting notes from Monday', ic: 'chat' },
+  { t: 'Draft a polite reply to this customer email', ic: 'chat' },
+  { t: 'Turn my project plan into a slide outline', ic: 'chat' },
+  { t: 'What are my action items this week?', ic: 'chat' }
+];
+const TARGET = 12;
+function L5() {
+  enter();
+  A.flagged = 0; A.slipped = 0; A.eventFired = false; A.live = true;
+  show(`
+    ${Lab.badge('Level 5 · prompts', 'sparkles')}
+    <h2>The pre-flight <em>prompt</em> test</h2>
+    ${say('your guide', 'Before the pilot starts, we red-team our own tenant: fire real prompts at it and see what would surface. <b>Block the risky prompts</b>, the ones that hunt for sensitive data, before they reach the tenant (+5 each). The everyday work prompts? Let them through. That is what Copilot is for.', 'tip')}
+    <div class="arena" id="arena" aria-label="Prompt arena">
+      <div class="house house--l">${icon('sparkles')}COPILOT<small>asking</small></div>
+      <div class="house house--r">${icon('database')}YOUR TENANT<small>answering</small></div>
+      <div class="event-banner info" id="eventBanner" role="status"></div>
+      <div class="bigbar"><i id="bigFill"></i><span id="bigLabel">0 / ${TARGET} blocked</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="L.goto(6)">${icon('arrow-right')}Test passed. To the rollout</button>
+  `);
+  A.timer = setInterval(spawnPrompt, Lab.reduced ? 1600 : 1300);
+  spawnPrompt();
+}
+function spawnPrompt() {
+  const arena = document.getElementById('arena');
+  if (!arena || !arena.isConnected) { stopArcade(); return; }
+  if (!A.live) return;
+  const lanes = LANES();
+  if (arena.querySelectorAll('.item.live').length >= lanes.length) return;
+  const risky = Math.random() < 0.65;
+  const p = risky ? pick(RISKY) : pick(SAFE);
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = 'item item--prompt live';
+  el.setAttribute('aria-label', (risky ? 'Risky prompt: ' : 'Prompt: ') + p.t);
+  el.innerHTML = icon(p.ic) + '<span>' + esc(p.t) + '</span>';
+  A.lane = (A.lane + 1) % lanes.length;
+  el.style.top = lanes[A.lane] + '%';
+  const retire = () => { if (!el.isConnected || !el.classList.contains('live')) return; el.remove(); if (risky) { A.slipped++; updateBar(); } };
+  if (Lab.reduced) {
+    el.style.left = (14 + Math.random() * 46) + '%';
+    setTimeout(retire, 6500);
+  } else {
+    const dur = 7.5 + Math.random() * 2.5;
+    el.style.left = '-250px';
+    el.style.transition = `left ${dur}s linear`;
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (el.isConnected) el.style.left = 'calc(100% + 20px)'; }));
+    el.addEventListener('transitionend', retire);
+  }
+  el.addEventListener('click', e => hitPrompt(el, risky, e));
+  arena.appendChild(el);
+}
+function freeze(el) { const left = getComputedStyle(el).left; el.style.transition = 'none'; el.style.left = left; }
+function hitPrompt(el, risky, e) {
+  if (!A.live || !el.classList.contains('live')) return;
+  el.classList.remove('live');
+  freeze(el);
+  if (risky) {
+    el.classList.add('bad', 'pop');
+    scoreAt(5, e);
+    A.flagged++; updateBar();
+    setTimeout(() => el.remove(), 400);
+    if (!A.eventFired && A.flagged === Math.floor(TARGET / 2)) promptEvent();
+    if (A.flagged >= TARGET) endPrompts();
+  } else {
+    el.classList.add('warn');
+    el.innerHTML = icon('check') + '<span>Normal work. That is what Copilot is for.</span>';
+    setTimeout(() => { if (el.isConnected) { el.classList.add('sink'); setTimeout(() => el.remove(), 500); } }, 1100);
+  }
+}
+function updateBar() {
+  const f = document.getElementById('bigFill'), l = document.getElementById('bigLabel');
+  if (f) f.style.width = Math.min(100, Math.round(A.flagged / TARGET * 100)) + '%';
+  if (l) l.textContent = `${A.flagged} / ${TARGET} blocked` + (A.slipped ? ` · ${A.slipped} slipped through` : '');
+}
+function clearLive() {
+  document.querySelectorAll('#arena .item.live').forEach(c => { c.classList.remove('live'); freeze(c); c.classList.add('sink'); setTimeout(() => c.remove(), 500); });
+}
+function promptEvent() {
+  A.eventFired = true; A.live = false;
+  clearLive();
+  const b = document.getElementById('eventBanner'); if (!b) return;
+  b.classList.remove('ok'); b.classList.add('show');
+  b.innerHTML = `${icon('info')} Anna asks: “If I cannot open a file, can Copilot show it to me anyway?”<small>The most important question of the whole rollout.</small><button class="btn small" onclick="L.annaAnswer(event)">${icon('chat')}Answer her</button>`;
+  Lab.hydrateIcons(b);
+}
+function annaAnswer(e) {
+  scoreAt(10, e);
+  const b = document.getElementById('eventBanner'); if (!b) return;
+  b.classList.add('ok');
+  b.innerHTML = `${icon('check-circle')} “No. Copilot only sees what you can already see. That is exactly why we spent the week fixing permissions.”`;
+  setTimeout(() => { if (!b.isConnected) return; b.classList.remove('show', 'ok'); const arena = document.getElementById('arena'); if (arena && arena.isConnected && A.timer) { A.live = true; spawnPrompt(); } }, 2200);
+}
+function endPrompts() {
+  stopArcade();
+  document.querySelectorAll('#arena .item').forEach(c => c.remove());
+  const l = document.getElementById('bigLabel'); if (l) l.textContent = 'pre-flight passed' + (A.slipped ? ` · ${A.slipped} slipped through, review them in the audit log` : '');
+  reveal('l5next');
+  toast('Pre-flight passed', 'check-circle');
+}
+
+/* ================= L6 : ROLLOUT NIGHT ================= */
+let rolStep = 0, rolIdx = 0;
+const rolSteps = [
+  { ic: 'users', t: 'Pick the pilot group', d: 'Ten people, mixed roles: sales, HR, finance, IT. Curious people who will actually use it and actually complain.',
+    w: 'Include at least one sceptic. Enthusiasts forgive problems; sceptics document them beautifully. Their feedback is worth double.' },
+  { ic: 'file-text', t: 'Write the one-page usage policy', d: 'What belongs in prompts, what never does (customer data into public tools, for one), where Copilot data lives, who to ask when unsure.',
+    w: 'One page. The 40-page version protects the lawyer who wrote it and informs absolutely no one.' },
+  { ic: 'graduation', t: 'Run the 60-minute onboarding', d: 'Prompt basics, live examples on their real files, the “verify before you trust” habit, and where the report-a-problem button is.',
+    w: 'Demo on their own documents, not on marketing slides. The moment someone sees their meeting notes summarised, the room changes.' },
+  { ic: 'chart', t: 'Switch on the dashboards and guardrails', d: 'Copilot usage report, Purview audit log of prompts and cited files, the DLP policy for Copilot on Confidential content, alerts on sensitive-label touches. Watching comes before scaling.',
+    w: 'Decide now who reviews these and how often. A dashboard nobody opens is a screensaver.' },
+  { ic: 'license', t: 'Assign the pilot licences', d: 'Ten Microsoft 365 Copilot licences to ten named people, not “the whole sales team, they will figure it out”.',
+    w: 'A licence is not readiness. The people, policy, training and dashboards above are; the licence is just the last mouse click.' },
+  { ic: 'route', t: 'Plan the waves', d: 'Team by team, each wave gated on its sites passing the oversharing check and its people being onboarded. Restricted SharePoint Search comes off only when the check passes tenant-wide.',
+    w: 'Tie each wave to cleanup progress, not to the boss’s conference schedule. “Marketing goes live when Marketing’s sites pass the check” is an easy rule to defend.' },
+  { ic: 'history', t: 'The 30-day review', d: 'What helped, what surfaced that should not have, what people actually ask it. Then, and only then, the next wave.',
+    w: 'Collect the wins in writing (“saved 3 hours on the quarterly report”). Wins fund the rollout politically; you will need them at budget time.' }
+];
+function L6() {
+  enter('night'); rolStep = 0; rolIdx = 0;
+  show(`
+    ${Lab.badge('Level 6 · rollout', 'moon')}
+    <h2>Sunday evening. Tomorrow, <em>ten people</em> get an AI.</h2>
+    <p class="muted">The tenant is cleaned, labelled and watched. The boss gets his Monday: a <b>pilot</b>, exactly as promised. Flip the switch to start the rollout checklist.</p>
+    <div class="switch-zone">
+      <button class="big-switch" id="bigSwitch" onclick="L.flip()" aria-label="Start the pilot rollout"><div class="knob" id="knob">OFF</div></button>
+      <div class="dns-line" id="rolLine">Copilot is dark. Flip it when the pilot is ready.</div>
+    </div>
+    <div id="rolZone" style="max-width:700px;margin:20px auto 0"></div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="L.goto(7)">${icon('arrow-right')}Pilot is live. One last morning</button></div>
+  `);
+}
+function flip() {
+  if (rolStep > 0) return;
+  rolStep = 1;
+  const sw = document.getElementById('bigSwitch'), knob = document.getElementById('knob');
+  if (sw) sw.classList.add('on');
+  if (knob) knob.textContent = 'PILOT';
+  setFixed(1);
+  addScore(20, innerWidth / 2, innerHeight / 2);
+  Lab.patch('#rolLine', 'Look at the background: every document answering Copilot is mint now. Walk the checklist.');
+  renderRol(0);
+}
+function renderRol(i) {
+  rolIdx = i;
+  const s = rolSteps[i];
+  const doneList = rolSteps.slice(0, i).map(x => `<div class="done-line">${icon('check')}${icon(x.ic)}${x.t}</div>`).join('');
+  Lab.patch('#rolZone', `
+    ${doneList}
+    <div class="say" data-who="step ${i + 1} / ${rolSteps.length}" style="margin-top:${i > 0 ? '16px' : '4px'}">
+      <b style="font-size:16px;display:flex;gap:8px;align-items:center">${icon(s.ic)}${s.t}</b>
+      <span style="font-size:14.5px">${s.d}</span>
+      <div class="warnnote"><b>${icon('alert')} Pay attention:</b> ${s.w}</div>
+      ${i < rolSteps.length - 1 ? `<div style="margin-top:12px"><button class="btn small blue" onclick="L.rolNext(event)">${icon('arrow-right')}Next step</button></div>` : ''}
+    </div>`);
+  if (i === rolSteps.length - 1) { reveal('l6next'); const el = document.getElementById('l6next'); if (el) el.scrollIntoView({ behavior: Lab.reduced ? 'auto' : 'smooth', block: 'nearest' }); }
+}
+function rolNext(e) { scoreAt(5, e); renderRol(rolIdx + 1); }
+
+/* ================= L7 : GOVERNANCE TICKETS + FINALE ================= */
+const tickets = [
+  { t: '“Can Copilot read my private chat and show it to my manager?”', who: 'Mia, first thing Monday', ic: 'chat',
+    opts: [
+      { o: 'Yes, everything is visible to everyone now', ok: false },
+      { o: 'No. It answers each person from their own access. Your chat answers to you, not to your manager', ok: true },
+      { o: 'Only on Tuesdays', ok: false }
+    ],
+    ex: 'The golden rule, one more time: Copilot inherits the permissions of whoever is asking. It cannot show your manager anything your manager could not already open. The fear is understandable, the mechanics say otherwise.' },
+  { t: '“Who can see what I ask it?”', who: 'Rudy, slightly paranoid (healthy)', ic: 'eye',
+    opts: [
+      { o: 'Nobody, prompts vanish into the void', ok: false },
+      { o: 'Prompts are logged for compliance in the Purview audit log, visible to authorised admins under audit controls, not to your colleagues', ok: true },
+      { o: 'Everyone. It is basically a public feed', ok: false }
+    ],
+    ex: 'Honest answer: yes, there is an audit trail, and that is a feature, not a scandal. It is how you investigate incidents and prove compliance. The transparent version of this answer builds trust; the mumbled version breeds rumours.' },
+  { t: '“GDPR and AI… are we even allowed to do this?”', who: 'Anna, compliance hat on', ic: 'shield',
+    opts: [
+      { o: 'Shhh. What Brussels does not know will not hurt it', ok: false },
+      { o: 'Yes, with homework: data stays within our Microsoft 365 service boundary, it is not used to train the foundation models, and we document it in our processing records', ok: true },
+      { o: 'No, AI is illegal in Europe now', ok: false }
+    ],
+    ex: 'Microsoft 365 Copilot processes prompts and responses inside your tenant’s service boundary under the same data protection terms as the rest of Microsoft 365, and does not train the foundation models on your data. Your homework: update the processing records, mention it in privacy notices, and be able to explain all of the above in one breath.' },
+  { t: '“Is this thing going to replace us?”', who: 'The whole office, basically', ic: 'users',
+    opts: [
+      { o: 'Yes. Nice knowing you all', ok: false },
+      { o: 'It replaces the boring 20%: drafts, summaries, minutes. You keep the judgement, and the accountability', ok: true },
+      { o: 'No, it is completely useless, ignore it', ok: false }
+    ],
+    ex: 'The honest pitch: Copilot is a draft machine. It does the blank-page part; humans do the “is this actually right and should we send it” part. Teams that get this split prosper; teams that skip the second half apologise a lot.' },
+  { t: '“Someone pasted a customer contract into a free public chatbot”', who: 'Vlad, reporting responsibly', ic: 'flag',
+    opts: [
+      { o: 'Public shaming at the all-hands', ok: false },
+      { o: 'That is shadow AI. The fix is a governed alternative, a clear policy and blocking the risky tools, not punishing the person', ok: true },
+      { o: 'Nothing we can do, the internet is the internet', ok: false }
+    ],
+    ex: 'People use whatever solves today’s problem. If the governed tool is good and available, shadow AI mostly evaporates. Block what you must, provide what they need, and keep the no-blame reporting culture.' },
+  { t: '“How do we know the licences are worth it?”', who: 'The boss, at budget time', ic: 'euro',
+    opts: [
+      { o: 'Vibes. Expensive vibes', ok: false },
+      { o: 'Measure the pilot: hours saved on drafts, meetings, summaries. Survey before and after, then decide wave two', ok: true },
+      { o: 'We cannot ever know. Mystery forever', ok: false }
+    ],
+    ex: 'You planned this at rollout: the 30-day review collects real numbers (“quarterly report: 3 hours to 40 minutes”). Licences that pay for themselves get renewed without a fight, but only if someone wrote the wins down.' },
+  { t: '“It cited a contract clause that… does not exist?”', who: 'Anna, eyebrow raised', ic: 'bug',
+    opts: [
+      { o: 'Impossible. The machine is never wrong', ok: false },
+      { o: 'It happens: AI can confabulate. Rule: Copilot drafts, humans verify. Especially numbers, dates and legal text', ok: true },
+      { o: 'Delete Copilot immediately and never speak of it', ok: false }
+    ],
+    ex: 'Hallucinations are real and nobody should pretend otherwise. The habit that fixes it: check the sources Copilot links before trusting the claim. It is a two-click verification; teach it on day one.' },
+  { t: 'Last one: the one habit everyone should keep?', who: 'You, wrapping the rollout', ic: 'star',
+    opts: [
+      { o: 'Ask Copilot to check Copilot', ok: false },
+      { o: 'Click the sources. For every important answer, check what it is citing before you trust or forward it', ok: true },
+      { o: 'Print every conversation for the archive', ok: false }
+    ],
+    ex: 'One habit, taught in one minute, prevents most AI embarrassments: important answer, click the cited sources, confirm they say what Copilot says they say. That is AI literacy in a single move.' }
+];
+let tdone = 0, firstTry = {};
+function L7() {
+  enter(); tdone = 0; firstTry = {};
+  show(`
+    ${Lab.badge('Level 7 · govern', 'check-circle')}
+    <h2>Monday morning: the <em>questions</em> hour</h2>
+    ${say('your guide', 'Ten pilots, ten opinions, one inbox: yours. The rollout succeeds or fails on how well you answer this morning. (+10 first try, +5 after a wrong guess)', 'tip')}
+    <div id="tzone">
+      ${tickets.map((tk, i) => `
+        <div class="ticket" id="tk${i}">
+          <div class="tx">${icon(tk.ic)}<span><b>${tk.t}</b><small>${tk.who}</small></span></div>
+          <div class="choices">
+            ${tk.opts.map((op, j) => `<button class="choice" id="tk${i}o${j}" onclick="L.solve(${i},${j},event)">${op.o}</button>`).join('')}
+          </div>
+          <div class="verdict" id="tk${i}v"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+function solve(i, j, e) {
+  const tk = tickets[i], card = document.getElementById('tk' + i), btn = document.getElementById('tk' + i + 'o' + j);
+  if (!card || !btn || card.classList.contains('done')) return;
+  if (tk.opts[j].ok) {
+    card.classList.add('done');
+    tk.opts.forEach((op, k) => { const b = document.getElementById('tk' + i + 'o' + k); if (!b) return; b.disabled = true; if (k === j) b.classList.add('good'); });
+    scoreAt(firstTry[i] === undefined ? 10 : 5, e);
+    const v = document.getElementById('tk' + i + 'v');
+    if (v) { v.innerHTML = say('solved', tk.ex, 'tip'); v.classList.add('show'); }
+    tdone++;
+    if (tdone === tickets.length) setTimeout(() => Lab.finale({ heading: 'Open Secrets: closed.', into: '#finale' }), 350);
+  } else {
+    firstTry[i] = false;
+    btn.classList.add('bad'); btn.disabled = true;
+  }
+}
+
+/* expose handlers used by inline onclick="" */
+window.L = { goto: Lab.goto, discover, pick: pickOpt, nextDecision, pickTool, selChip, assignLbl, doAct, annaAnswer, flip, rolNext, solve };
+
+Lab.init({
+  title: 'Open Secrets',
+  codename: 'operation: open-secrets',
+  levels: [
+    { icon: 'play', name: 'Start' },
+    { icon: 'search', name: 'Discover' },
+    { icon: 'list-check', name: 'Decide' },
+    { icon: 'tag', name: 'Label' },
+    { icon: 'share', name: 'Fix' },
+    { icon: 'sparkles', name: 'Prompts' },
+    { icon: 'moon', name: 'Rollout' },
+    { icon: 'check-circle', name: 'Govern' }
+  ],
+  render: [L0, L1, L2, L3, L4, L5, L6, L7],
+  maxScore: 410,
+  ranks: [
+    { min: 370, title: 'AI-Ready Legend', icon: 'trophy', msg: 'Flawless. You could run the readiness workshop yourself.' },
+    { min: 300, title: 'Governance Guru', icon: 'medal', msg: 'Sharp. You know exactly what stands between a demo and a rollout.' },
+    { min: 220, title: 'Prompt Pilot', icon: 'star', msg: 'Nice work. Another run and you will catch every call.' },
+    { min: 0, title: 'Curious Rookie', icon: 'sparkles', msg: 'You made it to AI-ready. Replay and hunt for more points.' }
+  ],
+  summary: 'The whole Copilot readiness story in one breath: <b>1)</b> Copilot respects permissions, so broken permissions are the risk → <b>2)</b> find the oversharing before it does → <b>3)</b> prioritise by damage, owners decide sensitivity → <b>4)</b> label what matters → <b>5)</b> fix the shares (private sites, no anonymous links, evict the ghosts, access reviews, DLP for Copilot as a guardrail) → <b>6)</b> red-team your own prompts → <b>7)</b> pilot first with Restricted SharePoint Search as a seatbelt, waves after, dashboards on, wins written down. And the one habit for everyone: <b>click the sources</b>.',
+  scene
+});
+})();
+</script>
+</body>
+</html>

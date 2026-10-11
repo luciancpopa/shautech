@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<!-- © 2026 shautech. All rights reserved. shautech labs — interactive workshop simulators. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Licence Hunt — shautech labs</title>
+<meta name="description" content="A Microsoft 365 licence and cloud cost simulator: audit a tenant, find the waste, right-size every role and walk into renewal night with a smaller invoice.">
+<meta name="theme-color" content="#0A0B0D">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.shautech.com/labs/licence-audit.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="shautech labs">
+<meta property="og:title" content="The Licence Hunt — shautech labs">
+<meta property="og:description" content="A Microsoft 365 licence and cloud cost simulator: audit a tenant, find the waste, right-size every role and walk into renewal night with a smaller invoice.">
+<meta property="og:url" content="https://www.shautech.com/labs/licence-audit.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='34' fill='%230A0B0D'/%3E%3Crect x='30' y='30' width='120' height='120' rx='26' fill='none' stroke='%234D9FFF' stroke-width='10'/%3E%3Ctext x='90' y='122' font-family='ui-monospace,monospace' font-size='98' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="../assets/css/labs.css">
+<style>
+  /* lab-specific styles only */
+  .savings{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:14px 18px 12px;margin-top:16px}
+  .savings .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+  .savings .score-big{color:var(--mint)}
+  .savings .right{flex:1;min-width:200px}
+  .savings .meter{margin-top:6px}
+  .defs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:14px}
+  .def{background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:11px 13px;font-size:13px;line-height:1.45;color:var(--ink2);display:flex;gap:10px;align-items:flex-start}
+  .def .ic{color:var(--accent2);flex:none;margin-top:2px}
+  .def b{color:var(--ink);display:block;font-size:13.5px}
+  .tile .eur{font-family:var(--mono);font-size:11px;color:var(--amber);font-weight:600}
+  .tile.found .eur{color:var(--mint)}
+  .item .lb{position:absolute;top:100%;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:var(--mono);font-size:9px;font-weight:600;color:var(--ink2);margin-top:3px;pointer-events:none;letter-spacing:.02em}
+  .userrow .slot{min-width:128px}
+  .userrow .slot.ok2{border-style:solid;border-color:var(--amber);background:rgba(255,184,77,.08);color:var(--amber);font-weight:600;cursor:default}
+  .userrow .verdict{flex-basis:100%;margin-top:4px}
+  .cost{font-family:var(--mono);font-size:11px;color:var(--ink3);white-space:nowrap}
+  .cost b{color:var(--ink2)}
+  .steps{display:grid;gap:10px;margin-top:16px;max-width:680px}
+  .step{display:flex;gap:12px;align-items:flex-start;text-align:left;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:12px 14px;cursor:pointer;color:var(--ink);transition:transform .2s var(--ease),border-color .2s,background .2s}
+  .step:hover{transform:translateX(3px);border-color:var(--accent)}
+  .step .n{font-family:var(--mono);font-size:11px;font-weight:700;width:26px;height:26px;border-radius:8px;border:1px solid var(--line2);display:grid;place-items:center;color:var(--ink3);flex:none}
+  .step b{display:block;font-size:14.5px}
+  .step small{color:var(--ink2);font-size:12.5px;line-height:1.4;display:block}
+  .step.done{background:rgba(124,242,196,.06);border-color:rgba(124,242,196,.55);cursor:default}
+  .step.done:hover{transform:none}
+  .step.done .n{background:var(--mint);border-color:var(--mint);color:var(--mint-ink)}
+  .step.locked{opacity:.5}
+  .step:disabled{cursor:default}
+  .night-grid{display:grid;grid-template-columns:1fr auto;gap:22px;align-items:start;margin-top:10px}
+  .night-grid .switch-zone{width:220px;margin-top:0}
+  .night-grid .dns-line{max-width:220px;font-size:12.5px}
+  @media (max-width:760px){.night-grid{grid-template-columns:1fr}.night-grid .switch-zone{width:auto;margin-top:8px}.night-grid .dns-line{max-width:none}}
+  .hud-strip{flex-wrap:wrap;max-width:calc(100% - 28px)}
+  #arena .house{top:52px}
+  @media (max-width:640px){#arena .house{top:72px}}
+</style>
+</head>
+<body>
+
+<canvas id="labbg" aria-hidden="true"></canvas>
+
+<header class="topbar" id="topbar">
+  <a class="logo" href="../index.html" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span><span class="logo__lab">/ labs</span></a>
+  <span class="sim-name" id="simName"></span>
+  <nav class="lvlmap" id="lvlmap" aria-label="Levels"></nav>
+  <div class="hud">
+    <div class="pill" id="scorePill" title="Points"><b id="score">0</b></div>
+    <a class="exit" href="index.html" title="All labs"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>all labs</span></a>
+  </div>
+</header>
+
+<main class="stage" id="stage"><div class="screen" id="screen" aria-live="polite"></div></main>
+
+<div class="nojs" id="nojs"><div class="box"><p class="badge">shautech labs</p><h2>This simulator needs JavaScript.</h2><p class="muted">It runs entirely in your browser, nothing is sent anywhere. Enable JavaScript, or <a href="index.html" style="color:var(--accent2)">go back to all labs</a>.</p></div></div>
+
+<script src="../assets/js/lab-engine.js"></script>
+<script>
+/* © 2026 shautech. The Licence Hunt — game logic. */
+(function(){
+'use strict';
+const { icon, say, btn, avatar, sev, scoreAt, addScore, show, goto, toast, mood, util } = Lab;
+const { esc, pick, shuffle, clamp } = util;
+const $ = s => document.querySelector(s);
+
+/* ---------------- shared state ---------------- */
+const SAVINGS_MAX = 120000;          // meter ceiling, €/year
+let saved = 0;                        // € per year found so far
+let timers = [];                      // every setTimeout/setInterval id of the current level
+const later = (fn, ms) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
+const every = (fn, ms) => { const id = setInterval(fn, ms); timers.push(id); return id; };
+function clearTimers(){ timers.forEach(id => { clearTimeout(id); clearInterval(id); }); timers = []; }
+const eur = n => '€' + Math.round(n).toLocaleString('en-GB');
+
+function addSavings(n){
+  saved += n;
+  if (Lab.scene) Lab.scene.set('saved', clamp(saved / SAVINGS_MAX, 0, 1));
+  const num = $('#savNum'), bar = $('#savBar');
+  if (num) num.innerHTML = `${eur(saved)}<small> / year</small>`;
+  if (bar) bar.style.width = (clamp(saved / SAVINGS_MAX, 0, 1) * 100) + '%';
+}
+function savingsBox(label){
+  return `
+    <div class="savings" aria-live="polite">
+      <div><div class="lbl">${esc(label || 'Savings found')}</div><div class="score-big" id="savNum">${eur(saved)}<small> / year</small></div></div>
+      <div class="right"><div class="lbl">Against a ${eur(SAVINGS_MAX)} stretch target</div><div class="meter"><i id="savBar" style="width:${clamp(saved / SAVINGS_MAX, 0, 1) * 100}%"></i></div></div>
+    </div>`;
+}
+
+/* ---------------- ambient scene: the invoice ---------------- */
+const scene = {
+  state: { level: 0, mood: '', saved: 0 },
+  init(s, W, H) {
+    s.bars = []; const n = 12;
+    for (let i = 0; i < n; i++) s.bars.push({ h: 0.12 + (i / (n - 1)) * 0.16 + Math.sin(i * 1.7) * 0.015 });
+    s.cards = [];
+    for (let i = 0; i < 22; i++) s.cards.push({ x: Math.random() * W, y: Math.random() * H, v: 8 + Math.random() * 14, w: 14 + Math.random() * 10, a: .12 + Math.random() * .16, ph: Math.random() * 6.3 });
+  },
+  draw(ctx, s, W, H, t, dt) {
+    const C = Lab.colors, D = Lab.draw;
+    D.grid(ctx, W, H, 56, 'rgba(255,255,255,.028)');
+    // floating licence cards drifting up
+    for (const c of s.cards) {
+      c.y -= c.v * dt; c.x += Math.sin(t * .6 + c.ph) * 6 * dt;
+      if (c.y < -30) { c.y = H + 20; c.x = Math.random() * W; }
+      const col = s.level === 6 ? C.violet : C.accent2;
+      ctx.save(); ctx.globalAlpha = c.a; ctx.strokeStyle = col; ctx.lineWidth = 1;
+      D.rr(ctx, c.x, c.y, c.w, c.w * .68, 3); ctx.stroke();
+      ctx.globalAlpha = c.a * 1.4; ctx.fillStyle = col; ctx.font = `700 ${Math.round(c.w * .5)}px "JetBrains Mono", monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('€', c.x + c.w / 2, c.y + c.w * .36); ctx.restore();
+    }
+    // invoice bars: 12 months across the bottom
+    const n = s.bars.length, pad = Math.max(24, W * .06), gap = 6, bw = (W - pad * 2 - gap * (n - 1)) / n, base = H - 34;
+    const sv = s.saved || 0;
+    ctx.save();
+    for (let i = 0; i < n; i++) {
+      const w = clamp(sv * 15 - (n - 1 - i), 0, 1);           // right-most bars react first
+      const h = s.bars[i].h * H * (1 - .55 * w);
+      const x = pad + i * (bw + gap);
+      const col = w > .5 ? C.mint : C.accent;
+      ctx.globalAlpha = .07 + .05 * w; ctx.fillStyle = col; D.rr(ctx, x, base - h, bw, h, 4); ctx.fill();
+      ctx.globalAlpha = .22 + .15 * w; ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke();
+    }
+    ctx.globalAlpha = .3; ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.moveTo(pad, base + .5); ctx.lineTo(W - pad, base + .5); ctx.stroke();
+    ctx.restore();
+    D.text(ctx, 'MICROSOFT INVOICE · 12 MONTHS', pad, base + 20, { align: 'left', color: 'rgba(169,177,192,.35)', size: 9 });
+    if (sv > 0) D.text(ctx, '-' + Math.round(sv * 55) + '% ON THE RIGHT', W - pad, base + 20, { align: 'right', color: Lab.rgba(C.mint, .45), size: 9 });
+    if (s.level === 6) { ctx.save(); ctx.globalAlpha = .06; ctx.fillStyle = C.violet; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+  }
+};
+
+/* ---------------- L0 briefing ---------------- */
+function L0(){
+  clearTimers(); mood('');
+  show(`
+    ${Lab.badge('Level 0 · briefing','play')}
+    <h1>The invoice went up <em>30 %</em>.<br>Headcount did not.</h1>
+    ${say('the cfo', `Microsoft, annual renewal: <b>€248,400</b>. Last year it was €191,000. We have the same 240 people we had then. Either Microsoft got 30 % better or we are paying for air. Find out which, and bring me a number.`)}
+    ${say('your guide', `Nobody did anything wrong on purpose. Licences are bought in a hurry, assigned "just in case" and never looked at again, and each one bills quietly every month. We are going to open the tenant, count what is actually used, and give every euro a reason to exist. Running total of what you find is at the bottom of every level.`, 'tip')}
+    <div class="defs">
+      <div class="def">${icon('license')}<div><b>Licence vs subscription</b>The subscription is the contract (how many seats, for how long). A licence is one seat assigned to one person.</div></div>
+      <div class="def">${icon('user-x')}<div><b>Assigned vs unassigned</b>An unassigned licence is a paid seat sitting on the shelf. You pay for it anyway.</div></div>
+      <div class="def">${icon('layers')}<div><b>E3 vs Business Premium</b>Nearly the same toolbox. Premium is for companies under 300 people and costs about 40 % less per seat.</div></div>
+      <div class="def">${icon('calendar')}<div><b>Reserved instances</b>Promise Azure you will run a server for 1 or 3 years and the hourly price drops by up to 60 %.</div></div>
+      <div class="def">${icon('hard-drive')}<div><b>Orphaned resources</b>Cloud things nobody uses any more (a disk, a test server, an IP) that still bill because nobody deleted them.</div></div>
+    </div>
+    ${savingsBox('Savings found so far')}
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="L.goto(1)">${icon('arrow-right')}Open the tenant</button>
+  `);
+}
+
+/* ---------------- L1 discovery ---------------- */
+const FINDS = [
+  { ic:'license', nm:'42 unassigned E3 licences', qty:'42 seats', unit:'€34 /mo', e:42*34*12,
+    x:'Bought for a hiring wave that never fully happened. 42 seats × €34 × 12 months sit on the shelf. Rule: unassigned seats are reviewed every month and reduced at renewal.' },
+  { ic:'user-x', nm:'9 leavers still licensed', qty:'9 people', unit:'€34 /mo', e:9*34*12,
+    x:'People who left between March and August. HR told nobody in IT, or IT kept the licence "so the mailbox stays". A leaver is unlicensed on day one; the mailbox is kept another way (level 2).' },
+  { ic:'monitor', nm:'E5 on the reception kiosk', qty:'1 device', unit:'€55 /mo', e:55*12,
+    x:'The lobby screen that shows the visitor list runs on the most expensive licence Microsoft sells. Someone cloned an admin account to set it up. A shared device needs a tiny licence or none at all.' },
+  { ic:'file-text', nm:'Visio + Project on 12 non-users', qty:'12 people', unit:'€41 /mo', e:12*41*12,
+    x:'Twelve people hold both Visio and Project and have not opened either in 180 days. They were given "the full set" on day one. Usage reports exist for exactly this question.' },
+  { ic:'chart', nm:'Power BI Pro for 60 viewers', qty:'60 people', unit:'€9 /mo', e:60*9*12,
+    x:'Sixty people licensed to build reports who only ever receive one PDF a month. Nobody has viewed a live report in 90 days. The 6 people who build reports need Pro; the rest need the PDF.' },
+  { ic:'server', nm:'3 Azure VMs from a 2024 test', qty:'3 VMs · 24/7', unit:'€140 /mo each', e:3*140*12,
+    x:'A proof of concept from 2024 is still running around the clock. The project ended; the servers did not get the memo. Every test resource gets an owner, an end date and an auto-shutdown schedule.' },
+  { ic:'hard-drive', nm:'Unattached managed disk', qty:'512 GB premium', unit:'€70 /mo', e:70*12,
+    x:'Someone deleted a VM and left its disk behind. Azure bills the disk whether or not anything reads it. Orphaned disks are the classic cloud leak: silent, small, permanent.' },
+  { ic:'database', nm:'2 TB of unused storage', qty:'2 TB hot tier', unit:'€40 /mo', e:40*12,
+    x:'Two terabytes of old file-server backups kept in the most expensive storage tier, untouched since migration. Move cold data to archive tier or delete what the retention policy allows.' }
+];
+let found = {};
+function L1(){
+  clearTimers(); mood(''); found = {};
+  show(`
+    ${Lab.badge('Level 1 · discovery','search')}
+    <h2>Eight things hiding in the admin centre</h2>
+    ${say('your guide', `This is the licence and Azure cost view, lightly simplified. Eight lines bill every month without earning their keep. Click each one to inspect it; every find adds to the savings total and teaches a rule. <b>+10 points each.</b>`, 'tip')}
+    <div class="grid grid--auto">
+      ${FINDS.map((f,i)=>`<button class="tile" id="tile${i}" onclick="L.find(${i},event)" aria-label="${esc(f.nm)}">${icon(f.ic)}<span class="nm">${esc(f.nm)}</span><span class="eur" id="tileE${i}">tap to inspect</span></button>`).join('')}
+    </div>
+    <div id="finding"></div>
+    <div class="sheet"><table aria-label="Licence inventory">
+      <thead><tr><th>Item</th><th>Quantity</th><th>Unit price</th><th>Waste / year</th><th>Status</th></tr></thead>
+      <tbody>${FINDS.map((f,i)=>`<tr id="row${i}"><td>${esc(f.nm)}</td><td>${esc(f.qty)}</td><td>${esc(f.unit)}</td><td id="rowE${i}">—</td><td id="rowS${i}">${sev('muted','not audited')}</td></tr>`).join('')}</tbody>
+    </table></div>
+    ${savingsBox('Savings found so far')}
+    <div class="spacer"></div>
+    <button class="btn blue" id="l1next" style="display:none" onclick="L.goto(2)">${icon('arrow-right')}All eight logged. Now the decisions</button>
+  `);
+}
+function find(i,e){
+  if (found[i]) return; found[i] = true;
+  const f = FINDS[i];
+  const t = $('#tile'+i); if (t) { t.classList.add('found'); }
+  Lab.patch('#tileE'+i, eur(f.e) + ' / yr');
+  const r = $('#row'+i); if (r) r.classList.add('hot');
+  Lab.patch('#rowE'+i, eur(f.e)); Lab.patch('#rowS'+i, sev('warn','waste found'));
+  Lab.patch('#finding', say(f.nm, f.x + ` <b>${eur(f.e)} a year.</b>`, 'warn'));
+  addSavings(f.e); scoreAt(10, e);
+  if (Object.keys(found).length === FINDS.length) {
+    const b = $('#l1next'); if (b) b.style.display = 'inline-flex';
+    Lab.patch('#finding', say('audit complete', `Eight lines, <b>${eur(saved)} a year</b>, and not one of them needed a negotiation with Microsoft. That is the usual shape of a licence audit: the waste is in the tenant, not in the price list. Next: the decisions that decide the other half.`, 'tip'));
+  }
+}
+
+/* ---------------- L2 decisions ---------------- */
+const DECISIONS = [
+  { q:'38 people hold E5 (€55). The CFO asks: downgrade everyone to E3?',
+    opts:[
+      { t:'Downgrade all 38 to E3 tonight', s:'Saves €21 per seat, immediately.', v:'meh', pts:5, fb:'It saves money and it also quietly removes advanced threat protection, Teams Phone, eDiscovery and Power BI Pro from people who may rely on them. The security team will find out on the day of the incident. Audit first, then downgrade.' },
+      { t:'Check who uses the E5 features, keep E5 only for them', s:'Security team, compliance, the people on Teams Phone; everyone else drops.', v:'good', pts:10, fb:'This is the job. E5 earns its price for the people who use Defender, eDiscovery or Teams Phone every week; for the rest it is an E3 with a surcharge. Typical outcome: 38 becomes 8 and nothing stops working.' },
+      { t:'Keep everyone on E5, it is the premium one', s:'Better safe than sorry.', v:'bad', pts:0, fb:'"Premium" is not a security control if nobody switched the features on. You are paying €21 a month per seat for settings that are off. Safety comes from configuration, not from the top price tier.' }
+    ]},
+  { q:'The company has 240 people. What should the core plan be?',
+    opts:[
+      { t:'Microsoft 365 Business Premium for the office staff', s:'€20 instead of €34: Office apps, Intune device management, Defender for Business, Entra ID P1.', v:'good', pts:10, sv:0, fb:'Under 300 users, Business Premium is the deal of the catalogue: almost everything a mid-size company needs from E3 plus security features that E3 does not even include, for about 40 % less. The 300-seat cap is the only reason enterprises cannot use it.' },
+      { t:'Stay on E3, enterprise sounds safer', s:'We have always been on E3.', v:'bad', pts:0, fb:'E3 is not safer, it is larger. For a 240-person company it means paying €14 more per seat per month and then buying Defender and Intune separately on top. "Enterprise" is a size, not a quality.' },
+      { t:'Business Standard for everyone', s:'€12. Office apps and email, that is all we need.', v:'meh', pts:5, fb:'Cheapest on paper, but Standard has no device management and no endpoint protection. You would be saving €8 a seat and taking a step backwards on security that an insurer or auditor will notice. Premium is the sensible floor.' }
+    ]},
+  { q:'Annual or monthly commitment?',
+    opts:[
+      { t:'Annual for the stable core, monthly for the flexible 15 %', s:'Roughly 200 seats locked for 12 months, the rest month-to-month.', v:'good', pts:10, sv:11500, fb:'Monthly seats cost about 20 % more for the privilege of cancelling. Most of your workforce is not going anywhere this year, so commit them and keep a small monthly pool for contractors, seasonal staff and surprises. About <b>€11,500 a year</b> on this tenant.' },
+      { t:'Everything monthly, we want flexibility', s:'Who knows what next year brings.', v:'meh', pts:5, fb:'Flexibility you pay 20 % for on every seat, including the 200 people who will still be here in December. Flexibility is worth buying for the people who might leave, not for the ones who will not.' },
+      { t:'Everything annual, including contractors', s:'Biggest discount possible.', v:'bad', pts:0, fb:'Annual seats cannot be reduced mid-term. The contractor who leaves in March is paid for until next January. The discount on the core does not cover paying nine empty months for every short-term person.' }
+    ]},
+  { q:'Copilot for Microsoft 365 is €28 a month. For everyone, that is €80,640 a year. Decision?',
+    opts:[
+      { t:'A 20-seat pilot for 90 days with measured outcomes, then expand by role', s:'€6,720 to learn who it actually helps.', v:'good', pts:10, fb:'Copilot helps some roles a lot and others not at all, and it only works well where the data is tidy and people are trained. A pilot with a success measure (hours saved, documents produced) tells you which roles to buy for. Then you expand with evidence, not enthusiasm.' },
+      { t:'Everyone, starting Monday', s:'We cannot afford to fall behind.', v:'bad', pts:0, fb:'€80,640 a year on a habit nobody has formed yet. Six months later the usage report shows 30 % of seats never opened it, and it is on an annual commitment. Falling behind is a real risk; so is paying for 240 seats to find the 60 that matter.' },
+      { t:'Nobody. AI is a fad', s:'We will revisit in a few years.', v:'meh', pts:5, fb:'You saved €80k and learned nothing. A small pilot costs less than the Visio licences you just removed and tells you where the value is before competitors do.' }
+    ]},
+  { q:'Azure: the production servers run 24/7 all year on pay-as-you-go. Options?',
+    opts:[
+      { t:'Reserved instances (1 or 3 years) for the always-on servers', s:'Same servers, 30–60 % lower hourly price.', v:'good', pts:10, sv:7200, fb:'A reservation is a promise to run that size of server for the term; in exchange the price drops sharply. For servers that genuinely run every hour of the year this is free money. About <b>€7,200 a year</b> here. Pay-as-you-go stays for anything that might be switched off.' },
+      { t:'Keep pay-as-you-go everywhere', s:'We like the flexibility.', v:'meh', pts:5, fb:'Pay-as-you-go is the right price for things that come and go. For a file server and a domain controller that have run every hour since 2021 it is a 40 % voluntary surcharge.' },
+      { t:'Reserve everything, including the test VMs', s:'Maximum discount.', v:'bad', pts:0, fb:'A reservation commits you to running the server. The 2024 test VMs should be shut down, not locked in for three years at a discount. You would turn a mistake into a contract.' }
+    ]},
+  { q:'The 9 leavers: their E3 licences were kept "so the mailbox stays". What now?',
+    opts:[
+      { t:'Convert to a shared mailbox or make it an inactive mailbox under a retention hold, then remove the licence', s:'Data kept, sign-in blocked, €0 a month.', v:'good', pts:10, fb:'A shared mailbox under 50 GB needs no licence and the manager can read it. An inactive mailbox under a retention policy keeps the data for legal and audit purposes, also with no licence. Either way the account cannot sign in. Keeping an active licensed account for a leaver is both a cost and an open door.' },
+      { t:'Keep the licence, just in case', s:'Someone might need an old email.', v:'bad', pts:0, fb:'€34 a month per ghost, forever, and an active account whose password nobody rotates. "Just in case" is the most expensive phrase in licensing and the most common in breach reports.' },
+      { t:'Delete the account and the mailbox today', s:'Clean slate.', v:'meh', pts:5, fb:'Clean, until finance needs an invoice thread from 2024 or a legal hold lands. Retention first, deletion when the policy allows. The licence can go today either way.' }
+    ]}
+];
+let di = 0;
+function L2(){
+  clearTimers(); mood(''); di = 0;
+  show(`
+    ${Lab.badge('Level 2 · decisions','route')}
+    <h2>Six calls the CFO needs by Friday</h2>
+    ${say('your guide', `The audit found the obvious waste. These six decisions shape the contract itself. Each has a strong answer, a half answer and a trap. <b>+10 for the strong answer, +5 for the half answer.</b>`, 'tip')}
+    <div id="dzone"></div>
+    ${savingsBox('Savings found so far')}
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d = DECISIONS[di];
+  Lab.patch('#dzone', `
+    <h3 style="margin-top:14px">Decision ${di+1} / ${DECISIONS.length}: ${esc(d.q)}</h3>
+    <div class="choices">
+      ${d.opts.map((o,i)=>`<button class="choice" id="ch${i}" onclick="L.decide(${i},event)"><b>${esc(o.t)}</b><small>${esc(o.s)}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none"></button>
+  `);
+}
+function decide(i,e){
+  const d = DECISIONS[di], o = d.opts[i];
+  d.opts.forEach((x,j)=>{ const el = $('#ch'+j); if (!el) return; el.disabled = true; if (j===i) el.classList.add(o.v); });
+  if (o.pts > 0) scoreAt(o.pts, e);
+  if (o.sv) addSavings(o.sv);
+  Lab.patch('#verdict', say(o.v==='good' ? 'strong call' : (o.v==='meh' ? 'half right' : 'trap'), o.fb, o.v==='good' ? 'tip' : (o.v==='meh' ? 'warn' : 'alert')));
+  const v = $('#verdict'); if (v) v.classList.add('show');
+  const b = $('#dnext'); if (!b) return;
+  b.style.display = 'inline-flex';
+  if (di < DECISIONS.length - 1) { b.innerHTML = icon('arrow-right') + 'Next decision'; b.onclick = () => { di++; renderDecision(); }; }
+  else { b.innerHTML = icon('arrow-right') + 'Decisions made. Right-size the fleet'; b.onclick = () => goto(3); }
+}
+
+/* ---------------- L3 build: right-size the fleet ---------------- */
+const PLANS = [
+  { id:'f3',  nm:'F3 frontline',       p:7 },
+  { id:'bb',  nm:'Business Basic',     p:6 },
+  { id:'bs',  nm:'Business Standard',  p:12 },
+  { id:'bp',  nm:'Business Premium',   p:20 },
+  { id:'e3',  nm:'E3',                 p:34 },
+  { id:'e5',  nm:'E5',                 p:55 }
+];
+const planBy = id => PLANS.find(p => p.id === id);
+const PEOPLE = [
+  { ini:'CE', hue:30,  nm:'Carmen, CEO', role:'Travels, lives in Outlook and PowerPoint, handles board papers', n:1,  cur:'e5', best:'bp', ok:['e3'],
+    why:'Premium gives her Office on every device, a managed laptop and Defender on it, and conditional access for the board papers. E5 adds features her security team would run, not her.' , okwhy:'E3 works, but at 240 people it is the same toolbox as Premium for €14 more and without Defender for Business.' },
+  { ini:'SR', hue:200, nm:'Radu, sales rep', role:'Company laptop, Office apps, CRM in the browser, Teams all day', n:30, cur:'e3', best:'bp', ok:['bs'],
+    why:'Desktop Office for proposals, a managed laptop that gets wiped if it is left in a taxi, and MFA that works. Premium, times 30 reps.', okwhy:'Standard has the apps but no device management. Thirty unmanaged laptops full of customer data is a cheap plan with an expensive risk.' },
+  { ini:'WH', hue:120, nm:'Ana, warehouse', role:'Shared scanner on the floor, shifts, email on the phone, no desk', n:60, cur:'e3', best:'f3', ok:['bb'],
+    why:'F3 is the frontline bundle: Teams with Shifts, web and mobile Office, a 2 GB mailbox and management for the shared devices, for a fifth of E3. Sixty people make this the biggest single saving in the fleet.', okwhy:'Basic covers email and Teams but has no management for the shared scanners and no Shifts. Close, but F3 is built for exactly this job.' },
+  { ini:'RE', hue:330, nm:'Mihaela, receptionist', role:'Desk PC, calendar and room bookings, visitor list, web apps are fine', n:3,  cur:'e3', best:'bb', ok:['bs'],
+    why:'Email, calendar, Teams and the web versions of Office cover the whole job. Basic. The kiosk in the lobby is a separate conversation (level 7).', okwhy:'Standard adds desktop apps she will not open. Not wrong, just €6 a month of unused software.' },
+  { ini:'DV', hue:260, nm:'Tudor, developer', role:'Needs Office, a managed workstation and Entra conditional access; dev tools are licensed separately', n:12, cur:'e5', best:'bp', ok:['e3'],
+    why:'Developers need a managed, protected machine and normal Office. Visual Studio and GitHub are their own subscriptions. Premium covers the Microsoft 365 side; E5 was a habit, not a requirement.', okwhy:'E3 works and costs €14 more per month than Premium for less security. Twelve developers, €2,000 a year of habit.' },
+  { ini:'FA', hue:45,  nm:'Elena, finance analyst', role:'Heavy Excel workbooks, Power BI reports, handles payroll data', n:8,  cur:'e3', best:'bp', ok:['e3'],
+    why:'Desktop Excel for the big workbooks, sensitivity labels and device encryption for payroll data. Premium includes all of it. Power BI Pro is a separate €9 add-on for the people who build reports.', okwhy:'E3 is the same experience for €14 more. Acceptable if the company grows past 300; today it is a surcharge.' },
+  { ini:'CT', hue:180, nm:'Marius, contractor', role:'Three-month engagement, own laptop, needs Teams, SharePoint and a mailbox', n:6,  cur:'e3', best:'bb', ok:['f3'],
+    why:'Teams, SharePoint and a mailbox in the browser. Basic, on a monthly commitment so it ends when the contract does. His laptop is not yours to manage.', okwhy:'F3 technically works but it is designed for shared devices and shift work, not for a consultant writing documents. Basic is the cleaner fit.' },
+  { ini:'IN', hue:90,  nm:'Ioana, intern', role:'Eight weeks, a desk, browser-based everything', n:4,  cur:'e5', best:'bb', ok:['f3'],
+    why:'An intern on E5 happens when someone copies the nearest account. Basic, monthly, with an end date on the account so the licence returns by itself.', okwhy:'F3 covers it, though an intern at a desk is not frontline. Both are fine; the lesson is that E5 was not.' }
+];
+let selPlan = null, fleet = {};
+function L3(){
+  clearTimers(); mood(''); selPlan = null; fleet = {};
+  show(`
+    ${Lab.badge('Level 3 · build','users')}
+    <h2>Right-size the fleet: eight roles, one plan each</h2>
+    ${say('your guide', `Each row is one role and how many colleagues share it. Pick a plan from the stack, then click the slot on the row. The best fit pays <b>+8</b>, a defensible second choice <b>+4</b>, and the cost impact is added to your savings. Fictional list prices, realistic proportions.`, 'tip')}
+    <div class="prep-grid">
+      <div id="fleet">
+        ${PEOPLE.map((p,i)=>`
+          <div class="userrow" id="pr${i}">
+            ${avatar(p.ini, p.hue)}
+            <div class="who"><b>${esc(p.nm)} <span class="cost">× ${p.n}</span></b><small>${esc(p.role)}</small></div>
+            <span class="cost" id="pc${i}">now <b>${esc(planBy(p.cur).nm)}</b> · €${planBy(p.cur).p}/mo</span>
+            <button class="slot" id="ps${i}" onclick="L.drop(${i},event)" aria-label="Assign plan to ${esc(p.nm)}">assign plan</button>
+            <div class="verdict" id="pv${i}"></div>
+          </div>`).join('')}
+      </div>
+      <div class="stack" aria-label="Plans">
+        <span class="stack-lbl">plans · €/user/month</span>
+        ${PLANS.map(pl=>`<button class="chip-btn" id="chip-${pl.id}" onclick="L.pickPlan('${pl.id}')">${icon('license')}${esc(pl.nm)} · €${pl.p}</button>`).join('')}
+        <span class="small" style="margin-top:6px;max-width:190px">Click a plan, then a slot. Plans can be used more than once.</span>
+      </div>
+    </div>
+    ${savingsBox('Savings found so far')}
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="L.goto(4)">${icon('arrow-right')}Fleet sized. On to the edge cases</button>
+  `);
+}
+function pickPlan(id){
+  selPlan = id;
+  PLANS.forEach(p => { const c = $('#chip-'+p.id); if (c) c.classList.toggle('sel', p.id === id); });
+}
+function drop(i,e){
+  const p = PEOPLE[i]; if (fleet[i] && fleet[i].done) return;
+  if (!selPlan) { toast('Pick a plan from the stack first', 'license'); return; }
+  const slot = $('#ps'+i), row = $('#pr'+i), v = $('#pv'+i); if (!slot || !row) return;
+  const chosen = planBy(selPlan), cur = planBy(p.cur);
+  const delta = (cur.p - chosen.p) * 12 * p.n;        // €/yr (positive = saving)
+  fleet[i] = fleet[i] || { tries: 0 }; fleet[i].tries++;
+  const impact = delta >= 0 ? `Saves <b>${eur(delta)}</b> a year across ${p.n} ${p.n === 1 ? 'person' : 'people'}.` : `Costs <b>${eur(-delta)}</b> more a year across ${p.n} people.`;
+  if (selPlan === p.best) {
+    fleet[i].done = true; row.classList.add('done'); slot.classList.add('filled'); slot.textContent = chosen.nm; slot.disabled = true;
+    scoreAt(8, e); addSavings(delta);
+    Lab.patch('#pv'+i, say('best fit', `${p.why} ${impact}`, 'tip')); v.classList.add('show');
+  } else if (p.ok.includes(selPlan)) {
+    fleet[i].done = true; row.classList.add('done'); slot.classList.add('ok2'); slot.textContent = chosen.nm; slot.disabled = true;
+    scoreAt(4, e); if (delta > 0) addSavings(delta);
+    Lab.patch('#pv'+i, say('defensible', `${p.okwhy} Best fit was <b>${planBy(p.best).nm}</b>. ${impact}`, 'warn')); v.classList.add('show');
+  } else {
+    slot.classList.add('wrong'); row.classList.add('bad');
+    later(() => { slot.classList.remove('wrong'); row.classList.remove('bad'); }, 500);
+    const hint = chosen.p > cur.p ? 'That costs more than today and adds nothing the role uses.' : (chosen.p < planBy(p.best).p ? 'Too thin: something this role depends on is missing from that plan.' : 'Too much plan for this job. Look at what the role actually opens.');
+    toast(hint, 'alert');
+  }
+  const done = Object.values(fleet).filter(f => f.done).length;
+  if (done === PEOPLE.length) {
+    const b = $('#l3next'); if (b) b.style.display = 'inline-flex';
+    toast('Fleet sized. ' + eur(saved) + ' a year found so far.', 'euro');
+  }
+}
+
+/* ---------------- L4 scenarios ---------------- */
+const SCEN = [
+  { t:'Teams Phone add-on (€8) for 40 sales reps. Call logs: zero Teams calls this year. Everyone uses the company mobile.', who:'row 1 · the phone nobody dials', ans:3,
+    why:'Forty add-ons bought for a rollout that never happened: €3,840 a year of dial tone nobody hears. Remove it. If sales ever wants desk calling, the usage data will say so and you can buy it back in an afternoon.' },
+  { t:'Shared mailbox invoices@ (31 GB) has an E3 assigned "so it works".', who:'row 2 · the licensed letterbox', ans:3,
+    why:'A shared mailbox under 50 GB needs no licence at all; the people who read it use their own. Remove the E3 and nothing changes except €408 a year. Only mailboxes over 50 GB, or with an archive, need a licence.' },
+  { t:'A developer wants an E5 "for the Defender features". He would be the only E5 in the team.', who:'row 3 · the one-seat fortress', ans:2,
+    why:'One E5 protects one person. If the goal is endpoint security for the company, that is a Defender for Business or Defender for Endpoint licence for every device, which Premium already includes. Change the request: solve the security need for everyone, not the licence wish for one.' },
+  { t:'Contractor Marius finishes next Friday. He still has Business Premium and signed in this morning.', who:'row 4 · the last week', ans:1,
+    why:'He is still working. Pulling the licence early breaks his handover and costs you more in confusion than six days of Basic. Keep it, set the account end date to Friday 18:00 so sign-in blocks and the licence returns automatically. Discipline is the date, not the hurry.' },
+  { t:'The three 2024 test VMs: the developer says he still needs them "for two hours each morning".', who:'row 5 · the always-on test', ans:2,
+    why:'Two hours a day is 44 hours a month, not 720. An auto-shutdown schedule (or start-on-demand) keeps the servers and cuts the bill by about 90 %. Change, not remove: the need is real, the schedule is not.' }
+];
+const VLAB = ['', 'Keep', 'Change', 'Remove'], VIC = ['', 'check', 'refresh', 'x'];
+let scDone = 0, scFirst = {};
+function L4(){
+  clearTimers(); mood(''); scDone = 0; scFirst = {};
+  show(`
+    ${Lab.badge('Level 4 · scenarios','list-check')}
+    <h2>Five edge cases on your desk</h2>
+    ${say('your guide', `Not everything in a licence review is waste. Some lines are fine, some need a different shape, some should go. Call <b>Keep</b>, <b>Change</b> or <b>Remove</b> on each. <b>+10 first try, +5 on a retry.</b>`, 'tip')}
+    ${SCEN.map((s,i)=>`
+      <div class="ticket" id="sc${i}">
+        <div class="tx">${icon('sheet')}<div><b>${esc(s.t)}</b><small>${esc(s.who)}</small></div></div>
+        <div class="verdict-btns">
+          ${[1,2,3].map(v=>`<button class="btn small" id="sc${i}v${v}" onclick="L.verdict(${i},${v},event)">${icon(VIC[v])}${VLAB[v]}</button>`).join('')}
+        </div>
+        <div class="verdict" id="sc${i}x"></div>
+      </div>`).join('')}
+    ${savingsBox('Savings found so far')}
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="L.goto(5)">${icon('arrow-right')}Verdicts filed. Brace for Invoice Day</button>
+  `);
+}
+function verdict(i,v,e){
+  const s = SCEN[i], card = $('#sc'+i); if (!card || card.classList.contains('done')) return;
+  const b = $(`#sc${i}v${v}`);
+  if (v === s.ans) {
+    card.classList.add('done');
+    [1,2,3].forEach(k => { const x = $(`#sc${i}v${k}`); if (x) { x.disabled = true; if (k === v) x.classList.add('green'); } });
+    scoreAt(scFirst[i] === undefined ? 10 : 5, e);
+    if (v === 3 && i === 0) addSavings(3840);   // Teams Phone add-ons
+    if (v === 3 && i === 1) addSavings(408);    // licence on the shared mailbox (the VM saving was already counted in level 1)
+    Lab.patch('#sc'+i+'x', say('verdict: ' + VLAB[v], s.why, 'tip')); $('#sc'+i+'x').classList.add('show');
+    scDone++;
+    if (scDone === SCEN.length) { const n = $('#l4next'); if (n) n.style.display = 'inline-flex'; }
+  } else {
+    scFirst[i] = false;
+    if (b) { b.classList.add('red'); b.disabled = true; later(() => { b.classList.remove('red'); b.disabled = false; }, 600); }
+    toast(v === 1 ? 'Keeping it as-is leaves the problem on the invoice.' : (v === 3 ? 'Removing it breaks something real. Look again.' : 'Changing it does not fit here. Think about what the line is for.'), 'alert');
+  }
+}
+
+/* ---------------- L5 arcade: Invoice Day ---------------- */
+const ARC_WASTE = [
+  { l:'E3 · unassigned', e:408 }, { l:'Visio · never opened', e:156 }, { l:'VM · test-2024', e:1680 }, { l:'Disk · unattached', e:840 },
+  { l:'E3 · leaver', e:408 }, { l:'Project · unused', e:336 }, { l:'Power BI · no views', e:108 }, { l:'Storage · idle', e:480 }, { l:'Teams Phone · no calls', e:96 }
+];
+const ARC_WARN = [ { l:'E5 · receptionist', e:588 }, { l:'E5 · intern', e:588 }, { l:'E3 · warehouse', e:324 }, { l:'E5 · developer', e:420 } ];
+const ARC_GOOD = [ { l:'E3 · CFO' }, { l:'Premium · sales' }, { l:'Teams Phone · reception' }, { l:'E5 · security lead' }, { l:'Power BI · finance' }, { l:'Premium · developer' } ];
+const ARC_MAX = 60, ARC_SECS = 50;
+let arc = null;
+function L5(){
+  clearTimers(); mood(''); arc = null;
+  show(`
+    ${Lab.badge('Level 5 · arcade','euro')}
+    <h2>Invoice Day</h2>
+    ${say('your guide', `The billing run is tonight. Every licence line flies from the tenant toward the invoice. <b>Red</b> is waste: click it to reclaim the money. <b>Amber</b> is a downgrade candidate: click it to right-size it. <b>Mint</b> is needed: leave it alone, or somebody loses Outlook on Monday and you lose points. ${ARC_SECS} seconds, up to <b>+${ARC_MAX}</b>.`, 'tip')}
+    <div class="arena" id="arena" aria-label="Invoice Day arena">
+      <div class="hud-strip"><span>time <b id="arcT">${ARC_SECS}</b>s</span><span>reclaimed <b id="arcR">€0</b></span><span>leaked <b id="arcL">€0</b></span><span>points <b id="arcP">0</b></span></div>
+      <div class="house house--l" aria-hidden="true">${icon('building')}tenant</div>
+      <div class="house house--r" id="houseR" aria-hidden="true">${icon('file-text')}invoice</div>
+      <div class="event-banner show info" id="arcBanner"><b>Billing run in 3, 2, 1…</b><small>Red = reclaim. Amber = downgrade. Mint = leave it.</small><button class="btn small blue" onclick="L.arcStart()">${icon('play')}Start Invoice Day</button></div>
+      <div class="bigbar" id="arcBar"><i></i><span id="arcBarT">reclaimed €0 / year</span></div>
+    </div>
+    ${savingsBox('Savings found so far')}
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="L.goto(6)">${icon('arrow-right')}Invoice closed. Now renewal night</button>
+  `);
+}
+function arcStart(){
+  const arena = $('#arena'); if (!arena || arc) return;
+  arc = { live:true, t:ARC_SECS, recl:0, leak:0, pts:0, n:0 };
+  $('#arcBanner').classList.remove('show');
+  const slow = Lab.reduced;
+  every(() => {
+    if (!arc || !arc.live || !document.body.contains(arena)) { arcEnd(); return; }
+    arc.t--; Lab.patch('#arcT', String(arc.t));
+    if (arc.t <= 0) arcEnd();
+  }, 1000);
+  every(() => { if (arc && arc.live && document.body.contains(arena)) spawn(arena); }, slow ? 1400 : 950);
+  spawn(arena);
+}
+function spawn(arena){
+  const r = Math.random(), kind = r < .45 ? 'bad' : (r < .7 ? 'warn' : 'good');
+  const src = kind === 'bad' ? pick(ARC_WASTE) : (kind === 'warn' ? pick(ARC_WARN) : pick(ARC_GOOD));
+  const el = document.createElement('button'); el.className = 'item ' + kind; el.type = 'button';
+  el.setAttribute('aria-label', (kind === 'bad' ? 'Waste: ' : kind === 'warn' ? 'Downgrade candidate: ' : 'Needed: ') + src.l);
+  el.innerHTML = icon('license') + `<span class="lb">${esc(src.l)}</span>`;
+  const H = arena.clientHeight, W = arena.clientWidth;
+  const size = W < 500 ? 42 : 48;
+  const top0 = W < 500 ? 76 : 58;
+  el.style.top = (top0 + Math.random() * Math.max(40, H - top0 - 72 - size)) + 'px';
+  el.style.left = (W < 500 ? 100 : 136) + 'px';
+  const dur = Lab.reduced ? 8 : (4.8 + Math.random() * 2.2);
+  el.style.transition = `left ${dur}s linear`;
+  const id = ++arc.n; el.dataset.id = id;
+  el.onclick = e => arcHit(el, kind, src, e);
+  arena.appendChild(el);
+  requestAnimationFrame(() => { el.style.left = (W - (W < 500 ? 100 : 136) - size) + 'px'; });
+  later(() => { if (!el.isConnected || el.dataset.hit) return; arcReach(el, kind, src); }, dur * 1000);
+}
+function arcHit(el, kind, src, e){
+  if (!arc || !arc.live || el.dataset.hit) return; el.dataset.hit = '1';
+  if (kind === 'bad') { el.classList.add('pop'); arc.recl += src.e; arcPts(3, e); addSavings(src.e); }
+  else if (kind === 'warn') { el.classList.add('sink'); arc.recl += src.e; arcPts(2, e); addSavings(src.e); }
+  else { el.classList.add('sink'); arcPts(-4, e); toast('That one was needed. Someone just lost Outlook.', 'alert'); const h = $('#houseR'); if (h) { h.classList.add('bad'); later(() => h.classList.remove('bad'), 600); } }
+  later(() => el.remove(), 600); arcHud();
+}
+function arcReach(el, kind, src){
+  el.dataset.hit = '1'; el.classList.add('fly');
+  if (kind === 'bad') { arc.leak += src.e; const h = $('#houseR'); if (h) { h.classList.add('bad'); later(() => h.classList.remove('bad'), 500); } }
+  else if (kind === 'warn') arc.leak += Math.round(src.e / 2);
+  else { const h = $('#houseR'); if (h) { h.classList.add('ok'); later(() => h.classList.remove('ok'), 400); } }
+  later(() => el.remove(), 700); arcHud();
+}
+function arcPts(n, e){
+  if (!arc) return;
+  if (n > 0) { const room = ARC_MAX - arc.pts; n = Math.min(n, Math.max(0, room)); if (n <= 0) return; }
+  arc.pts = Math.max(0, arc.pts + n); scoreAt(n, e);
+}
+function arcHud(){
+  if (!arc) return;
+  Lab.patch('#arcR', eur(arc.recl)); Lab.patch('#arcL', eur(arc.leak)); Lab.patch('#arcP', String(arc.pts));
+  const bar = $('#arcBar'); if (bar) { const tot = arc.recl + arc.leak || 1; bar.querySelector('i').style.width = clamp(arc.recl / tot, 0, 1) * 100 + '%'; bar.classList.toggle('danger', arc.leak > arc.recl); }
+  Lab.patch('#arcBarT', `reclaimed ${eur(arc.recl)} / year · leaked ${eur(arc.leak)}`);
+}
+function arcEnd(){
+  if (!arc || !arc.live) return; arc.live = false; clearTimers();
+  document.querySelectorAll('#arena .item').forEach(el => { el.dataset.hit = '1'; el.classList.add('sink'); later(() => el.remove(), 500); });
+  const good = arc.recl >= arc.leak;
+  const b = $('#arcBanner'); if (b) {
+    b.classList.remove('info'); b.classList.add('show'); if (good) b.classList.add('ok');
+    b.innerHTML = `<b>Billing run closed.</b><small>Reclaimed ${eur(arc.recl)} a year, ${eur(arc.leak)} leaked onto the invoice. ${good ? 'The invoice is smaller than it would have been.' : 'More leaked than you caught. Replay later; the real fix is monthly, not heroic.'}</small>`;
+  }
+  const n = $('#l5next'); if (n) n.style.display = 'inline-flex';
+}
+
+/* ---------------- L6 night: renewal ---------------- */
+const STEPS = [
+  { t:'Run the true-up count', s:'Count every assigned licence per plan against the contract before anything else. Renewal numbers come from the tenant, not from memory.', pts:7,
+    log:[['p','PS> Get-MgSubscribedSku | Select SkuPartNumber, ConsumedUnits, PrepaidUnits'],['','SPE_E3            consumed 188   purchased 230   (42 unassigned)'],['','SPE_E5            consumed  38   purchased  38'],['','SPB (Premium)     consumed   0   purchased   0'],['warn','VISIO_PLAN2       consumed  19   purchased  19   (12 inactive >180d)'],['warn','PROJECT_PLAN3     consumed  19   purchased  19   (12 inactive >180d)'],['warn','POWER_BI_PRO      consumed  66   purchased  66   (60 no views >90d)'],['dim','9 licensed accounts with sign-in blocked (leavers)']] },
+  { t:'Remove the unassigned and leaver licences', s:'Reduce the E3 count by 42 at renewal and release the 9 leaver seats after converting the mailboxes.', pts:7,
+    log:[['p','PS> Set-MgUserLicense -RemoveLicenses SPE_E3  (9 leavers)'],['ok','9 licences released · mailboxes converted to shared / inactive'],['p','PS> renewal order: SPE_E3 230 -> 0 ; SPB 160 ; F3 60 ; E5 8'],['ok','unassigned seats at renewal: 0']] },
+  { t:'Switch the stable core to annual commitment', s:'About 200 seats go annual; the contractor and intern pool stays monthly so it can shrink.', pts:7,
+    log:[['p','PS> billing: 200 seats annual (-20 %) · 28 seats monthly'],['ok','annual term starts at renewal · monthly pool: contractors, interns, seasonal']] },
+  { t:'Schedule the monthly licence report', s:'An automation that emails finance and IT: assigned vs unassigned, inactive users, orphaned Azure resources, cost per department.', pts:7,
+    log:[['p','PS> Register-ScheduledReport -Name LicenceHealth -Schedule "1st of month 07:00" -To finance@, it@'],['ok','report: assigned / unassigned / inactive 90d / orphaned disks+VMs / € per department'],['ok','first run scheduled · next renewal will not be a surprise']] }
+];
+let stepIdx = 0, renewed = false, logQ = Promise.resolve();
+function typeLog(lines){ const log = $('#nlog'); if (!log) return; logQ = logQ.then(() => (log.isConnected ? Lab.typeLines(log, lines, 6) : null)).catch(() => {}); }
+function L6(){
+  clearTimers(); mood('night'); stepIdx = 0; renewed = false; logQ = Promise.resolve();
+  show(`
+    ${Lab.badge('Level 6 · renewal night','moon')}
+    <h2>Renewal night: four steps, then the switch</h2>
+    ${say('your guide', `The contract renews at midnight. Do the steps in order: count, remove, commit, automate. Then flip the switch and the new order goes to Microsoft. <b>+7 per step, +28 for a clean renewal.</b>`, 'tip')}
+    <div class="night-grid">
+      <div>
+        <div class="steps" id="steps">
+          ${STEPS.map((s,i)=>`<button class="step${i>0?' locked':''}" id="st${i}" onclick="L.step(${i},event)"><span class="n">${i+1}</span><div><b>${esc(s.t)}</b><small>${esc(s.s)}</small></div></button>`).join('')}
+        </div>
+        <div class="log" id="nlog" aria-live="polite"><span class="dim">licence report console. waiting for step 1</span></div>
+      </div>
+      <div class="switch-zone">
+        <button class="big-switch" id="bigSwitch" onclick="L.flip(event)" aria-label="Submit the renewal order"><div class="knob" id="knob">RENEW</div></button>
+        <div class="dns-line" id="renewLine">Order not submitted. Finish the four steps first.</div>
+      </div>
+    </div>
+    ${savingsBox('Savings found so far')}
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="L.goto(7)">${icon('arrow-right')}Renewed. Now survive Monday morning</button></div>
+  `);
+}
+function step(i,e){
+  if (i !== stepIdx) { toast(i > stepIdx ? 'Not yet. Finish step ' + (stepIdx+1) + ' first.' : 'Already done.', 'clock'); return; }
+  const s = STEPS[i], el = $('#st'+i); if (!el) return;
+  el.classList.add('done'); el.classList.remove('locked'); el.disabled = true;
+  stepIdx++; const nx = $('#st'+stepIdx); if (nx) nx.classList.remove('locked');
+  scoreAt(s.pts, e);
+  if (i === 0) { const log = $('#nlog'); if (log) log.innerHTML = ''; }
+  typeLog(s.log);
+  if (stepIdx === STEPS.length) Lab.patch('#renewLine', 'Four steps done. Flip the switch to submit the order.');
+}
+function flip(e){
+  if (renewed) return;
+  if (stepIdx < STEPS.length) { toast('The order is not ready. ' + (STEPS.length - stepIdx) + ' step(s) left.', 'alert'); return; }
+  renewed = true;
+  const sw = $('#bigSwitch'); if (sw) sw.classList.add('on'); Lab.patch('#knob', 'RENEWED');
+  scoreAt(28, e);
+  Lab.patch('#renewLine', saved > 0 ? `Order submitted. New annual run-rate is about ${eur(248400 - saved)} instead of €248,400.` : 'Order submitted. The run-rate drops by whatever the audit found.');
+  typeLog([['p','PS> Submit-RenewalOrder -Confirm'],['ok','order accepted · ' + eur(saved) + ' / year removed from the run-rate'],['dim','go to sleep. Monday will have opinions.']]);
+  const n = $('#l6next'); if (n) n.style.display = 'inline-flex';
+}
+
+/* ---------------- L7 tickets ---------------- */
+const TICKETS = [
+  { t:'"I lost Visio and I need it for the factory floor plans this week."', who:'Dana, facilities · she was on parental leave during the 180-day usage window',
+    opts:[ { o:'Tell her to use PowerPoint shapes instead', ok:false }, { o:'Re-assign Visio today and add an "on leave" exclusion to the inactivity rule', ok:true }, { o:'Give Visio back to all 19 original holders to be safe', ok:false } ],
+    ex:'Usage-based cleanup is right 95 % of the time; leave and long projects are the other 5 %. Re-assigning takes a minute. The real fix is the rule: exclude people on leave and ask the manager before removing a specialist tool.' },
+  { t:'"My mailbox is read-only since Monday. I cannot send anything."', who:'Andrei, sales · an active employee who was mis-tagged as a leaver in the sweep',
+    opts:[ { o:'Create a new account for him and move on', ok:false }, { o:'Re-assign a licence now: a removed mailbox stays fully recoverable for 30 days, nothing is lost', ok:true }, { o:'Ask him to export his email to a file first', ok:false } ],
+    ex:'When a licence is removed the mailbox goes read-only and is kept for 30 days. Put the licence back and it is live again within minutes, with every email. The lesson for the script: filter on "sign-in blocked AND left per HR", not on a spreadsheet column.' },
+  { t:'"The lobby kiosk cannot sign in. Visitors are staring at a login screen."', who:'Reception · the kiosk account lost its E5 in the cleanup',
+    opts:[ { o:'Give the E5 back, it worked before', ok:false }, { o:'Set it up as a shared device account with the smallest fitting licence (F3 or a Teams shared-device licence)', ok:true }, { o:'Unplug the kiosk', ok:false } ],
+    ex:'A display in the lobby is a device, not a person. Shared-device sign-in with an F-class or Teams shared-device licence costs a few euros, and the account can only do what a kiosk needs. The E5 was never the fix; it was the nearest thing someone had.' },
+  { t:'"We need Copilot for the marketing team. All 12 of us. This quarter."', who:'Head of marketing · saw a demo at a conference',
+    opts:[ { o:'Buy 12 seats now, no questions asked', ok:false }, { o:'Bring them into the 90-day pilot with a success measure, expand if it delivers', ok:true }, { o:'Refuse: no AI until next year', ok:false } ],
+    ex:'Marketing is a plausible win for Copilot: drafts, campaign variants, summaries. That is exactly what the pilot is for. Twelve seats inside a measured pilot, with training, beats twelve seats on an annual commitment and a hope.' },
+  { t:'"A new starter joins sales on Monday and needs a licence."', who:'HR · the first joiner since the audit',
+    opts:[ { o:'Assign one by hand from the spare pool and note it in the spreadsheet', ok:false }, { o:'HR puts her in the Sales role group; group-based licensing assigns Business Premium automatically and the true-up catches it', ok:true }, { o:'Buy her an E5 so she has everything', ok:false } ],
+    ex:'Group-based licensing means the licence follows the role: join the group, get the plan; leave the group, the seat returns. No spreadsheet, no ghost seats, and the monthly report shows the count move by one. This is how the audit stays done.' },
+  { t:'"The test VM is gone. I cannot find it in the portal."', who:'Tudor, developer · it is 07:40 on a Tuesday',
+    opts:[ { o:'Restore it from backup immediately', ok:false }, { o:'It is deallocated by the auto-shutdown schedule, not deleted. Start it; it takes about two minutes', ok:true }, { o:'Rebuild it from scratch', ok:false } ],
+    ex:'A stopped (deallocated) VM keeps its disk and configuration and costs almost nothing. The schedule turns it off at 19:00; the developer starts it when needed or sets an auto-start for 08:00. Stopped is not gone, and the bill is 90 % smaller.' },
+  { t:'"Finance would like that licence report every month, please. With cost per department."', who:'The CFO · in a noticeably better mood',
+    opts:[ { o:'Export it by hand on the first of each month', ok:false }, { o:'The scheduled automation from renewal night already produces it; add finance to the recipients and a department cost column', ok:true }, { o:'Give finance admin access to the portal so they can look themselves', ok:false } ],
+    ex:'A report nobody has to remember to run is the only report that survives a busy month. Assigned, unassigned, inactive, orphaned resources and cost per department, in finance\'s inbox on the first. Next year the renewal is a formality, not a shock.' }
+];
+let tdone = 0, firstTry = {};
+function L7(){
+  clearTimers(); mood(''); tdone = 0; firstTry = {};
+  show(`
+    ${Lab.badge('Level 7 · monday aftermath','check-circle')}
+    <h2>Monday morning: seven tickets</h2>
+    ${say('your guide', `Every cleanup has a Monday. Each ticket has a lazy answer, an expensive answer and a right one. <b>+10 first try, +5 on a retry.</b> Clear all seven and the CFO gets the number.`, 'tip')}
+    ${TICKETS.map((tk,i)=>`
+      <div class="ticket" id="tk${i}">
+        <div class="tx">${icon('ticket')}<div><b>${esc(tk.t)}</b><small>${esc(tk.who)}</small></div></div>
+        <div class="choices">${tk.opts.map((op,j)=>`<button class="choice" id="tk${i}o${j}" onclick="L.solve(${i},${j},event)">${esc(op.o)}</button>`).join('')}</div>
+        <div class="verdict" id="tk${i}v"></div>
+      </div>`).join('')}
+    ${savingsBox('Savings found')}
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+function solve(i,j,e){
+  const tk = TICKETS[i], card = $('#tk'+i); if (!card || card.classList.contains('done')) return;
+  const b = $(`#tk${i}o${j}`);
+  if (tk.opts[j].ok) {
+    card.classList.add('done');
+    tk.opts.forEach((op,k) => { const x = $(`#tk${i}o${k}`); if (x) { x.disabled = true; if (k === j) x.classList.add('good'); } });
+    scoreAt(firstTry[i] === undefined ? 10 : 5, e);
+    Lab.patch('#tk'+i+'v', say('solved', tk.ex, 'tip')); $('#tk'+i+'v').classList.add('show');
+    tdone++;
+    if (tdone === TICKETS.length) later(finale, 400);
+  } else {
+    firstTry[i] = false;
+    if (b) { b.classList.add('bad'); b.disabled = true; later(() => b.classList.remove('bad'), 500); }
+  }
+}
+function finale(){
+  const pct = Math.round(saved / 248400 * 100);
+  Lab.finale({
+    into: '#finale',
+    heading: `${eur(saved)} a year back in the budget. The invoice is ${pct} % smaller.`,
+    summary: `The CFO's number: <b>${eur(saved)} per year</b>, found without a single call to Microsoft. Keep it that way: <b>1)</b> audit the tenant quarterly, waste grows back; <b>2)</b> leavers lose their licence on day one, the mailbox is kept as shared or inactive; <b>3)</b> the right plan per role, not the nearest one (F3 for frontline, Basic for the browser-only, Premium under 300 people, E5 only where its features are switched on); <b>4)</b> annual commitment for the stable core, monthly for the people who come and go; <b>5)</b> reserved instances for servers that never sleep, auto-shutdown for the ones that should; <b>6)</b> automate the monthly report so nobody has to remember. A 30 % jump with flat headcount is never Microsoft. It is the shelf.`
+  });
+}
+
+/* expose handlers used by inline onclick="" */
+window.L = { goto: Lab.goto, find, decide, pickPlan, drop, verdict, arcStart, step, flip, solve };
+
+Lab.init({
+  title: 'The Licence Hunt',
+  codename: 'operation: invoice',
+  levels: [
+    { icon:'play',         name:'Briefing' },
+    { icon:'search',       name:'Discovery' },
+    { icon:'route',        name:'Decisions' },
+    { icon:'users',        name:'Fleet' },
+    { icon:'list-check',   name:'Scenarios' },
+    { icon:'euro',         name:'Invoice Day' },
+    { icon:'moon',         name:'Renewal' },
+    { icon:'check-circle', name:'Tickets' }
+  ],
+  render: [L0, L1, L2, L3, L4, L5, L6, L7],
+  maxScore: 440,
+  ranks: [
+    { min: 400, title: 'Cost Commander', icon: 'trophy', msg: 'Flawless. You could run the licence workshop yourself, and the CFO knows your name.' },
+    { min: 330, title: 'Licence Ranger', icon: 'medal',  msg: 'Sharp. You know where the waste hides and which plan fits which job.' },
+    { min: 240, title: 'Budget Scout',   icon: 'badge',  msg: 'Solid. One more run and nothing leaks onto the invoice.' },
+    { min: 0,   title: 'Invoice Victim', icon: 'star',   msg: 'The shelf is still winning. Replay and look harder at who actually opens what.' }
+  ],
+  summary: 'Audit quarterly. Licence leavers out on day one. The right plan per role. Annual commitment for the stable core. Reserved instances for always-on servers. Automate the report.',
+  scene
+});
+})();
+</script>
+</body>
+</html>

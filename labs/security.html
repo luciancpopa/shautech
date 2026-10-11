@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<!-- © 2026 shautech. All rights reserved. shautech labs — interactive workshop simulators. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Breach Day — shautech labs</title>
+<meta name="description" content="Breach Day: an interactive security incident simulator. A phishing mail lands Monday 9 AM. Detect, triage, investigate, contain and recover, level by level.">
+<meta name="theme-color" content="#0A0B0D">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.shautech.com/labs/security.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="shautech labs">
+<meta property="og:title" content="Breach Day — shautech labs">
+<meta property="og:description" content="Breach Day: an interactive security incident simulator. A phishing mail lands Monday 9 AM. Detect, triage, investigate, contain and recover, level by level.">
+<meta property="og:url" content="https://www.shautech.com/labs/security.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='34' fill='%230A0B0D'/%3E%3Crect x='30' y='30' width='120' height='120' rx='26' fill='none' stroke='%234D9FFF' stroke-width='10'/%3E%3Ctext x='90' y='122' font-family='ui-monospace,monospace' font-size='98' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="../assets/css/labs.css">
+<style>
+  /* lab-specific styles only (shared components live in labs.css) */
+  /* the engine toast is a status chip; it must never swallow clicks on buttons underneath it (it stays in the DOM, invisible, after fading) */
+  .toast{pointer-events:none}
+  /* L1: clue hotspots are real buttons for keyboard users, styled as inline text */
+  .mail button.clue{background:none;border:0;border-bottom:1.5px dashed transparent;font:inherit;color:inherit;display:inline;text-align:left;line-height:inherit;cursor:pointer}
+  .mail .clue.hit{cursor:default}
+  .mail .clue.link{color:var(--accent2);text-decoration:underline}
+  .mail .clue.link.hit{color:var(--red)}
+  .mail .clue.attach{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:6px 12px}
+  .mail .clue.attach.hit{border-color:var(--red)}
+  .mail__head .k{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink3);display:inline-block;width:64px}
+  .mail__bar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--ink3)}
+  .mail__bar i{width:9px;height:9px;border-radius:50%;background:var(--line2);display:inline-block}
+  /* L3: timeline entries are buttons with a hidden detail that opens on click */
+  .timeline button.tl{display:block;width:100%;text-align:left}
+  .tl .ic{color:var(--accent2);margin-right:6px}
+  .tl .detail{display:none;margin-top:6px;font-family:var(--sans);font-size:13.5px;line-height:1.5;color:var(--ink2)}
+  .tl.hit .detail{display:block}
+  .tl.hit{cursor:default}
+  .tl.hit:hover{transform:none}
+  /* L4: board cards are buttons */
+  button.card-sm{width:100%;text-align:left}
+  .card-sm:disabled{cursor:default;transform:none}
+  .card-sm.bad .ic{color:var(--red)}
+  .card-sm.done .ic{color:var(--mint)}
+  /* L5: readable mail items in the arena (you have to read before you click) */
+  .item.wide{width:auto;max-width:190px;height:auto;min-height:44px;padding:8px 10px;display:flex;align-items:flex-start;gap:8px;text-align:left;font-family:var(--mono);font-size:11px;line-height:1.4;color:var(--ink);border-radius:10px}
+  .item.wide .ic{width:16px;height:16px;flex:none;margin-top:1px;color:var(--accent2)}
+  .item.wide small{display:block;color:var(--ink3);font-size:10px}
+  .item.wide.good .ic{color:var(--mint)}
+  .item.wide.warn{color:var(--amber)}
+  .item.wide.warn .ic{color:var(--amber)}
+  .item.gone{opacity:0;transition:opacity .8s}
+  .item.dim{opacity:.25;pointer-events:none}
+  @media (max-width:640px){.item.wide{max-width:150px;font-size:10.5px}}
+  /* L6: done list */
+  .rec-done{font-family:var(--mono);font-size:12px;color:var(--mint);margin-bottom:6px;display:flex;gap:8px;align-items:center}
+  .clock-panel{display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:16px;max-width:700px}
+</style>
+</head>
+<body>
+
+<canvas id="labbg" aria-hidden="true"></canvas>
+
+<header class="topbar" id="topbar">
+  <a class="logo" href="../index.html" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span><span class="logo__lab">/ labs</span></a>
+  <span class="sim-name" id="simName"></span>
+  <nav class="lvlmap" id="lvlmap" aria-label="Levels"></nav>
+  <div class="hud">
+    <div class="pill" id="scorePill" title="Points"><b id="score">0</b></div>
+    <a class="exit" href="index.html" title="All labs"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>all labs</span></a>
+  </div>
+</header>
+
+<main class="stage" id="stage"><div class="screen" id="screen" aria-live="polite"></div></main>
+
+<div class="nojs" id="nojs"><div class="box"><p class="badge">shautech labs</p><h2>This simulator needs JavaScript.</h2><p class="muted">It runs entirely in your browser, nothing is sent anywhere. Enable JavaScript, or <a href="index.html" style="color:var(--accent2)">go back to all labs</a>.</p></div></div>
+
+<script src="../assets/js/lab-engine.js"></script>
+<script>
+/* © 2026 shautech. Breach Day — game logic. */
+(function(){
+'use strict';
+const { icon, say, sev, scoreAt, addScore, show, toast, mood, util } = Lab;
+const { esc, pick, clamp } = util;
+const $ = s => document.querySelector(s);
+
+/* ---------------- timers (always cleared when a level starts) ---------------- */
+const timers = { to: [], iv: [] };
+function later(fn, ms){ const id = setTimeout(fn, ms); timers.to.push(id); return id; }
+function every(fn, ms){ const id = setInterval(fn, ms); timers.iv.push(id); return id; }
+function clearTimers(){ timers.to.forEach(clearTimeout); timers.iv.forEach(clearInterval); timers.to = []; timers.iv = []; }
+function sc(k, v){ if (Lab.scene) Lab.scene.set(k, v); }
+
+/* ---------------- ambient scene: attacker rack (left) firing at the company rack (right) ---------------- */
+const FLOWS = {
+  phish:  { glyphs:['mail'],               hostile:true,  dir:1 },
+  urls:   { glyphs:['bug','mail'],         hostile:true,  dir:1 },
+  attach: { glyphs:['file'],               hostile:true,  dir:1 },
+  creds:  { glyphs:['key'],                hostile:true,  dir:1 },
+  exfil:  { glyphs:['mail','file'],        hostile:true,  dir:-1 },
+  storm:  { glyphs:['mail','bug'],         hostile:true,  dir:1, fast:true },
+  clean:  { glyphs:['lock','shield','mail'], hostile:false, dir:1 }
+};
+const scene = {
+  state: { level: 0, mood: '', flow: 'phish', contained: false, clean: false },
+  init(s, W, H){
+    const small = W < 640;
+    const rw = small ? 34 : 46, rh = Math.min(H * .5, 360), ry = (H - rh) / 2 + 24;
+    s.g = { rw, rh, ry, lx: 14, rx: W - 14 - rw, ax: 14 + rw, bx: W - 14 - rw, cy: ry + rh / 2 };
+    const lanes = small ? 4 : 6;
+    s.lanes = [];
+    for (let i = 0; i < lanes; i++) {
+      const ya = ry + rh * (.1 + .8 * i / (lanes - 1));
+      const yb = ry + rh * (.1 + .8 * Math.random());
+      s.lanes.push(Lab.draw.curve(
+        [s.g.ax, ya],
+        [W * (.3 + Math.random() * .1), ya + (Math.random() * 2 - 1) * H * .18],
+        [W * (.6 + Math.random() * .1), yb + (Math.random() * 2 - 1) * H * .18],
+        [s.g.bx, yb], 120));
+    }
+    const n = clamp(Math.round(W / 40), 14, 36);
+    s.parts = Array.from({ length: n }, () => ({ lane: Math.floor(Math.random() * lanes), t: Math.random(), v: .05 + Math.random() * .07, sz: 3.2 + Math.random() * 1.8, k: null }));
+    s.pulses = []; s.flash = 0;
+  },
+  draw(ctx, s, W, H, t, dt){
+    if (!s.g) return;
+    const C = Lab.colors, D = Lab.draw, g = s.g;
+    const flowName = (s.clean || s.mood === 'calm' || s.level >= 7) ? 'clean' : (FLOWS[s.flow] ? s.flow : 'phish');
+    const F = FLOWS[flowName];
+    const night = s.mood === 'night';
+    const coCol = F.hostile ? (night ? C.violet : C.accent) : C.mint;
+    s.flash = Math.max(0, s.flash - dt * 1.2);
+
+    // racks
+    D.rack(ctx, g.lx, g.ry, g.rw, g.rh, { color: Lab.rgba(C.red, .45), label: 'ATTACKER', led: i => Lab.rgba(C.red, .25 + .5 * (Math.sin(t * 2 + i * 1.7) * .5 + .5)) });
+    D.rack(ctx, g.rx, g.ry, g.rw, g.rh, { color: Lab.rgba(coCol, .5), label: 'PIXELSOFT', led: i => Lab.rgba(coCol, .25 + .5 * (Math.sin(t * 1.6 + i * 2.1) * .5 + .5)) });
+
+    // lanes (slow dash crawl)
+    ctx.lineDashOffset = -t * 7;
+    s.lanes.forEach(pts => D.path(ctx, pts, 'rgba(255,255,255,.05)', 1, [2, 7]));
+    ctx.lineDashOffset = 0;
+
+    // shield in front of the company rack (only once containment is done)
+    const BLOCK = .84;
+    if (s.contained) {
+      ctx.save();
+      ctx.strokeStyle = Lab.rgba(F.hostile ? C.accent : C.mint, .28 + s.flash * .45);
+      ctx.lineWidth = 2; ctx.shadowBlur = 14; ctx.shadowColor = Lab.rgba(F.hostile ? C.accent : C.mint, .7);
+      ctx.beginPath(); ctx.ellipse(g.bx + 8, g.cy, 40, g.rh * .58, 0, Math.PI * .55, Math.PI * 1.45); ctx.stroke();
+      ctx.restore();
+    }
+
+    // packets
+    const speed = F.fast ? 1.8 : 1;
+    for (const p of s.parts) {
+      if (!p.k || !F.glyphs.includes(p.k)) p.k = pick(F.glyphs);
+      p.t += p.v * dt * speed * F.dir;
+      const pts = s.lanes[p.lane];
+      if (F.dir === 1 && F.hostile && s.contained && p.t >= BLOCK) {
+        const [hx, hy] = D.posOn(pts, BLOCK);
+        s.pulses.push({ x: hx, y: hy, r: 2, a: .35, col: C.red });
+        s.flash = Math.min(1, s.flash + .4);
+        p.t = 0; p.lane = Math.floor(Math.random() * s.lanes.length); p.k = pick(F.glyphs);
+        continue;
+      }
+      if (F.dir === 1 && p.t >= 1) {
+        const [ex, ey] = D.posOn(pts, 1);
+        if (Math.random() < .5) s.pulses.push({ x: ex, y: ey, r: 2, a: .3, col: F.hostile ? C.red : C.mint });
+        p.t = 0; p.lane = Math.floor(Math.random() * s.lanes.length); p.v = .05 + Math.random() * .07; p.k = pick(F.glyphs);
+      }
+      if (F.dir === -1 && p.t <= 0) {
+        const [ex, ey] = D.posOn(pts, 0);
+        if (Math.random() < .5) s.pulses.push({ x: ex, y: ey, r: 2, a: .3, col: C.red });
+        p.t = 1; p.lane = Math.floor(Math.random() * s.lanes.length); p.v = .05 + Math.random() * .07; p.k = pick(F.glyphs);
+      }
+      const lane = s.lanes[p.lane];
+      const col = F.hostile ? C.red : (p.k === 'mail' ? C.accent2 : C.mint);
+      for (let k = 4; k >= 1; k--) {
+        const [qx, qy] = D.posOn(lane, p.t - F.dir * k * .012);
+        ctx.fillStyle = Lab.rgba(col, .14 * (1 - k / 5));
+        ctx.beginPath(); ctx.arc(qx, qy, Math.max(p.sz * .5 * (1 - k * .15), .3), 0, 7); ctx.fill();
+      }
+      const [hx, hy] = D.posOn(lane, p.t);
+      ctx.save(); ctx.globalAlpha = .85; D.glyph(ctx, p.k, hx, hy, p.sz, Lab.rgba(col, .9)); ctx.restore();
+    }
+
+    // impact / arrival pulses
+    s.pulses = s.pulses.filter(q => q.a > .01);
+    for (const q of s.pulses) {
+      q.r += 34 * dt; q.a -= .5 * dt;
+      ctx.strokeStyle = Lab.rgba(q.col, Math.max(q.a, 0)); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 7); ctx.stroke();
+    }
+  }
+};
+
+/* ---------------- L0 : briefing ---------------- */
+function L0(){
+  clearTimers(); mood('');
+  sc('flow', 'phish');
+  show(`
+    ${Lab.badge('Level 0 · Monday, 09:02', 'play')}
+    <h1>Something <em>phishy</em> just landed in the inbox.</h1>
+    ${say('the boss', `Quick question. I got an email from <b>"Microsoft Support"</b> saying my mailbox gets deleted in 2 hours unless I verify my password. I clicked the link and, well, typed it in. It looked <i>completely</i> real. That's fine, right?`, 'alert')}
+    ${say('your guide', `Welcome to <b>Breach Day</b> at PixelSoft (the same team from the migration lab; trouble follows them). What the boss just described is a <b>phishing attack</b>, and those typed-in credentials are now in someone else's hands. No panic: incidents are won with a <b>plan</b>, not with adrenaline. Detect, investigate, contain, clean up, recover, learn. Step by step.`, 'tip')}
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="L.goto(1)">${icon('arrow-right')}Take the incident</button>
+  `);
+}
+
+/* ---------------- L1 : spot the phish ---------------- */
+const clues = [
+  { t:'The sender address', ex:'"micros0ft-helpdesk.com", with a zero. The display name says Microsoft; the actual domain says scam. Always read the part after the @.', flow:'phish' },
+  { t:'Panic plus a deadline', ex:'"URGENT", "2 hours", capitals everywhere. Fear and time pressure switch off careful thinking; that is the whole trick. Real providers do not threaten to delete your mailbox by lunch.', flow:'phish' },
+  { t:'The generic greeting', ex:'"Dear valued user": they do not know your name, because this exact mail went to thousands of people.', flow:'phish' },
+  { t:'The broken grammar', ex:'"Please to verify you account": large companies employ proofreaders. Attackers often do not. Odd phrasing is a gift; accept it.', flow:'phish' },
+  { t:'The link', ex:'"portal-micr0soft-secure.com" is not microsoft.com. Hover before you click and the true destination shows up. A lookalike domain is the number one tell.', flow:'urls' },
+  { t:'The attachment', ex:'A "mailbox_backup.html" file: an HTML attachment that opens a fake login page right on your computer. Unexpected attachments from strangers: never open them.', flow:'attach' }
+];
+let cluesFound = 0;
+function L1(){
+  clearTimers(); mood('');
+  cluesFound = 0;
+  show(`
+    ${Lab.badge('Level 1 · detect', 'mail')}
+    <h2>Spot the <em>phish</em></h2>
+    ${say('your guide', `Here is the exact email the boss received. It fooled him, but it would not fool someone who knows the tells. Find and click all <b>6 red flags</b> (+10 each).`, 'tip')}
+    <div class="mail" role="group" aria-label="Suspicious email, click the parts that look wrong">
+      <div class="mail__bar"><i></i><i></i><i></i><span>inbox · boss@pixelsoft.com</span></div>
+      <div class="mail__head">
+        <div><span class="k">FROM</span><b>Microsoft Support</b> &lt;<button class="clue" id="cl0" onclick="L.clue(0,event)">security-alert@micros0ft-helpdesk.com</button>&gt;</div>
+        <div><span class="k">TO</span>boss@pixelsoft.com</div>
+        <div><span class="k">SUBJECT</span><button class="clue" id="cl1" onclick="L.clue(1,event)">URGENT!!! Your mailbox will be DELETED in 2 hours</button></div>
+      </div>
+      <div class="mail__body">
+        <button class="clue" id="cl2" onclick="L.clue(2,event)">Dear valued user,</button><br><br>
+        We detected unusual activity on your mailbox. <button class="clue" id="cl3" onclick="L.clue(3,event)">Please to verify you account immediately</button>
+        or your mailbox will be permanently deleted and all emails lost forever.<br><br>
+        Verify here: <button class="clue link" id="cl4" onclick="L.clue(4,event)">portal-micr0soft-secure.com/verify</button><br>
+        <span class="fake-btn" aria-hidden="true">Verify my account</span><br>
+        <button class="clue attach" id="cl5" onclick="L.clue(5,event)">${icon('file')}mailbox_backup.html (2 KB)</button><br><br>
+        Thank you for your cooperation,<br>
+        <span class="muted">The IT Team</span>
+      </div>
+    </div>
+    <div class="inv" id="clueLog">${icon('search')} <b>Red flags found: 0/6</b> — click the suspicious parts of the email above.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l1next" style="display:none" onclick="L.goto(2)">${icon('arrow-right')}All flags found. To triage</button>
+  `);
+}
+function clue(i, e){
+  const el = $('#cl' + i); if (!el || el.classList.contains('hit')) return;
+  el.classList.add('hit');
+  cluesFound++;
+  sc('flow', clues[i].flow);
+  scoreAt(10, e);
+  const log = $('#clueLog'); if (!log) return;
+  if (cluesFound === clues.length) {
+    Lab.patch('#clueLog', `${icon('check-circle')} <b>All 6 flags found.</b> One golden rule covers most of them: <b>slow down</b>. Phishing only works at high speed; the moment you pause and read, the costume falls apart.`);
+    const n = $('#l1next'); if (n) n.style.display = 'inline-flex';
+  } else {
+    Lab.patch('#clueLog', `${icon('search')} <b>Red flags found: ${cluesFound}/6</b><br>${sev('crit', 'flag')} <b>${esc(clues[i].t)}</b> — ${esc(clues[i].ex)}`);
+  }
+}
+
+/* ---------------- L2 : triage decisions + toolbox ---------------- */
+const decisions = [
+  { q:'The boss clicked and typed his password. Your very first move?',
+    opts:[
+      { t:'Reset his password and kill every active session', s:'Make the stolen credentials worthless, right now.', v:'good', pts:10,
+        fb:'Exactly. Every minute those credentials work, the attacker is reading email as the boss. Revoke sessions too: a password change alone does not kick out someone already logged in. (+10)' },
+      { t:'Send a company-wide warning email', s:'Warn everyone before somebody else clicks.', v:'meh', pts:5,
+        fb:'Good instinct, wrong order. While you are wordsmithing the announcement, the attacker is inside. Lock the door first, then warn people. (+5)' },
+      { t:'Unplug the server and the Wi-Fi', s:'No network, no hacker. Problem solved?', v:'bad', pts:0,
+        fb:'Dramatic, but the mailbox lives in the cloud. Pulling office cables stops your business, not the attacker, who is connecting from somewhere else entirely. (0)' }
+    ] },
+  { q:'Is it just the boss? How do you find out?',
+    opts:[
+      { t:'Search the logs: who received it, who clicked, who signed in', s:'Facts from the systems, not from memory.', v:'good', pts:10,
+        fb:'Scope first. The same mail went to 14 people. Message trace shows who received it, sign-in logs show who got harvested. Facts beat feelings during an incident. (+10)' },
+      { t:'Ask everyone to raise a hand if they clicked', s:'Honesty poll in the hallway.', v:'meh', pts:5,
+        fb:'People are embarrassed to admit clicking; you will get silence and half-truths. Ask anyway (kindly), but verify in the logs. (+5)' },
+      { t:'Assume it is only him; nobody else said anything', s:'No news is good news, right?', v:'bad', pts:0,
+        fb:'The quiet clickers are the dangerous ones. "Nobody said anything" is exactly what a spreading incident sounds like. (0)' }
+    ] },
+  { q:'Who needs to know, right now?',
+    opts:[
+      { t:'Management plus whoever handles your security, calm and factual', s:'Short briefing: what happened, what you are doing.', v:'good', pts:10,
+        fb:'Yes. Decision-makers must hear it from you, early, without drama. If personal data might be involved, this also starts the compliance clock; more on that tonight. (+10)' },
+      { t:'Everyone, subject: "WE HAVE BEEN HACKED!!!"', s:'Total transparency, maximum volume.', v:'meh', pts:5,
+        fb:'Transparency yes, panic no. That subject line generates 50 helpdesk calls and three rumours per hour. Inform people with instructions, not sirens. (+5)' },
+      { t:'Nobody. Fix it quietly, tell no one', s:'What they do not know cannot scare them.', v:'bad', pts:0,
+        fb:'Silence feels safe and ages terribly. If personal data leaked, staying quiet can even be illegal (GDPR says 72 hours). Secrets and incidents do not mix. (0)' }
+    ] }
+];
+const tools = [
+  { ic:'shield-check', t:'The built-in security tools', s:'Microsoft Defender and friends, already in many M365 licences.',
+    fb:'Great default: alerts, message trace, sign-in logs and quarantine actions are already there. Many companies just never open the console. Today you will. (+10)' },
+  { ic:'radar', t:'A SIEM, the control tower', s:'Microsoft Sentinel or similar: every log, one screen.',
+    fb:'The control tower: all logs in one place, hunting queries, automation. Overkill for a tiny office, priceless once you have real infrastructure. (+10)' },
+  { ic:'phone', t:'Call in specialists', s:'A security partner or MSSP who does this every week.',
+    fb:'No shame in this one: during an incident, speed beats pride. The best setups combine it: your tools plus someone on speed-dial who has seen this before. (+10)' }
+];
+let di = 0;
+function L2(){
+  clearTimers(); mood('');
+  di = 0;
+  sc('flow', 'creds');
+  show(`
+    ${Lab.badge('Level 2 · triage', 'bolt')}
+    <h2>First moves <em>matter most</em></h2>
+    ${say('your guide', `The first hour of an incident decides how the whole week goes. Three quick calls to make; choose wisely.`, 'tip')}
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d = decisions[di];
+  Lab.patch('#dzone', `
+    <h3 style="margin-top:14px">Decision ${di + 1}/${decisions.length}: ${esc(d.q)}</h3>
+    <div class="choices">
+      ${d.opts.map((o, i) => `<button class="choice" id="ch${i}" onclick="L.decide(${i},event)"><b>${esc(o.t)}</b><small>${esc(o.s)}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none" onclick="L.nextDecision()"></button>
+  `);
+}
+function decide(i, e){
+  const d = decisions[di], o = d.opts[i];
+  d.opts.forEach((x, j) => { const el = $('#ch' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add(o.v); });
+  if (o.pts > 0) scoreAt(o.pts, e);
+  Lab.patch('#verdict', say(o.v === 'good' ? 'nice' : 'hmm', esc(o.fb), o.v === 'good' ? 'tip' : 'warn'));
+  const v = $('#verdict'); if (v) v.classList.add('show');
+  const btn = $('#dnext'); if (!btn) return;
+  btn.style.display = 'inline-flex';
+  btn.innerHTML = di < decisions.length - 1 ? `${icon('arrow-right')}Next decision` : `${icon('search')}One more thing: pick your magnifying glass`;
+}
+function nextDecision(){
+  if (di < decisions.length - 1) { di++; renderDecision(); }
+  else renderToolbox();
+}
+function renderToolbox(){
+  Lab.patch('#dzone', `
+    <h3 style="margin-top:14px">What do we investigate with?</h3>
+    ${say('your guide', `Like the migration toolbox: there is no wrong answer, only what fits your size, budget and team. Choose one.`, 'tip')}
+    <div class="choices">
+      ${tools.map((o, i) => `<button class="choice" id="tl${i}" onclick="L.tool(${i},event)"><b>${icon(o.ic)} ${esc(o.t)}</b><small>${esc(o.s)}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="tverdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="tnext" style="display:none" onclick="L.goto(3)">${icon('arrow-right')}Toolbox ready. Follow the trail</button>
+  `);
+}
+function tool(i, e){
+  tools.forEach((x, j) => { const el = $('#tl' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add('good'); });
+  scoreAt(10, e);
+  Lab.patch('#tverdict', say('nice', esc(tools[i].fb), 'tip'));
+  const v = $('#tverdict'); if (v) v.classList.add('show');
+  const n = $('#tnext'); if (n) n.style.display = 'inline-flex';
+}
+
+/* ---------------- L3 : the timeline hunt ---------------- */
+const events = [
+  { tm:'09:02', ic:'mail', t:'The phishing mail is delivered', flow:'phish',
+    d:'Message trace shows it landed in 14 inboxes, not just the boss\'s. The attacker bought the whole team a ticket.' },
+  { tm:'09:06', ic:'link', t:'The boss clicks the link', flow:'urls',
+    d:'The fake login page was pixel-perfect: logo, colours, even a little loading spinner. Nobody should feel stupid for falling for this.' },
+  { tm:'09:07', ic:'key', t:'Credentials entered', flow:'creds',
+    d:'Username and password, hand-delivered. From this second, the attacker can log in as the boss from anywhere on Earth.' },
+  { tm:'09:11', ic:'globe', t:'Sign-in from another continent', flow:'creds',
+    d:'The logs show it plainly: office sign-in at 9:05, foreign sign-in at 9:11. Unless the boss owns a private supersonic jet, that is "impossible travel", a classic alarm.' },
+  { tm:'09:14', ic:'inbox', t:'A new inbox rule appears', flow:'exfil',
+    d:'Rule name: blank. Action: "delete every incoming reply". Why? So when victims respond "is this really you?", the boss never sees the question. Attackers cover their tracks with your own settings.' },
+  { tm:'09:18', ic:'send', t:'200 emails sent to customers', flow:'exfil',
+    d:'The same scam, now sent from the boss\'s real address to customers who trust it. This is why speed matters: every minute uncontained, the blast radius grows.' }
+];
+let evDone = 0;
+function L3(){
+  clearTimers(); mood('');
+  evDone = 0;
+  sc('flow', 'phish');
+  show(`
+    ${Lab.badge('Level 3 · investigate', 'search')}
+    <h2>Follow the <em>trail</em></h2>
+    ${say('your guide', `The logs never lie. Click each event to reconstruct what actually happened, minute by minute. (+10 per event)`, 'tip')}
+    <div class="timeline">
+      ${events.map((ev, i) => `<button class="tl" id="ev${i}" onclick="L.ev(${i},event)"><span class="t">${ev.tm}</span>${icon(ev.ic)}<b>${esc(ev.t)}</b><span class="detail">${esc(ev.d)}</span></button>`).join('')}
+    </div>
+    <div id="evVerdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="L.goto(4)">${icon('arrow-right')}Picture is clear. Contain it</button>
+  `);
+}
+function ev(i, e){
+  const el = $('#ev' + i); if (!el || el.classList.contains('hit')) return;
+  el.classList.add('hit');
+  evDone++;
+  sc('flow', events[i].flow);
+  scoreAt(10, e);
+  if (evDone === events.length) {
+    Lab.patch('#evVerdict', say('scope check', `And your Level 2 instinct pays off: the log search finds <b>one more victim</b>. Mia also entered her password ("the page asked so nicely"). Two compromised accounts, one malicious rule, 200 outbound scam mails. Now we know exactly what we are fighting. Time to slam the doors.`, 'alert'));
+    const n = $('#l3next'); if (n) n.style.display = 'inline-flex';
+  }
+}
+
+/* ---------------- L4 : containment board ---------------- */
+const actions = [
+  { ic:'key', t:'Reset passwords and revoke sessions', d:'For the boss and Mia, both compromised accounts.', ok:true,
+    ex:'Both accounts locked down. The attacker\'s stolen keys just stopped working, mid-session.' },
+  { ic:'inbox', t:'Delete the malicious inbox rule', d:'The "delete all replies" rule the attacker planted.', ok:true,
+    ex:'Rule removed. Replies flow again, including 12 customers asking "was that email really from you?"' },
+  { ic:'mail', t:'Purge the phish from all 14 inboxes', d:'Remove it everywhere, so nobody else can click it.', ok:true,
+    ex:'One search-and-destroy later, the bait is gone from every mailbox. You cannot click what is not there.' },
+  { ic:'shield-off', t:'Block the sender and the fake site', d:'Blocklist the domain and the lookalike login URL.', ok:true,
+    ex:'Both blocked at the gateway. If anyone clicks an old copy from their phone, the door is bricked up.' },
+  { ic:'laptop', t:'Isolate Mia\'s laptop', d:'She also opened the attachment; quarantine the machine from the network.', ok:true,
+    ex:'The laptop is cut off while it gets checked. If the attachment left a surprise behind, it is now in a sealed box.' },
+  { ic:'fire', t:'Format every computer in the building', d:'Scorched earth. Total certainty.', ok:false,
+    ex:'That destroys the evidence, the business day and everyone\'s patience, while the actual problem (stolen cloud credentials) does not live on the laptops.' },
+  { ic:'wifi', t:'Turn off the internet for everyone', d:'No internet, no hacker.', ok:false,
+    ex:'The attacker connects to the cloud, not to your office router. This only disconnects the defenders.' },
+  { ic:'credit-card', t:'Buy "PC Cleaner Pro" from that popup', d:'It says it removes 100% of hackers.', ok:false,
+    ex:'That popup is another scam; attackers love selling "cures" during incidents. You almost got phished twice in one day.' }
+];
+let actDone = 0;
+function L4(){
+  clearTimers(); mood('');
+  actDone = 0;
+  sc('flow', 'exfil');
+  show(`
+    ${Lab.badge('Level 4 · contain', 'shield')}
+    <h2>Slam the <em>doors</em></h2>
+    ${say('your guide', `Containment means stop the bleeding and keep the evidence. Five of these actions are right; move them to the Executed column. Wrong ones cost nothing but pride. (+10 each)`, 'tip')}
+    <div class="board">
+      <div class="col" id="colTodo"><h4>Proposed <span id="todoN">${actions.length}</span></h4>
+        ${actions.map((a, i) => `<button class="card-sm" id="act${i}" onclick="L.act(${i},event)">${icon(a.ic)}<span><b>${esc(a.t)}</b><small>${esc(a.d)}</small></span></button>`).join('')}
+      </div>
+      <div class="col" id="colDone"><h4>Executed <span id="doneN">0/5</span></h4></div>
+    </div>
+    <div class="inv" id="actLog">${icon('shield')} <b>Containment: 0/5</b> — pick your moves.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="L.goto(5)">${icon('arrow-right')}Contained. Wait, what is that?</button>
+  `);
+}
+function act(i, e){
+  const a = actions[i], el = $('#act' + i);
+  if (!el || el.disabled) return;
+  el.disabled = true;
+  if (a.ok) {
+    el.classList.add('done');
+    actDone++;
+    const done = $('#colDone'); if (done) done.appendChild(el);
+    scoreAt(10, e);
+    Lab.patch('#doneN', `${actDone}/5`);
+    Lab.patch('#todoN', String(actions.length - actDone));
+    if (actDone === 5) {
+      sc('contained', true);
+      Lab.patch('#actLog', `${icon('shield-check')} <b>Contained.</b> Look at the background: the shield is up and the red traffic is bouncing off. The attacker's access is gone, and all the evidence is preserved.`);
+      const n = $('#l4next'); if (n) n.style.display = 'inline-flex';
+      toast('Shield up. Hostile traffic blocked.', 'shield-check');
+    } else {
+      Lab.patch('#actLog', `${icon('shield')} <b>Containment: ${actDone}/5</b> — ${icon('check')} ${esc(a.ex)}`);
+    }
+  } else {
+    el.classList.add('bad');
+    Lab.patch('#actLog', `${icon('shield')} <b>Containment: ${actDone}/5</b> — ${icon('x')} ${esc(a.ex)}`);
+  }
+}
+
+/* ---------------- L5 : phish storm arcade ---------------- */
+const PHISH = [
+  'Your password expires in 1 HOUR - verify now',
+  'You won an iPhone 17! Claim today',
+  'Parcel held at customs - pay EUR 1.99',
+  'Payroll update: re-enter your bank details',
+  'Micr0soft: unusual sign-in, verify HERE',
+  'CEO: buy gift cards, urgent and confidential'
+];
+const LEGIT = [
+  'Invoice #4482 - the paper supplier',
+  'HR: holiday calendar for August',
+  'Meeting notes - Monday standup',
+  'Customer question about your quote'
+];
+const STORM_TARGET = 12;
+let zapped = 0, stormLive = false, stormEventFired = false, itemSeq = 0;
+function L5(){
+  clearTimers(); mood('alert');
+  zapped = 0; stormLive = true; stormEventFired = false; itemSeq = 0;
+  sc('flow', 'storm');
+  show(`
+    ${Lab.badge('Level 5 · the second wave', 'inbox')}
+    <h2>The copycat <em>storm</em></h2>
+    ${say('your guide', `Word got out that PixelSoft bites, so now every scammer wants a turn, and the whole team is forwarding you suspicious mails. <b>Quarantine the phish</b> (+5 each), but read first: some of these are real business, and quarantining legitimate mail costs you 5.`, 'tip')}
+    <div class="arena" id="arena" aria-label="Incoming mail. Click the phishing messages to quarantine them.">
+      <div class="house house--l bad">${icon('skull')}ATTACKERS<small>persistent</small></div>
+      <div class="house house--r ok">${icon('shield-check')}PIXELSOFT<small>defended</small></div>
+      <div class="event-banner" id="eventBanner" role="status"></div>
+      <div class="bigbar" id="bigbar"><i id="bigFill"></i><span id="bigLabel">0 / ${STORM_TARGET} quarantined</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="L.goto(6)">${icon('arrow-right')}Storm weathered. To recovery</button>
+  `);
+  every(spawnItem, Lab.reduced ? 1500 : 1100);
+  spawnItem(); spawnItem();
+}
+function spawnItem(){
+  const arena = $('#arena');
+  if (!arena || !arena.isConnected) { clearTimers(); return; }
+  if (!stormLive) return;
+  if (arena.querySelectorAll('.item:not(.pop):not(.warn):not(.gone)').length >= 3) return;
+  const isPhish = Math.random() < .65;
+  const subj = isPhish ? pick(PHISH) : pick(LEGIT);
+  const el = document.createElement('button');
+  el.className = 'item wide'; el.id = 'mi' + (itemSeq++);
+  el.innerHTML = `${icon('mail')}<span><small>new message</small>${esc(subj)}</span>`;
+  const w = arena.clientWidth || 600, h = arena.clientHeight || 340;
+  const itemW = w < 480 ? 150 : 190, margin = w < 480 ? 70 : 110;
+  const span = Math.max(20, w - margin * 2 - itemW);
+  el.style.left = Math.round(margin + Math.random() * span) + 'px';
+  el.style.top = Math.round(44 + Math.random() * (h - 44 - 60 - 56)) + 'px';
+  el.onclick = e => {
+    if (!stormLive || el.classList.contains('pop') || el.classList.contains('warn')) return;
+    if (isPhish) {
+      el.classList.add('good', 'pop');
+      scoreAt(5, e);
+      zapped++;
+      updateStormBar();
+      later(() => el.remove(), 400);
+      if (!stormEventFired && zapped === Math.floor(STORM_TARGET / 2)) stormEvent();
+      if (zapped >= STORM_TARGET) endStorm();
+    } else {
+      el.classList.add('warn');
+      el.innerHTML = `${icon('alert')}<span><small>checked</small>That one is legitimate; let it through.</span>`;
+      scoreAt(-5, e);
+      later(() => { el.classList.add('gone'); later(() => el.remove(), 850); }, 1200);
+    }
+  };
+  arena.appendChild(el);
+  if (!isPhish) {
+    later(() => { if (el.isConnected && !el.classList.contains('warn')) { el.classList.add('gone'); later(() => el.remove(), 850); } }, Lab.reduced ? 7000 : 5200);
+  }
+}
+function updateStormBar(){
+  const p = Math.min(100, Math.round(zapped / STORM_TARGET * 100));
+  const f = $('#bigFill'); if (f) f.style.width = p + '%';
+  const l = $('#bigLabel'); if (l) l.textContent = `${zapped} / ${STORM_TARGET} quarantined`;
+}
+function stormEvent(){
+  stormEventFired = true; stormLive = false;
+  document.querySelectorAll('#arena .item').forEach(c => c.classList.add('dim'));
+  const b = $('#eventBanner'); if (!b) return;
+  b.classList.remove('ok'); b.classList.add('show');
+  b.innerHTML = `${Lab.avatar('RD', 30, 'avatar--sm')} Rudy appears at your desk: "I think I clicked one of these..."<small>He came and told you. That is a security culture win: never punish the messenger.</small><button class="btn small blue" onclick="L.rudy(event)">${icon('key')}Reset his password and revoke sessions</button>`;
+}
+function rudy(e){
+  scoreAt(10, e);
+  const b = $('#eventBanner'); if (!b) return;
+  b.classList.add('ok');
+  b.innerHTML = `${icon('check-circle')} Rudy is safe. Because he reported fast, the attacker had 4 minutes, not 4 hours.`;
+  later(() => {
+    b.classList.remove('show', 'ok'); stormLive = true;
+    document.querySelectorAll('#arena .item').forEach(c => c.classList.remove('dim'));
+  }, 1600);
+}
+function endStorm(){
+  stormLive = false; clearTimers();
+  document.querySelectorAll('#arena .item').forEach(c => c.remove());
+  const l = $('#bigLabel'); if (l) l.textContent = 'storm weathered';
+  const n = $('#l5next'); if (n) n.style.display = 'inline-flex';
+  toast('Second wave handled. 12 phish in quarantine.', 'check-circle');
+}
+
+/* ---------------- L6 : recovery night + the 72-hour clock ---------------- */
+const recSteps = [
+  { ic:'search', t:'Hunt for leftover backdoors', d:'Attackers rarely leave through the door they came in. Check for: extra MFA devices they registered, app passwords, forwarding rules on other mailboxes, strange app permissions granted.',
+    w:'The sneakiest trick: the attacker adds their own authenticator app to the boss\'s account. Password reset? They do not care; they approve the login themselves. Check registered MFA methods.' },
+  { ic:'key', t:'Re-issue clean credentials', d:'The boss and Mia get fresh passwords and re-register their MFA, done together with them, identity verified in person.',
+    w:'Never reset a password to "Welcome123" and email it. And verify it is really them asking: attackers love calling the helpdesk pretending to be locked-out employees.' },
+  { ic:'mail', t:'Restore normal mail flow', d:'Release the false positives from quarantine, re-enable what was frozen. The business breathes again.',
+    w:'Check the quarantine before emptying it. In today\'s panic, a real customer invoice got swept up too. There is always one.' },
+  { ic:'file-text', t:'The GDPR question', d:'The attacker read mailboxes and mailed 200 customers. Personal data was involved, so document everything, and if there is a risk to people\'s rights, the authority must be notified within 72 hours.',
+    w:'The 72-hour clock starts when you become aware of the breach: this morning, around 09:30. Documenting as you go (you did) makes this step paperwork instead of archaeology.' },
+  { ic:'phone', t:'Tell the affected customers', d:'A short, honest note to the 200 recipients: what happened, what you did, what they should do (do not click, delete it, call us with questions).',
+    w:'Honest and boring beats silent and mysterious. Customers forgive an incident handled well; they do not forgive finding out from someone else.' },
+  { ic:'save', t:'Preserve the evidence', d:'Export the sign-in logs, the message trace, the timeline, screenshots of the rule. Zip it, date it, store it.',
+    w:'Logs expire. Default retention can be surprisingly short. Export today what you might need in three months; future you (or an insurer, or an authority) will ask.' },
+  { ic:'moon', t:'Stand down', d:'22:41. Both accounts clean, mail flowing, customers informed, evidence archived. Incident: closed. Go home.',
+    w:'Before you leave: put the lessons-learned meeting in the calendar for this week. Memory of an incident has a half-life of about four days.' }
+];
+let recStep = 0, recIdx = 0, clockLeft = 0;
+function fmtClock(s){ const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`; }
+function L6(){
+  clearTimers(); mood('alert');
+  recStep = 0; recIdx = 0; clockLeft = 60 * 3600 + 30 * 60; /* aware at 09:30, it is now 21:00 */
+  sc('flow', 'phish');
+  show(`
+    ${Lab.badge('Level 6 · recover', 'clock')}
+    <h2>Monday, 21:00. The office is dark. <em>You are still here.</em></h2>
+    <p class="muted">The attack is contained, but <b>contained is not finished</b>. Tonight we make sure the attacker left nothing behind, the paperwork is right, and tomorrow starts like a normal Tuesday. Flip the switch to begin the cleanup shift.</p>
+    <div class="panel clock-panel">
+      <div>
+        <div class="stack-lbl">GDPR notification clock</div>
+        <div class="countdown" id="cd">${fmtClock(clockLeft)}</div>
+        <div class="small">72 hours from the moment you became aware (today, 09:30)</div>
+      </div>
+      <div id="cdState">${sev('warn', 'running')}</div>
+    </div>
+    <div class="switch-zone">
+      <button class="big-switch" id="bigSwitch" onclick="L.flip()" aria-label="Begin recovery"><div class="knob" id="knob">ALERT</div></button>
+      <div class="dns-line" id="recLine">The tenant is still in alert mode. Flip it when you are ready to close this out.</div>
+    </div>
+    <div id="recZone" style="max-width:700px;margin:20px auto 0"></div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="L.goto(7)">${icon('arrow-right')}Incident closed. One last morning</button></div>
+  `);
+  every(() => {
+    const cd = $('#cd'); if (!cd || !cd.isConnected) { clearTimers(); return; }
+    if (cd.classList.contains('ok')) return;
+    clockLeft = Math.max(0, clockLeft - 1);
+    cd.textContent = fmtClock(clockLeft);
+  }, 1000);
+}
+function flip(){
+  if (recStep > 0) return;
+  recStep = 1;
+  const sw = $('#bigSwitch'); if (sw) sw.classList.add('on');
+  const k = $('#knob'); if (k) k.textContent = 'SECURE';
+  mood('night');
+  sc('clean', true);
+  addScore(20, innerWidth / 2, innerHeight / 2);
+  const rl = $('#recLine'); if (rl) rl.textContent = 'Watch the background: the shield holds, and clean traffic flows again. Now the checklist.';
+  renderRec(0);
+}
+function renderRec(i){
+  recIdx = i;
+  const s = recSteps[i];
+  const doneList = recSteps.slice(0, i).map(x => `<div class="rec-done">${icon('check')}${icon(x.ic)}${esc(x.t)}</div>`).join('');
+  Lab.patch('#recZone', `
+    ${doneList}
+    <div class="say" data-who="step ${i + 1} / ${recSteps.length}" style="margin-top:${i > 0 ? '16px' : '4px'};max-width:none">
+      <b style="font-size:16px">${icon(s.ic)} ${esc(s.t)}</b><br>
+      <span style="font-size:14.5px">${esc(s.d)}</span>
+      <div class="warnnote"><b>Pay attention:</b> ${esc(s.w)}</div>
+      ${i < recSteps.length - 1 ? `<div style="margin-top:12px"><button class="btn small blue" onclick="L.recNext(event)">${icon('arrow-right')}Next step</button></div>` : ''}
+    </div>`);
+  if (i >= 4) { /* the GDPR step is done: the clock stops */
+    const cd = $('#cd'); if (cd && !cd.classList.contains('ok')) { cd.classList.add('ok'); Lab.patch('#cdState', sev('ok', 'authority notified')); }
+  }
+  if (i === recSteps.length - 1) { const n = $('#l6next'); if (n) n.style.display = 'inline-flex'; }
+}
+function recNext(e){
+  scoreAt(5, e);
+  renderRec(recIdx + 1);
+}
+
+/* ---------------- L7 : hardening tickets + finale ---------------- */
+const tickets = [
+  { t:'"So... was this all my fault?"', who:'the boss, quietly, with coffee',
+    opts:[
+      { o:'Yes. We have prepared a small ceremony of shame', ok:false },
+      { o:'No. Anyone can be phished. Good systems assume clicks will happen and limit the damage', ok:true },
+      { o:'We will never speak of this again', ok:false }
+    ],
+    ex:'Blameless is the only culture that works. Shame teaches people to hide clicks, and a hidden click is how a bad Monday becomes a catastrophic Friday. Rudy reported his in minutes because nobody gets punished.' },
+  { t:'"How do we make a stolen password worthless?"', who:'Vlad, taking notes',
+    opts:[
+      { o:'Change all passwords every week, forever', ok:false },
+      { o:'MFA for everyone, ideally phishing-resistant, so there is no code to steal', ok:true },
+      { o:'Longer passwords. Much, much longer', ok:false }
+    ],
+    ex:'Multi-factor authentication is the single biggest upgrade: a stolen password alone stops working. Prefer app-based or passkey methods over SMS, and remember today\'s lesson: attackers who get in will try to enrol their own MFA.' },
+  { t:'"Can we just block sign-ins from strange places?"', who:'Vlad, on a roll',
+    opts:[
+      { o:'Yes: conditional access. Rules like "only our countries, only healthy devices, MFA for anything unusual"', ok:true },
+      { o:'Ban the internet outside office hours', ok:false },
+      { o:'No, sign-ins cannot be controlled', ok:false }
+    ],
+    ex:'Conditional access is the bouncer at the door: the 09:11 foreign sign-in would have been challenged or blocked automatically, before you even finished your coffee.' },
+  { t:'"How will I recognise the next one?"', who:'Mia, notebook ready',
+    opts:[
+      { o:'Read this 40-page security PDF; there is a quiz on Friday', ok:false },
+      { o:'Short, regular practice, plus one big visible Report button in the mail app', ok:true },
+      { o:'Forward everything suspicious to the boss', ok:false }
+    ],
+    ex:'Five minutes of practice monthly beats a yearly lecture. And the report button matters more than the training: you do not need everyone to spot every phish; you need one person to report it fast.' },
+  { t:'"What if next time they encrypt everything and ask for money?"', who:'Anna, asking the scary one',
+    opts:[
+      { o:'Backups: tested ones, with a copy the attacker cannot reach, and a restore drill on the calendar', ok:true },
+      { o:'We would pay quickly and hope they are honest hackers', ok:false },
+      { o:'That only happens to big companies', ok:false }
+    ],
+    ex:'Ransomware\'s only true antidote is a backup that works and cannot be deleted by the same stolen account. "Tested" is the key word: an untested backup is a wish, not a plan.' },
+  { t:'"Which expensive security product should we buy now?"', who:'the boss, wallet half-open',
+    opts:[
+      { o:'All of them. If it blinks, buy it', ok:false },
+      { o:'First tune what we already own: alerts on, logs kept, MFA enforced. Then talk about gaps', ok:true },
+      { o:'None, we are clearly experts now', ok:false }
+    ],
+    ex:'Most companies already pay for security features nobody switched on. Today\'s entire incident was visible in tools PixelSoft already had; the difference was someone finally looking.' },
+  { t:'"How do we know it is actually over?"', who:'Vlad, still suspicious (good)',
+    opts:[
+      { o:'It feels over. The mood is good', ok:false },
+      { o:'Keep watching: sign-in logs and alerts get a daily glance for the next few weeks', ok:true },
+      { o:'We will know when something breaks', ok:false }
+    ],
+    ex:'Attackers sometimes wait for the dust to settle and try their leftover access. Elevated watchfulness for a few weeks is how you catch the encore before it starts.' },
+  { t:'Last one: what do we write down?', who:'you, closing the laptop',
+    opts:[
+      { o:'Nothing; it is all seared into our memories forever', ok:false },
+      { o:'A one-page incident report plus a runbook: "when this happens again, do these steps in this order"', ok:true },
+      { o:'A dramatic company novel, published quarterly', ok:false }
+    ],
+    ex:'The report proves what happened (insurers and auditors will ask). The runbook is the real treasure: next time, anyone on the team can run today\'s playbook, calmly, in order, without a hero.' }
+];
+let tdone = 0, firstTry = {};
+function L7(){
+  clearTimers(); mood('');
+  tdone = 0; firstTry = {};
+  sc('flow', 'clean');
+  show(`
+    ${Lab.badge('Level 7 · harden', 'check-circle')}
+    <h2>Tuesday morning: the <em>lessons-learned</em> hour</h2>
+    ${say('your guide', `An incident you do not learn from is just damage. An incident you do learn from is a security upgrade someone else paid for. The team has questions; give them the right answers. (+10 first try, +5 after a wrong guess.)`, 'tip')}
+    <div id="tzone">
+      ${tickets.map((tk, i) => `
+        <div class="ticket" id="tk${i}">
+          <div class="tx">${icon('ticket')}<span><b>${esc(tk.t)}</b><small>${esc(tk.who)}</small></span></div>
+          <div class="choices">
+            ${tk.opts.map((op, j) => `<button class="choice" id="tk${i}o${j}" onclick="L.solve(${i},${j},event)">${esc(op.o)}</button>`).join('')}
+          </div>
+          <div class="verdict" id="tk${i}v"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+function solve(i, j, e){
+  const tk = tickets[i], card = $('#tk' + i);
+  if (!card || card.classList.contains('done')) return;
+  const btn = $(`#tk${i}o${j}`); if (!btn) return;
+  if (tk.opts[j].ok) {
+    card.classList.add('done');
+    tk.opts.forEach((op, k) => { const b = $(`#tk${i}o${k}`); if (!b) return; b.disabled = true; if (k === j) b.classList.add('good'); });
+    scoreAt(firstTry[i] === undefined ? 10 : 5, e);
+    Lab.patch('#tk' + i + 'v', say('solved', esc(tk.ex), 'tip'));
+    const v = $('#tk' + i + 'v'); if (v) v.classList.add('show');
+    tdone++;
+    if (tdone === tickets.length) Lab.finale({ into: '#finale', heading: 'Breach Day: survived.' });
+  } else {
+    firstTry[i] = false;
+    btn.classList.add('bad'); btn.disabled = true;
+  }
+}
+
+/* expose handlers used by inline onclick="" */
+window.L = { goto: n => { clearTimers(); Lab.goto(n); }, clue, decide, nextDecision, tool, ev, act, rudy, flip, recNext, solve };
+
+Lab.init({
+  title: 'Breach Day',
+  codename: 'operation: breach-day',
+  levels: [
+    { icon:'play',         name:'Start' },
+    { icon:'mail',         name:'Detect' },
+    { icon:'bolt',         name:'Triage' },
+    { icon:'search',       name:'Investigate' },
+    { icon:'shield',       name:'Contain' },
+    { icon:'inbox',        name:'Storm' },
+    { icon:'clock',        name:'Recover' },
+    { icon:'check-circle', name:'Harden' }
+  ],
+  render: [L0, L1, L2, L3, L4, L5, L6, L7],
+  maxScore: 410,
+  ranks: [
+    { min: 370, title: 'SOC Legend',      icon: 'trophy',       msg: 'Flawless response. You can run the next tabletop exercise yourself.' },
+    { min: 300, title: 'Cyber Sentinel',  icon: 'shield-check', msg: 'Very sharp. You understood exactly how an incident is fought.' },
+    { min: 220, title: 'Threat Hunter',   icon: 'search',       msg: 'Solid work. Another run and you will catch every right call.' },
+    { min: 0,   title: 'Security Rookie', icon: 'star',         msg: 'You survived Breach Day. Replay it and hunt for more points.' }
+  ],
+  summary: `Every incident, big or small, follows the same playbook:
+    <b>1)</b> spot it (slow down: read the sender, the link, the pressure) →
+    <b>2)</b> triage: lock accounts first, then talk → <b>3)</b> investigate in the logs, not from memory →
+    <b>4)</b> contain: revoke, purge, block, isolate, and keep the evidence →
+    <b>5)</b> expect the second wave → <b>6)</b> recover: hunt backdoors, mind the 72-hour GDPR clock, tell people honestly →
+    <b>7)</b> harden: MFA, conditional access, backups, practice. And the golden culture rule:
+    <b>never punish the person who reports a click</b>.`,
+  scene
+});
+})();
+</script>
+</body>
+</html>

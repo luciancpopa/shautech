@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<!-- © 2026 shautech. All rights reserved. shautech labs — interactive workshop simulators. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LAB TITLE — shautech labs</title>
+<meta name="description" content="ONE-SENTENCE DESCRIPTION OF THE LAB.">
+<meta name="theme-color" content="#0A0B0D">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.shautech.com/labs/SLUG.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="shautech labs">
+<meta property="og:title" content="LAB TITLE — shautech labs">
+<meta property="og:description" content="ONE-SENTENCE DESCRIPTION OF THE LAB.">
+<meta property="og:url" content="https://www.shautech.com/labs/SLUG.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='34' fill='%230A0B0D'/%3E%3Crect x='30' y='30' width='120' height='120' rx='26' fill='none' stroke='%234D9FFF' stroke-width='10'/%3E%3Ctext x='90' y='122' font-family='ui-monospace,monospace' font-size='98' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="../assets/css/labs.css">
+<style>
+  /* lab-specific styles only (keep short; shared components live in labs.css) */
+</style>
+</head>
+<body>
+
+<canvas id="labbg" aria-hidden="true"></canvas>
+
+<header class="topbar" id="topbar">
+  <a class="logo" href="../index.html" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span><span class="logo__lab">/ labs</span></a>
+  <span class="sim-name" id="simName"></span>
+  <nav class="lvlmap" id="lvlmap" aria-label="Levels"></nav>
+  <div class="hud">
+    <div class="pill" id="scorePill" title="Points"><b id="score">0</b></div>
+    <a class="exit" href="../labs/index.html" title="All labs"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>all labs</span></a>
+  </div>
+</header>
+
+<main class="stage" id="stage"><div class="screen" id="screen" aria-live="polite"></div></main>
+
+<div class="nojs" id="nojs"><div class="box"><p class="badge">shautech labs</p><h2>This simulator needs JavaScript.</h2><p class="muted">It runs entirely in your browser, nothing is sent anywhere. Enable JavaScript, or <a href="../labs/index.html" style="color:var(--accent2)">go back to all labs</a>.</p></div></div>
+
+<script src="../assets/js/lab-engine.js"></script>
+<script>
+/* © 2026 shautech. LAB TITLE — game logic. */
+(function(){
+'use strict';
+const { icon, say, btn, avatar, sev, scoreAt, addScore, show, goto, toast, mood, util } = Lab;
+const { esc, pick, shuffle, clamp } = util;
+
+/* ---------------- ambient scene ---------------- */
+const scene = {
+  state: { level: 0, mood: '' },
+  init(s, W, H) { /* precompute geometry */ },
+  draw(ctx, s, W, H, t, dt) { /* draw one frame; keep alpha low (≤ .35) so UI stays readable */ }
+};
+
+/* ---------------- levels ---------------- */
+function L0(){
+  show(`
+    ${Lab.badge('Level 0 · briefing','play')}
+    <h1>Headline for the <em>mission</em>.</h1>
+    ${say('the boss', 'Situation copy…')}
+    ${say('your guide', 'Plain-English explanation…', 'tip')}
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="L.goto(1)">${icon('arrow-right')}Accept the mission</button>
+  `);
+}
+function L1(){ show(`…`); }
+
+/* expose handlers used by inline onclick="" */
+window.L = { goto: Lab.goto };
+
+Lab.init({
+  title: 'LAB TITLE',
+  codename: 'operation: codename',
+  levels: [
+    { icon:'play', name:'Start' },
+    { icon:'search', name:'Discovery' }
+    /* … one entry per level, same length as render */
+  ],
+  render: [L0, L1],
+  maxScore: 100,
+  ranks: [
+    { min: 90, title: 'Top rank', icon: 'trophy', msg: '…' },
+    { min: 60, title: 'Mid rank', icon: 'medal', msg: '…' },
+    { min: 0,  title: 'Rookie',   icon: 'star',   msg: '…' }
+  ],
+  summary: 'The one-paragraph “remember” box shown at the end.',
+  scene
+});
+})();
+</script>
+</body>
+</html>

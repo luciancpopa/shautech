@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<!-- © 2026 shautech. All rights reserved. shautech labs — interactive workshop simulators. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Operation Moving Clouds — shautech labs</title>
+<meta name="description" content="An interactive tenant-to-tenant migration simulator: discover, plan, prepare, pilot, migrate, cut over and validate a cloud move, level by level.">
+<meta name="theme-color" content="#0A0B0D">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.shautech.com/labs/migration.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="shautech labs">
+<meta property="og:title" content="Operation Moving Clouds — shautech labs">
+<meta property="og:description" content="An interactive tenant-to-tenant migration simulator: discover, plan, prepare, pilot, migrate, cut over and validate a cloud move, level by level.">
+<meta property="og:url" content="https://www.shautech.com/labs/migration.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='34' fill='%230A0B0D'/%3E%3Crect x='30' y='30' width='120' height='120' rx='26' fill='none' stroke='%234D9FFF' stroke-width='10'/%3E%3Ctext x='90' y='122' font-family='ui-monospace,monospace' font-size='98' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="../assets/css/labs.css">
+<style>
+  /* lab-specific styles only (shared components live in labs.css) */
+  button.slot{background:transparent}
+  .citem .box .ic{width:12px;height:12px;color:inherit;stroke-width:3}
+  .q{margin-top:18px;font-size:19px;line-height:1.3}
+  .cut-done{font-family:var(--mono);font-size:12px;color:var(--mint);margin-bottom:6px;display:flex;gap:8px;align-items:center}
+  .cut-done .ic{flex:none}
+  .step-title{font-size:16px;font-weight:600;display:flex;gap:9px;align-items:center;margin-bottom:6px}
+  .step-title .ic{color:var(--accent2);flex:none;width:1.3em;height:1.3em}
+  .step-body{font-size:14.5px;color:var(--ink)}
+  .inv .ic{color:var(--accent2);vertical-align:-.2em;margin-right:4px}
+  .sheet .sev{margin-left:6px;vertical-align:middle}
+  .tile .nm{color:var(--ink)}
+  .hero-note{margin-top:8px}
+  .arena .house{z-index:2}
+  .arena .event-banner{width:min(92%,460px)}
+  .arena .item{animation-delay:calc(var(--d,0) * 1ms)}
+  .arena .item.wait{opacity:.25;pointer-events:none}
+  .say .btn{margin-top:10px}
+</style>
+</head>
+<body>
+
+<canvas id="labbg" aria-hidden="true"></canvas>
+
+<header class="topbar" id="topbar">
+  <a class="logo" href="../index.html" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span><span class="logo__lab">/ labs</span></a>
+  <span class="sim-name" id="simName"></span>
+  <nav class="lvlmap" id="lvlmap" aria-label="Levels"></nav>
+  <div class="hud">
+    <div class="pill" id="scorePill" title="Points"><b id="score">0</b></div>
+    <a class="exit" href="index.html" title="All labs"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>all labs</span></a>
+  </div>
+</header>
+
+<main class="stage" id="stage"><div class="screen" id="screen" aria-live="polite"></div></main>
+
+<div class="nojs" id="nojs"><div class="box"><p class="badge">shautech labs</p><h2>This simulator needs JavaScript.</h2><p class="muted">It runs entirely in your browser, nothing is sent anywhere. Enable JavaScript, or <a href="index.html" style="color:var(--accent2)">go back to all labs</a>.</p></div></div>
+
+<script src="../assets/js/lab-engine.js"></script>
+<script>
+/* © 2026 shautech. Operation Moving Clouds — game logic. */
+(function(){
+'use strict';
+const { icon, say, btn, avatar, sev, scoreAt, addScore, show, goto, toast, mood, util } = Lab;
+const { esc, pick, shuffle, clamp } = util;
+const $ = id => document.getElementById(id);
+
+/* ---------------- timers: every level clears what the previous one left behind ---------------- */
+let timers = [];
+const later = (fn, ms) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
+const every = (fn, ms) => { const id = setInterval(fn, ms); timers.push(id); return id; };
+function clearTimers(){ timers.forEach(id => { clearTimeout(id); clearInterval(id); }); timers = []; }
+
+/* what travels the wire in the background — set from the game as the player touches things */
+function flow(k){ if (Lab.scene) Lab.scene.set('flow', k); }
+
+/* ---------------- ambient scene: two tenant racks, dashed lanes, packets left -> right ---------------- */
+const KINDS = {
+  dot: ['dot'],
+  mail: ['mail'],
+  files: ['file'],
+  chat: ['dot', 'mail'],
+  users: ['user'],
+  sites: ['file', 'dot'],
+  calendar: ['file'],
+  license: ['key'],
+  mix: ['mail', 'file', 'user', 'key', 'dot']
+};
+const scene = {
+  state: { level: 0, mood: '', flow: 'dot', lanes: [], pkts: [], pulses: [], g: null },
+  init(s, W, H) {
+    const D = Lab.draw;
+    const rw = W < 600 ? 34 : 56, rh = Math.min(H * .5, 360), ry = (H - rh) / 2 + 34;
+    const g = { rw, rh, ry, x0: 12, x1: W - 12 - rw, ax: 12 + rw + 2, bx: W - 12 - rw - 2 };
+    s.g = g; s.lanes = [];
+    const LANES = 6;
+    for (let i = 0; i < LANES; i++) {
+      const ya = g.ry + g.rh * (0.08 + 0.84 * i / (LANES - 1));
+      const yb = g.ry + g.rh * (0.08 + 0.84 * Math.random());
+      const p0 = [g.ax, ya], p3 = [g.bx, yb];
+      const p1 = [W * (0.30 + Math.random() * 0.08), ya + (Math.random() * 2 - 1) * H * 0.18];
+      const p2 = [W * (0.62 + Math.random() * 0.08), yb + (Math.random() * 2 - 1) * H * 0.18];
+      s.lanes.push(D.curve(p0, p1, p2, p3, 120));
+    }
+    const n = clamp(Math.round(W / 34), 16, 50);
+    s.pkts = Array.from({ length: n }, () => ({
+      l: Math.floor(Math.random() * LANES), t: Math.random(), v: 0.04 + Math.random() * 0.07,
+      s: 3 + Math.random() * 2.2, k: pick(KINDS[s.flow] || KINDS.dot), alt: Math.random() < 0.16
+    }));
+    s.pulses = [];
+  },
+  onChange(s, k, v) {
+    if (k === 'flow' && KINDS[v]) s.pkts.forEach(p => { p.k = pick(KINDS[v]); });
+  },
+  draw(ctx, s, W, H, t, dt) {
+    const D = Lab.draw, C = Lab.colors, g = s.g; if (!g) return;
+    const night = s.level === 6 || s.mood === 'night';
+    const calm = s.mood === 'calm' || s.level >= 8;
+    const main = night ? C.violet : calm ? C.mint : C.accent;
+    const alt = calm ? C.accent2 : C.mint;
+    // racks
+    const led = i => Lab.rgba(main, 0.25 + 0.5 * (Math.sin(t * 1.8 + i * 1.7) * 0.5 + 0.5));
+    const ledB = i => Lab.rgba(alt, 0.25 + 0.5 * (Math.sin(t * 1.8 + i * 1.7 + 3) * 0.5 + 0.5));
+    const narrow = W < 600;
+    ctx.save(); ctx.globalAlpha = narrow ? .35 : 1;
+    D.rack(ctx, g.x0, g.ry, g.rw, g.rh, { color: Lab.rgba(main, .45), fill: 'rgba(16,19,23,.6)', label: narrow ? 'SRC' : 'SOURCE', led });
+    D.rack(ctx, g.x1, g.ry, g.rw, g.rh, { color: Lab.rgba(alt, .45), fill: 'rgba(16,19,23,.6)', label: narrow ? 'DST' : 'DESTINATION', led: ledB });
+    ctx.restore();
+    // dashed lanes with a slow crawl
+    ctx.save(); ctx.lineDashOffset = -t * 9;
+    s.lanes.forEach(pts => D.path(ctx, pts, Lab.rgba(main, .14), 1, [2, 7]));
+    ctx.restore();
+    // packets
+    for (const p of s.pkts) {
+      p.t += p.v * dt;
+      if (p.t >= 1) {
+        const end = D.posOn(s.lanes[p.l], 1);
+        if (Math.random() < .5) s.pulses.push({ x: end[0], y: end[1], r: 2, a: .3, alt: p.alt });
+        p.t = 0; p.l = Math.floor(Math.random() * s.lanes.length); p.v = 0.04 + Math.random() * 0.07;
+        p.k = pick(KINDS[s.flow] || KINDS.dot); p.alt = Math.random() < 0.16;
+      }
+      const lane = s.lanes[p.l], col = p.alt ? alt : main;
+      for (let k = 4; k >= 1; k--) {
+        const q = D.posOn(lane, p.t - k * 0.012);
+        ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(p.s * .25 * (1 - k * .15), .3), 0, 7);
+        ctx.fillStyle = Lab.rgba(col, .18 * (1 - k / 5)); ctx.fill();
+      }
+      const h = D.posOn(lane, p.t);
+      D.glyph(ctx, p.k, h[0], h[1], p.s, Lab.rgba(col, .8));
+    }
+    // arrival pulses at the destination rack
+    s.pulses = s.pulses.filter(q => q.a > .01);
+    for (const q of s.pulses) {
+      q.r += 34 * dt; q.a -= .5 * dt;
+      ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 7); ctx.strokeStyle = Lab.rgba(q.alt ? alt : main, Math.max(q.a, 0)); ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+};
+
+/* ================= L0 : BRIEFING ================= */
+function L0(){
+  clearTimers(); mood('');
+  show(`
+    ${Lab.badge('Level 0 · briefing','play')}
+    <h1>You have just been handed <em>today's migration</em>.</h1>
+    ${say('the boss', `Big news: our company, <b>PixelSoft</b>, has been acquired by <b>MegaCorp</b>. We need to move <i>everything</i> — email, files, accounts, teams — from our cloud into theirs. It is called a <b>tenant-to-tenant migration</b>. You will handle it, right? Thanks, I have a meeting.`)}
+    ${say('your guide', `You do not need to be technical for this. A "tenant" is simply <b>a company's own space in the cloud</b> — think of an apartment building where the company rents one unit, holding its email, files and users. We are moving everything from building A to building B without losing anything on the way. Step by step.`, 'tip')}
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="L.goto(1)">${icon('arrow-right')}Accept the mission</button>
+  `);
+}
+
+/* ================= L1 : DISCOVERY ================= */
+const objects = [
+  { ic: 'mail',    nm: 'The email server',   flow: 'mail',  found: '48 mailboxes, some holding 15 years of messages. Yes, including the jokes from 2011.' },
+  { ic: 'folder',  nm: 'The company files',  flow: 'files', found: '820 GB of documents. Half of them are named "final_FINAL_v3_good.docx".' },
+  { ic: 'chat',    nm: 'The chat teams',     flow: 'chat',  found: '12 Teams teams, including a semi-secret one called "Coffee Break".' },
+  { ic: 'users',   nm: 'The employee list',  flow: 'users', found: '48 user accounts, plus 3 accounts of colleagues who left two years ago. Noted.' },
+  { ic: 'globe',   nm: 'The internal sites', flow: 'sites', found: '5 internal sites. One was last updated in 2019.' },
+  { ic: 'printer', nm: 'The corner printer', flow: 'dot',   found: 'Good news: the printer does not migrate to the cloud. It stays here, jamming paper in peace.' }
+];
+const collectItems = [
+  { ic: 'users',   b: 'Users and groups',       flow: 'users',   d: 'Who exists, who is actually active, who has left (goodbye, ghost accounts).' },
+  { ic: 'mail',    b: 'Mailboxes',              flow: 'mail',    d: 'Size of each mailbox, plus shared mailboxes (info@, sales@) and distribution lists.' },
+  { ic: 'folder',  b: 'OneDrive files',         flow: 'files',   d: 'How big each person\'s storage is and who shares what with whom.' },
+  { ic: 'layers',  b: 'SharePoint sites',       flow: 'sites',   d: 'Sites, document libraries and, crucially, the permissions on them.' },
+  { ic: 'chat',    b: 'Teams and channels',     flow: 'chat',    d: 'Which teams exist, who owns them, and where their files live.' },
+  { ic: 'at',      b: 'Domains and DNS records', flow: 'sites',  d: 'The company\'s email address entries in the "internet address book".' },
+  { ic: 'license', b: 'Licenses',               flow: 'license', d: 'What everyone has today versus what they will need in the new cloud.' },
+  { ic: 'plug',    b: 'Connected apps',         flow: 'dot',     d: 'Printers and scanners that send email, the CRM, website forms — anything wired to the old cloud.' }
+];
+let foundCount = 0, collectDone = 0;
+function L1(){
+  clearTimers(); mood('');
+  foundCount = 0; collectDone = 0;
+  show(`
+    ${Lab.badge('Level 1 · discovery','search')}
+    <h2>You cannot move what you do not know you have</h2>
+    ${say('your guide', `The first step of any migration is <b>the inventory</b>. We walk through the "digital office" and write down everything that exists. Click each object to discover it (+10 points each).`, 'tip')}
+    <div class="grid grid--auto">
+      ${objects.map((o, i) => `
+        <button class="tile" id="obj${i}" onclick="L.discover(${i},event)">${icon(o.ic)}<span class="nm">${esc(o.nm)}</span></button>`).join('')}
+    </div>
+    <div class="inv" id="inv">${icon('list-check')}<b>Inventory:</b> empty for now — click the objects.</div>
+    <div id="sheetZone"></div>
+    <div class="spacer"></div>
+    <button class="btn" id="l1sheetBtn" style="display:none" onclick="L.showSheet()">${icon('sheet')}Open the inventory sheet</button>
+    <button class="btn blue" id="l1next" style="display:none" onclick="L.goto(2)">${icon('arrow-right')}Inventory complete — on to the plan</button>
+  `);
+}
+function discover(i, e){
+  const el = $('obj' + i); if (!el || el.classList.contains('found')) return;
+  el.classList.add('found'); foundCount++;
+  flow(objects[i].flow);
+  scoreAt(10, e);
+  Lab.patch('#inv', `${icon('list-check')}<b>Discovered:</b> ${esc(objects[i].found)}<br><small class="small">(${foundCount}/${objects.length} objects found)</small>`);
+  if (foundCount === objects.length) {
+    Lab.patch('#inv', `${icon('list-check')}<b>All objects found.</b> Clicking around is not enough, though — a real discovery ends with a <b>written inventory</b>. Let's see what that actually looks like.`);
+    const b = $('l1sheetBtn'); if (b) b.style.display = 'inline-flex';
+  }
+}
+function showSheet(){
+  const b = $('l1sheetBtn'); if (b) b.style.display = 'none';
+  Lab.patch('#sheetZone', `
+    ${say('your guide', `This is what collected data looks like: a plain but priceless <b>spreadsheet</b>. In real life it is exported automatically with reports or scripts — nobody counts emails by hand. Notice how it already <b>predicts problems</b>: Mia's mailbox is flagged for a reason.`, 'tip')}
+    <div class="sheet">
+      <table>
+        <tr><th>Who / what</th><th>Mailbox</th><th>OneDrive</th><th>Notes</th></tr>
+        <tr><td>Anna (Accounting)</td><td>9.8 GB</td><td>4.2 GB</td><td>15 years of email, all "important"</td></tr>
+        <tr><td>Rudy (Design)</td><td>2.1 GB</td><td>410 GB</td><td>giant design files — will migrate slowly</td></tr>
+        <tr class="hot"><td>Mia (Reception)</td><td>14.6 GB ${sev('warn','flag')}</td><td>0.3 GB</td><td>huge attachments — flag for cleanup</td></tr>
+        <tr><td>Vlad (IT)</td><td>1.2 GB</td><td>12 GB</td><td>perfect first test pilot</td></tr>
+        <tr><td>…44 more people</td><td>…</td><td>…</td><td>collected the same way</td></tr>
+        <tr><td>info@ (shared mailbox)</td><td>6.4 GB</td><td>—</td><td>3 people use it — do not forget it</td></tr>
+        <tr><td>"Coffee Break" (Team)</td><td>—</td><td>2.1 GB</td><td>semi-secret but beloved — must survive</td></tr>
+      </table>
+    </div>
+    ${say('the checklist', `And here is <b>what to collect</b>, category by category. Tick each one to confirm it is on your list (+5 points each).`, 'tip')}
+    <div class="clist">
+      ${collectItems.map((c, i) => `
+        <button class="citem" id="ci${i}" onclick="L.checkItem(${i},event)">
+          <span class="box">${icon('check')}</span>
+          <span><b>${icon(c.ic)} ${esc(c.b)}</b>${esc(c.d)}</span>
+        </button>`).join('')}
+    </div>`);
+}
+function checkItem(i, e){
+  const el = $('ci' + i); if (!el || el.classList.contains('checked')) return;
+  el.classList.add('checked'); collectDone++;
+  flow(collectItems[i].flow);
+  scoreAt(5, e);
+  if (collectDone === collectItems.length) { const n = $('l1next'); if (n) n.style.display = 'inline-flex'; }
+}
+
+/* ================= L2 : PLANNING DECISIONS ================= */
+const decisions = [
+  { q: 'How do we move the data of all 48 people?',
+    opts: [
+      { t: 'Big bang', s: 'Move everything, for everyone, in a single weekend.', v: 'meh', pts: 5,
+        fb: 'It works for small companies, but if a problem shows up, it shows up for everyone at once. Brave — maybe too brave. (+5)' },
+      { t: 'In waves', s: 'Move small groups, one at a time, starting with the least demanding people.', v: 'good', pts: 10,
+        fb: 'Exactly. Waves mean that if something breaks, it breaks for 5 people, not 48 — and you learn from every wave. (+10)' },
+      { t: 'Everyone moves themselves', s: 'Send them a PDF guide and wish them luck.', v: 'bad', pts: 0,
+        fb: 'Half of them would not read the guide; the other half would "move" their files onto a USB stick. (0)' }
+    ] },
+  { q: 'When do we do the final cutover (the moment everyone switches to the new system)?',
+    opts: [
+      { t: 'Monday morning', s: 'Everyone is fresh and full of energy.', v: 'bad', pts: 0,
+        fb: 'On Monday morning everyone wants to read their email — which is being moved at that very moment. Guaranteed chaos. (0)' },
+      { t: 'Saturday night', s: 'Nobody is working, and we have the whole weekend as a safety net.', v: 'good', pts: 10,
+        fb: 'Correct. The cutover always happens when the impact is lowest — and you still have Sunday to fix surprises. (+10)' },
+      { t: 'On Christmas Day', s: 'A surprise gift for everyone.', v: 'bad', pts: 0,
+        fb: 'Technically it is quiet, but who fixes things if they break? Nobody on call knows the admin password. (0)' }
+    ] },
+  { q: 'Do we tell people in advance what is about to happen?',
+    opts: [
+      { t: 'No, keep it a surprise', s: 'On Monday they will have a new system. Ta-da.', v: 'bad', pts: 0,
+        fb: 'The "surprise" turns into 48 calls to IT before lunch. Communication is not optional. (0)' },
+      { t: 'Yes, early and clearly', s: 'Emails, a simple guide and a Q&amp;A session.', v: 'good', pts: 10,
+        fb: 'Yes. The biggest part of a successful migration is not technical — it is making sure nobody is caught off guard. (+10)' },
+      { t: 'Only the managers', s: 'Everyone else hears it from them, like a game of telephone.', v: 'meh', pts: 5,
+        fb: 'Better than nothing, but the message gets distorted on the way: "is everything getting deleted?!". Tell everyone. (+5)' }
+    ] }
+];
+const tools = [
+  { ic: 'box', t: 'A third-party migration tool', s: 'ShareGate, BitTitan MigrationWiz, Quest, AvePoint…',
+    fb: 'A great choice for most companies: friendly dashboards, progress reports, mapping wizards and a support line to call at 2 AM. It costs money, but it saves nerves — and nerves are expensive too. (+10)' },
+  { ic: 'terminal', t: 'PowerShell scripts', s: 'Free, powerful, fully under your control — if your team speaks "script".',
+    fb: 'The do-it-yourself route: free and infinitely flexible, but you write, test and babysit everything. Perfect if your team has scripting skills and time. (+10)' },
+  { ic: 'building', t: 'Microsoft\'s built-in tools', s: 'Native cross-tenant migration, no extra vendor.',
+    fb: 'The native route: Microsoft\'s own cross-tenant migration covers mailboxes and OneDrive without buying anything extra. It needs careful setup and has fewer bells and whistles. (+10)' }
+];
+let di = 0;
+function L2(){
+  clearTimers(); mood('');
+  di = 0;
+  show(`
+    ${Lab.badge('Level 2 · planning','map')}
+    <h2>The big decisions</h2>
+    ${say('your guide', `Now that we know <b>what</b> we are moving, we decide <b>how</b>. Every choice has consequences — choose carefully.`, 'tip')}
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d = decisions[di];
+  Lab.patch('#dzone', `
+    <h3 class="q">Decision ${di + 1} of ${decisions.length}: ${esc(d.q)}</h3>
+    <div class="choices">
+      ${d.opts.map((o, i) => `<button class="choice" id="ch${i}" onclick="L.pick(${i},event)"><b>${esc(o.t)}</b><small>${o.s}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none"></button>
+  `);
+}
+function pickOpt(i, e){
+  const d = decisions[di], o = d.opts[i];
+  d.opts.forEach((x, j) => { const el = $('ch' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add(o.v); });
+  if (o.pts > 0) scoreAt(o.pts, e);
+  Lab.patch('#verdict', say(o.v === 'good' ? 'good call' : 'not quite', esc(o.fb), o.v === 'good' ? 'tip' : 'warn'));
+  const v = $('verdict'); if (v) v.classList.add('show');
+  const b = $('dnext'); if (!b) return;
+  b.style.display = 'inline-flex';
+  if (di < decisions.length - 1) { b.innerHTML = icon('arrow-right') + 'Next decision'; b.onclick = () => { di++; renderDecision(); }; }
+  else { b.innerHTML = icon('arrow-right') + 'One more thing: pick your toolbox'; b.onclick = renderToolbox; }
+}
+function renderToolbox(){
+  Lab.patch('#dzone', `
+    <h3 class="q">Final call: what do we migrate <em style="font-style:normal;color:var(--accent)">with</em>?</h3>
+    ${say('your guide', `Good news: there is no wrong answer here. All three options do the same job — <b>get the truck from cloud A to cloud B</b>. You choose based on budget, company size and your team's skills. Pick one.`, 'tip')}
+    <div class="choices">
+      ${tools.map((o, i) => `<button class="choice" id="tl${i}" onclick="L.pickTool(${i},event)"><b>${icon(o.ic)} ${esc(o.t)}</b><small>${esc(o.s)}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="tverdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="tnext" style="display:none" onclick="L.goto(3)">${icon('arrow-right')}Toolbox packed — to preparation</button>
+  `);
+}
+function pickTool(i, e){
+  tools.forEach((x, j) => { const el = $('tl' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add('good'); });
+  scoreAt(10, e);
+  Lab.patch('#tverdict', say('good call', `${esc(tools[i].fb)}<br><br><small class="muted" style="display:block">For this mission we will picture a migration tool with a dashboard — it is easier to visualise. In real life, mixing is normal: a tool for the heavy lifting plus a few scripts for the odd corners.</small>`, 'tip'));
+  const v = $('tverdict'); if (v) v.classList.add('show');
+  const n = $('tnext'); if (n) n.style.display = 'inline-flex';
+}
+
+/* ================= L3 : PREPARATION / LICENSES ================= */
+const crew = [
+  { ini: 'AN', hue: 200, name: 'Anna from Accounting',  small: 'Has 15 years of email. All of it "important".' },
+  { ini: 'RU', hue: 280, name: 'Rudy from Design',      small: '820 GB of files? Half of it is his.' },
+  { ini: 'MI', hue: 30,  name: 'Mia at Reception',      small: 'Still calls it "the electronic mail". Respect.' },
+  { ini: 'VL', hue: 150, name: 'Vlad, your IT colleague', small: 'Will test first. He "volunteered".' }
+];
+let licSel = null, licDone = 0;
+function L3(){
+  clearTimers(); mood('');
+  licSel = null; licDone = 0;
+  show(`
+    ${Lab.badge('Level 3 · preparation','license')}
+    <h2>Making room in the new building</h2>
+    ${say('your guide', `Before you move someone into a new apartment, the apartment has to exist and come with a key. In the cloud, the "key" is a <b>license</b>. Create the accounts, then give each colleague a license: click a license, then click their slot (+10 points per person).`, 'tip')}
+    <div id="acctZone">
+      <button class="btn" id="mkBtn" onclick="L.makeAccounts()">${icon('user-plus')}Create the accounts in the new tenant</button>
+      <div class="log" id="acctLog" style="display:none"></div>
+    </div>
+    <div class="prep-grid" id="prepGrid" style="display:none">
+      <div>
+        ${crew.map((c, i) => `
+          <div class="userrow" id="ur${i}">
+            ${avatar(c.ini, c.hue)}
+            <span class="who"><b>${esc(c.name)}</b><small>${esc(c.small)}</small></span>
+            <button class="slot" id="ls${i}" onclick="L.assignLic(${i},event)" aria-label="License slot for ${esc(c.name)}">no license</button>
+          </div>`).join('')}
+      </div>
+      <div class="stack">
+        <div class="stack-lbl">Available licenses</div>
+        ${crew.map((c, i) => `<button class="chip-btn" id="lic${i}" onclick="L.selLic(${i})">${icon('license')}M365 license</button>`).join('')}
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="L.goto(4)">${icon('arrow-right')}Everyone has a key — to the pilot</button>
+  `);
+}
+async function makeAccounts(){
+  const b = $('mkBtn'), log = $('acctLog'); if (!b || !log) return;
+  b.disabled = true; log.style.display = 'block';
+  await Lab.typeLines(log, [
+    ['p', '> creating account: anna@megacorp.com … ok'],
+    ['p', '> creating account: rudy@megacorp.com … ok'],
+    ['p', '> creating account: mia@megacorp.com … ok'],
+    ['p', '> creating account: vlad@megacorp.com … ok'],
+    ['ok', '> done. 4 new accounts are waiting.'],
+    ['warn', '> note: passwords do NOT migrate — everyone gets a new one.']
+  ], 6);
+  if (!log.isConnected) return;
+  flow('users');
+  const g = $('prepGrid'); if (g) g.style.display = 'grid';
+  addScore(10);
+}
+function selLic(i){
+  document.querySelectorAll('.chip-btn').forEach(l => l.classList.remove('sel'));
+  const el = $('lic' + i); if (!el || el.classList.contains('used')) return;
+  el.classList.add('sel'); licSel = i;
+}
+function assignLic(u, e){
+  if (licSel === null) { toast('Pick a license first, then click the slot.', 'license'); return; }
+  const slot = $('ls' + u); if (!slot || slot.classList.contains('filled')) return;
+  slot.classList.add('filled'); slot.innerHTML = icon('check') + ' active';
+  const lic = $('lic' + licSel); if (lic) { lic.classList.remove('sel'); lic.classList.add('used'); }
+  licSel = null; licDone++;
+  flow('license');
+  scoreAt(10, e);
+  if (licDone === crew.length) { const n = $('l3next'); if (n) n.style.display = 'inline-flex'; }
+}
+
+/* ================= L4 : PILOT ================= */
+let pilotState = [0, 0, 0]; // 0 waiting, 1 done, 2 failed
+let miaFixed = false;
+function L4(){
+  clearTimers(); mood('');
+  pilotState = [0, 0, 0]; miaFixed = false;
+  const pilots = [crew[3], crew[2], crew[0]];
+  show(`
+    ${Lab.badge('Level 4 · the pilot','flask')}
+    <h2>The dress rehearsal</h2>
+    ${say('your guide', `We never move the whole company on the first try. We pick a few volunteers and migrate them as a test. If something goes wrong, we find out now — not on Saturday night. Click "Migrate" for each pilot.`, 'tip')}
+    ${pilots.map((p, i) => `
+      <div class="userrow" id="pr${i}">
+        ${avatar(p.ini, p.hue)}
+        <span class="who"><b>${esc(p.name)}</b><small>${esc(p.small)}</small></span>
+        <div class="mini-bar"><i id="pb${i}"></i></div>
+        <span class="pstatus" id="ps${i}">waiting…</span>
+        <button class="btn small blue" id="pgo${i}" onclick="L.pilotGo(${i},event)">${icon('play')}Migrate</button>
+      </div>`).join('')}
+    <div id="pilotVerdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="L.goto(5)">${icon('arrow-right')}Pilot successful — start the big migration</button>
+  `);
+}
+function pilotGo(i, e){
+  flow('mix');
+  const b = $('pgo' + i), bar = $('pb' + i), st = $('ps' + i); if (!b || !bar || !st) return;
+  b.disabled = true;
+  st.innerHTML = icon('spinner') + ' migrating…'; st.className = 'pstatus';
+  let w = 0;
+  const failAt = (i === 1) ? 62 : 101; // Mia fails the first time
+  const step = Lab.reduced ? 60 : 160;
+  const t = every(() => {
+    if (!bar.isConnected) { clearInterval(t); return; }
+    w += Math.random() * 14 + 6;
+    if (i === 1 && !miaFixed && w >= failAt) {
+      clearInterval(t); bar.style.width = '62%'; bar.className = 'err';
+      st.innerHTML = icon('alert') + ' error'; st.className = 'pstatus err';
+      pilotState[1] = 2;
+      const row = $('pr1'); if (row) row.classList.add('bad');
+      Lab.patch('#pilotVerdict', say('alert', `Mia's migration got stuck. The reason: her mailbox has <b>huge attachments</b> — 14 GB of animated greeting cards received since 2009.<br><button class="btn small" onclick="L.fixMia(event)">${icon('wrench')}Archive the attachments and retry</button>`, 'alert'));
+      return;
+    }
+    if (w >= 100) {
+      clearInterval(t); bar.style.width = '100%'; bar.className = 'ok';
+      st.innerHTML = icon('check') + ' migrated'; st.className = 'pstatus ok';
+      const row = $('pr' + i); if (row) { row.classList.remove('bad'); row.classList.add('done'); }
+      pilotState[i] = 1; scoreAt(10, e);
+      if (pilotState.every(s => s === 1)) { const n = $('l4next'); if (n) n.style.display = 'inline-flex'; }
+    } else bar.style.width = w + '%';
+  }, step);
+}
+function fixMia(e){
+  miaFixed = true;
+  scoreAt(15, e);
+  Lab.patch('#pilotVerdict', say('lesson', `This is exactly why the pilot exists. We discovered the problem on <b>one</b> person, not 48. Now we know to check mailbox sizes <i>before</i> the big wave. (+15)`, 'tip'));
+  const bar = $('pb1'), b = $('pgo1'), st = $('ps1'), row = $('pr1');
+  if (bar) { bar.className = ''; bar.style.width = '0%'; }
+  if (row) row.classList.remove('bad');
+  pilotState[1] = 0;
+  if (b) b.disabled = false;
+  if (st) { st.textContent = 'ready to retry'; st.className = 'pstatus warn'; }
+}
+
+/* ================= L5 : THE BIG MIGRATION (arcade) ================= */
+const ITEM_TYPES = [
+  { ic: 'mail',     flow: 'mail' },
+  { ic: 'folder',   flow: 'files' },
+  { ic: 'chat',     flow: 'chat' },
+  { ic: 'calendar', flow: 'calendar' },
+  { ic: 'sheet',    flow: 'files' }
+];
+const TARGET = 14;
+let migrated = 0, eventFired = false, arcadeLive = false;
+function L5(){
+  clearTimers(); mood('');
+  migrated = 0; eventFired = false; arcadeLive = true;
+  show(`
+    ${Lab.badge('Level 5 · the big migration','truck')}
+    <h2>The waves begin</h2>
+    ${say('your guide', `Now we move everyone's data, wave after wave. Click the objects as they appear to send them to the new cloud (+5 each). Watch out: the cloud has speed limits.`, 'tip')}
+    <div class="arena" id="arena">
+      <div class="house house--l">${icon('cloud')}PixelSoft<small>old tenant</small></div>
+      <div class="house house--r">${icon('cloud-check')}MegaCorp<small>new tenant</small></div>
+      <div class="event-banner" id="eventBanner" role="status"></div>
+      <div class="bigbar"><i id="bigFill"></i><span id="bigLabel">0%</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="L.goto(6)">${icon('arrow-right')}The data has arrived — to the cutover</button>
+  `);
+  every(spawnItem, Lab.reduced ? 1200 : 900);
+  spawnItem();
+}
+function spawnItem(){
+  const arena = $('arena');
+  if (!arena) { clearTimers(); return; }
+  if (!arcadeLive) return;
+  if (arena.querySelectorAll('.item:not(.fly)').length >= 4) return;
+  const type = pick(ITEM_TYPES);
+  const it = document.createElement('button');
+  it.className = 'item'; it.setAttribute('aria-label', 'Send ' + type.ic + ' to the new cloud');
+  it.innerHTML = icon(type.ic);
+  const aw = arena.clientWidth || 600, ah = arena.clientHeight || 340;
+  const narrow = aw < 520, pad = narrow ? 100 : 150, sz = narrow ? 42 : 48;
+  const x = pad + Math.random() * Math.max(40, aw - pad * 2 - sz);
+  const y = (narrow ? 92 : 100) + Math.random() * Math.max(20, ah - (narrow ? 92 : 100) - sz - 44);
+  it.style.left = Math.round(x) + 'px'; it.style.top = Math.round(y) + 'px';
+  it.style.setProperty('--d', Math.round(Math.random() * 1500));
+  it.onclick = e => {
+    if (it.classList.contains('fly') || !arcadeLive) return;
+    it.classList.add('fly');
+    flow(type.flow);
+    scoreAt(5, e);
+    migrated++;
+    updateBigBar();
+    later(() => it.remove(), 750);
+    if (!eventFired && migrated === Math.floor(TARGET / 2)) throttleEvent();
+    if (migrated >= TARGET) endArcade();
+  };
+  arena.appendChild(it);
+}
+function updateBigBar(){
+  const p = Math.min(100, Math.round(migrated / TARGET * 100));
+  const f = $('bigFill'), l = $('bigLabel');
+  if (f) f.style.width = p + '%';
+  if (l) l.textContent = p + '%';
+}
+function throttleEvent(){
+  eventFired = true; arcadeLive = false;
+  document.querySelectorAll('#arena .item:not(.fly)').forEach(i => i.classList.add('wait'));
+  const b = $('eventBanner'); if (!b) return;
+  b.classList.remove('ok'); b.classList.add('show');
+  b.innerHTML = `${icon('hourglass')} Slowdown. The cloud says: "too fast, too much."
+    <small>This is normal — it is called <b>throttling</b>. You do not fix it with anger; you fix it with patience.</small>
+    <button class="btn small" onclick="L.coffee(event)">${icon('coffee')}Take a coffee break</button>`;
+}
+function coffee(e){
+  scoreAt(10, e);
+  const b = $('eventBanner'); if (!b) return;
+  b.classList.add('ok');
+  b.innerHTML = `${icon('coffee')} Speed is back. The migration continues.`;
+  later(() => {
+    b.classList.remove('show', 'ok'); arcadeLive = true;
+    document.querySelectorAll('#arena .item').forEach(i => i.classList.remove('wait'));
+  }, Lab.reduced ? 600 : 1300);
+}
+function endArcade(){
+  arcadeLive = false;
+  document.querySelectorAll('#arena .item').forEach(i => i.remove());
+  const l = $('bigLabel'); if (l) l.textContent = '100% — complete';
+  const n = $('l5next'); if (n) n.style.display = 'inline-flex';
+  toast('All waves delivered.', 'cloud-check');
+}
+
+/* ================= L6 : CUTOVER ================= */
+let dnsStep = 0, cutIdx = 0;
+const cutSteps = [
+  { ic: 'lock', t: 'Freeze the old cloud', d: 'We switch the old tenant to read-only mode. Nobody can change anything while we move — like taking a photo of the apartment before handing over the keys.',
+    w: 'Announce the freeze in advance. A cloud that suddenly refuses to save files creates instant panic.' },
+  { ic: 'refresh', t: 'Run the final sync', d: 'One last quick copy catches everything from the past few hours — the email from 5 PM, the file saved at the last minute. Now both clouds are identical.',
+    w: 'Compare the numbers before moving on: the same count of emails, files and folders on both sides. Trust, but verify.' },
+  { ic: 'plug', t: 'Detach the domain from the old cloud', d: 'The address @pixelsoft.com can only live in one tenant at a time. We officially remove it from the old cloud. For a few minutes it belongs to no one — this is the most delicate moment of the whole night.',
+    w: 'Every user must first get a temporary address in the old tenant, or the removal will be blocked. Check aliases, shared mailboxes and groups too — they all hold on to the domain.' },
+  { ic: 'home', t: 'Attach the domain to the new cloud', d: 'We add @pixelsoft.com to MegaCorp\'s tenant and prove we own it. From now on, this is its official home.',
+    w: 'Prepare the ownership proof (a small verification record) before tonight — you do not want to be reading documentation at 1 AM.' },
+  { ic: 'globe', t: 'Update the internet\'s address book (DNS)', d: 'We update the DNS records — think of them as the internet\'s address book. Every mail server in the world learns: "deliver pixelsoft.com mail to the new cloud". Spreading this news takes minutes, sometimes hours. That is why we started at 11 PM.',
+    w: 'Two classics not to forget: lower the TTL (the "expiry date" of the old address entry) a few days earlier so the news spreads fast, and update SPF, DKIM and DMARC — the records that prove your emails are not spam. Miss those and Monday\'s emails land in junk folders.' },
+  { ic: 'inbox', t: 'Watch the first email arrive', d: 'A test message lands safely in the new system. Login works, mail flows, files open. The switch did its job.',
+    w: 'Test more than one thing: internal mail, external mail (send to a personal address), a phone, and a shared mailbox. Five minutes of testing now saves fifty tickets on Monday.' },
+  { ic: 'sparkles', t: 'Celebrate (quietly, it is midnight)', d: 'Cutover complete. On Monday, everyone opens their laptop in the new cloud — and everything is right where it should be.',
+    w: 'Do not delete the old tenant tonight — or next week. Keep it read-only for a while as a safety net. You never know what someone will miss in two weeks.' }
+];
+function L6(){
+  clearTimers(); mood('night');
+  dnsStep = 0; cutIdx = 0;
+  show(`
+    ${Lab.badge('Level 6 · the cutover','switch')}
+    <h2>Saturday, 11 PM. The city sleeps. <em>You don't.</em></h2>
+    <p class="muted">The big moment has arrived: <b>the cutover</b>. Until now the data has been quietly copying over, but the company's official email address still lives in the old cloud. Tonight we move it officially. From this moment on, everyone works in the new system.</p>
+    <div class="switch-zone">
+      <button class="big-switch" id="bigSwitch" onclick="L.flip()" aria-label="Switch the domain to the new tenant">
+        <div class="knob" id="knob">OLD</div>
+      </button>
+      <div class="dns-line" id="dnsLine">Pull the switch when you are ready. Take a deep breath.</div>
+    </div>
+    <div id="cutZone" style="max-width:680px;margin:20px auto 0"></div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="L.goto(7)">${icon('arrow-right')}It worked — to the final check</button></div>
+  `);
+}
+function flip(){
+  if (dnsStep > 0) return;
+  dnsStep = 1;
+  const sw = $('bigSwitch'); if (sw) { sw.classList.add('on'); sw.setAttribute('aria-pressed', 'true'); }
+  const k = $('knob'); if (k) k.textContent = 'NEW';
+  flow('sites');
+  addScore(20, innerWidth / 2, innerHeight / 2);
+  const d = $('dnsLine'); if (d) d.textContent = 'Switch flipped. Now walk through what actually happens, step by step.';
+  renderCut(0);
+}
+function renderCut(i){
+  cutIdx = i;
+  const s = cutSteps[i];
+  const doneList = cutSteps.slice(0, i).map(x => `<div class="cut-done">${icon('check')}${icon(x.ic)}${esc(x.t)}</div>`).join('');
+  Lab.patch('#cutZone', `
+    ${doneList}
+    <div class="say" data-who="step ${i + 1} / ${cutSteps.length}" style="margin-top:${i > 0 ? '16px' : '4px'};max-width:none">
+      <div class="step-title">${icon(s.ic)}${esc(s.t)}</div>
+      <div class="step-body">${esc(s.d)}</div>
+      <div class="warnnote"><b>${icon('alert')} Pay attention:</b> ${esc(s.w)}</div>
+      ${i < cutSteps.length - 1 ? `<div style="margin-top:12px"><button class="btn small blue" onclick="L.cutNext(event)">${icon('arrow-right')}Next step</button></div>` : ''}
+    </div>`);
+  if (i === cutSteps.length - 1) { const n = $('l6next'); if (n) n.style.display = 'inline-flex'; }
+}
+function cutNext(e){
+  scoreAt(5, e);
+  renderCut(cutIdx + 1);
+}
+
+/* ================= L7 : VALIDATION (tickets) ================= */
+const tickets = [
+  { t: 'First things first: did all the data actually arrive?', who: 'you, being professional',
+    opts: [
+      { o: 'Trust the migration tool — it said "Success"', ok: false },
+      { o: 'Compare item counts on both sides and spot-check a few mailboxes and folders', ok: true },
+      { o: 'Ask all 48 people to count their own emails', ok: false }
+    ],
+    ex: '"Success" in a tool means "I finished", not "nothing is missing". Compare the numbers from your inventory sheet with the destination, and open a few mailboxes yourself. Trust, but verify.' },
+  { t: '"Outlook keeps asking for my password over and over."', who: 'Anna, slightly stressed',
+    opts: [
+      { o: 'Tell her to type it more carefully', ok: false },
+      { o: 'Her Outlook profile still points to the old cloud — create a fresh profile and sign in with the new account', ok: true },
+      { o: 'Buy her a new laptop', ok: false }
+    ],
+    ex: 'The number-one post-migration classic. The old Outlook profile still remembers the old cloud. A fresh profile connected to the new account fixes it in minutes.' },
+  { t: '"My phone stopped receiving work email."', who: 'Rudy, from the coffee machine',
+    opts: [
+      { o: 'Phones do not do email anymore; it is a new policy', ok: false },
+      { o: 'Restart the phone ten times', ok: false },
+      { o: 'Remove the old mail account on the phone and add the new one', ok: true }
+    ],
+    ex: 'Same story as Outlook: the phone is still knocking on the old cloud\'s door. Delete the old account, add the new one, and mail flows again. Put this in the user guide before Monday.' },
+  { t: '"The file link I sent a customer last week is dead."', who: 'Mia, apologetic',
+    opts: [
+      { o: 'Old sharing links point to the old cloud — reshare the file from its new home', ok: true },
+      { o: 'The customer probably deleted it', ok: false },
+      { o: 'Links naturally expire every month; this is normal', ok: false }
+    ],
+    ex: 'Sharing links contain the old cloud\'s address inside them, so they do not survive the move. The file is safe in the new cloud; it just needs to be shared again from there.' },
+  { t: '"A customer says our emails land in their spam folder."', who: 'the boss, not amused',
+    opts: [
+      { o: 'Tell every customer to check spam from now on', ok: false },
+      { o: 'Check SPF, DKIM and DMARC — the records that prove your mail is legitimate', ok: true },
+      { o: 'Send every email twice; one will get through', ok: false }
+    ],
+    ex: 'When a domain moves, the "ID papers" of your email (SPF, DKIM and DMARC records) must be updated for the new cloud. Miss one and the world\'s spam filters get suspicious. Fix the records and reputation recovers.' },
+  { t: '"My OneDrive folder on the desktop is empty. Everything is gone."', who: 'Vlad, testing your calm',
+    opts: [
+      { o: 'The files are gone forever', ok: false },
+      { o: 'The sync app still watches the old cloud — sign it into the new account and let it re-sync', ok: true },
+      { o: 'Look behind the monitor', ok: false }
+    ],
+    ex: 'Nothing is lost — the sync app on the desktop is simply still connected to the old, now-empty place. Sign it into the new account, give it time to re-download, and everything reappears.' },
+  { t: '"Our website\'s contact form stopped sending us messages."', who: 'Marketing, three days later',
+    opts: [
+      { o: 'Nobody wants to contact us anymore', ok: false },
+      { o: 'The form still sends mail through the old cloud — update its settings to the new one', ok: true },
+      { o: 'Forms are obsolete; delete the website', ok: false }
+    ],
+    ex: 'The sneaky category: apps, printers, scanners and website forms that quietly sent email through the old cloud. This is exactly why "Connected apps" was on the discovery checklist — each one needs to be repointed.' },
+  { t: 'Last move: what do we do with the old, empty cloud?', who: 'you, wrapping up',
+    opts: [
+      { o: 'Delete it tonight — clean break', ok: false },
+      { o: 'Keep it read-only for a while as a safety net, then retire it properly', ok: true },
+      { o: 'Keep paying for it forever, just in case', ok: false }
+    ],
+    ex: 'Never burn the bridge the same week. Keep the old tenant read-only for an agreed period (often 30 to 90 days) — someone will remember a forgotten file. Then retire it and stop paying for two clouds.' }
+];
+let tdone = 0, firstTry = {};
+function L7(){
+  clearTimers(); mood('');
+  tdone = 0; firstTry = {};
+  show(`
+    ${Lab.badge('Level 7 · validation','check-circle')}
+    <h2>Monday morning: the helpdesk hour</h2>
+    ${say('your guide', `A migration is not over when the data arrives — it is over when <b>people can work in peace</b>. The tickets are rolling in. For each incident, pick the right solution (+10 if you get it first try, +5 after a retry — wrong guesses are how we learn).`, 'tip')}
+    <div id="tzone">
+      ${tickets.map((tk, i) => `
+        <div class="ticket" id="tk${i}">
+          <div class="tx">${icon('ticket')}<span><b>${esc(tk.t)}</b><small>— ${esc(tk.who)}</small></span></div>
+          <div class="choices">
+            ${tk.opts.map((op, j) => `<button class="choice" id="tk${i}o${j}" onclick="L.solve(${i},${j},event)">${esc(op.o)}</button>`).join('')}
+          </div>
+          <div class="verdict" id="tk${i}v"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+function solve(i, j, e){
+  const tk = tickets[i], card = $('tk' + i); if (!card || card.classList.contains('done')) return;
+  const b = $('tk' + i + 'o' + j); if (!b) return;
+  if (tk.opts[j].ok) {
+    card.classList.add('done');
+    tk.opts.forEach((op, k) => { const x = $('tk' + i + 'o' + k); if (!x) return; x.disabled = true; if (k === j) x.classList.add('good'); });
+    scoreAt(firstTry[i] === undefined ? 10 : 5, e);
+    Lab.patch('#tk' + i + 'v', say('solved', esc(tk.ex), 'tip'));
+    const v = $('tk' + i + 'v'); if (v) v.classList.add('show');
+    tdone++;
+    if (tdone === tickets.length) later(() => Lab.finale({ into: '#finale', heading: 'Mission accomplished.' }), 500);
+  } else {
+    firstTry[i] = false;
+    b.classList.add('bad'); b.disabled = true;
+    later(() => b.classList.remove('bad'), 450);
+  }
+}
+
+/* expose handlers used by inline onclick="" */
+window.L = { goto: Lab.goto, discover, showSheet, checkItem, pick: pickOpt, pickTool, makeAccounts, selLic, assignLic, pilotGo, fixMia, coffee, flip, cutNext, solve };
+
+Lab.init({
+  title: 'Operation Moving Clouds',
+  codename: 'operation: moving-clouds',
+  levels: [
+    { icon: 'play',         name: 'Start' },
+    { icon: 'search',       name: 'Discovery' },
+    { icon: 'map',          name: 'Planning' },
+    { icon: 'license',      name: 'Preparation' },
+    { icon: 'flask',        name: 'Pilot' },
+    { icon: 'truck',        name: 'Migration' },
+    { icon: 'switch',       name: 'Cutover' },
+    { icon: 'check-circle', name: 'Validation' }
+  ],
+  render: [L0, L1, L2, L3, L4, L5, L6, L7],
+  maxScore: 445,
+  ranks: [
+    { min: 400, title: 'Migration Legend', icon: 'trophy', msg: 'Flawless. You could give the next migration briefing yourself.' },
+    { min: 330, title: 'Master of Moves',  icon: 'medal',  msg: 'Very solid. You understood exactly how a migration flows.' },
+    { min: 240, title: 'Cloud Pilot',      icon: 'badge',  msg: 'Nice work. Play again and catch all the good decisions.' },
+    { min: 0,   title: 'Cloud Rookie',     icon: 'star',   msg: 'You finished the mission — next time, hunt for more points.' }
+  ],
+  summary: `Every migration, big or small, follows the same steps: <b>1)</b> find out what you have (and write it down) → <b>2)</b> make a plan and pick your tools → <b>3)</b> prepare the ground → <b>4)</b> test with a few people → <b>5)</b> move in waves → <b>6)</b> cut over when it is quiet, checking every detail → <b>7)</b> verify, fix the Monday surprises, and keep the old cloud as a safety net. And always: <b>talk to people beforehand</b>.`,
+  scene
+});
+})();
+</script>
+</body>
+</html>

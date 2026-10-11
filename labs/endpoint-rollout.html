@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<!-- © 2026 shautech. All rights reserved. shautech labs — interactive workshop simulators. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Patch Night — shautech labs</title>
+<meta name="description" content="An endpoint modernisation simulator: move 1,000 laptops to Windows 11 with Intune, Autopilot and Defender during business hours, without stopping sales.">
+<meta name="theme-color" content="#0A0B0D">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.shautech.com/labs/endpoint-rollout.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="shautech labs">
+<meta property="og:title" content="Patch Night — shautech labs">
+<meta property="og:description" content="An endpoint modernisation simulator: move 1,000 laptops to Windows 11 with Intune, Autopilot and Defender during business hours, without stopping sales.">
+<meta property="og:url" content="https://www.shautech.com/labs/endpoint-rollout.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='34' fill='%230A0B0D'/%3E%3Crect x='30' y='30' width='120' height='120' rx='26' fill='none' stroke='%234D9FFF' stroke-width='10'/%3E%3Ctext x='90' y='122' font-family='ui-monospace,monospace' font-size='98' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="../assets/css/labs.css">
+<style>
+  /* lab-specific styles only (shared components live in labs.css) */
+  .defs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:14px}
+  .def{background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:11px 13px;font-size:13.5px;line-height:1.45;color:var(--ink2);display:flex;gap:10px;align-items:flex-start}
+  .def .ic{color:var(--accent2);flex:none;margin-top:2px}
+  .def b{color:var(--ink);display:block}
+  .policy .acts{display:flex;gap:6px;flex-wrap:wrap}
+  .policy .acts .btn{padding:.5em .85em;font-size:.74rem}
+  .policy.on .acts,.policy.report .acts{display:none}
+  .policy .why{flex-basis:100%;font-size:13px;line-height:1.45;color:var(--ink2);display:none;margin-top:4px}
+  .policy.on .why,.policy.report .why{display:block}
+  .scen{background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .scen .tx{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+  .scen .tx .ic{color:var(--accent2);flex:none;margin-top:3px}
+  .scen .tx b{display:block}
+  .scen .tx small{color:var(--ink2)}
+  .scen .opts{display:grid;gap:6px;margin-top:10px;font-size:13px;color:var(--ink2)}
+  .scen .opts span b{color:var(--ink);font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-right:6px}
+  .scen.done{border-color:rgba(124,242,196,.5);background:rgba(124,242,196,.05)}
+  .scen.bad{border-color:rgba(255,92,122,.5);background:rgba(255,92,122,.05)}
+  .arena .lane{position:absolute;left:0;right:0;height:1px;border-top:1px dashed var(--line2);opacity:.6}
+  .arena .house{top:50px}
+  .arena .event-banner.start{top:50%;transform:translate(-50%,-50%)}
+  .arena .fixlane{position:absolute;left:14px;right:14px;bottom:60px;height:1px;border-top:1px dashed rgba(255,184,77,.4)}
+  .arena .fixlane::after{content:"fix lane · battery / disk / TPM";position:absolute;left:0;top:2px;font-family:var(--mono);font-size:10px;color:rgba(255,184,77,.7);letter-spacing:.08em;text-transform:uppercase}
+  .item .mini{position:absolute;right:-4px;top:-4px;width:14px;height:14px;border-radius:50%;background:var(--amber);color:#2A1B06;display:grid;place-items:center}
+  .item.bad .mini{background:var(--red);color:#2A0E12}
+  .item .mini .ic{width:9px;height:9px;stroke-width:2.5}
+  .steps{display:grid;gap:10px;margin-top:14px}
+  .step{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:12px 14px}
+  .step .num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent2);border:1px solid var(--accent);border-radius:8px;width:30px;height:30px;display:grid;place-items:center;flex:none}
+  .step.ok{border-color:rgba(124,242,196,.5);background:rgba(124,242,196,.05)}
+  .step.ok .num{color:var(--mint);border-color:var(--mint)}
+  .step.locked{opacity:.45}
+  .step .body{flex:1;min-width:0}
+  .step .body b{display:block;font-size:15px}
+  .step .body small{color:var(--ink2);display:block;font-size:13px}
+  .step .choices{margin-top:10px;max-width:none}
+  .step .choice{padding:10px 14px;font-size:13.5px}
+  .big-switch:disabled{opacity:.45;cursor:not-allowed}
+  .night-grid{display:grid;grid-template-columns:1fr 160px;gap:20px;align-items:start;margin-top:10px}
+  @media (max-width:700px){.night-grid{grid-template-columns:1fr}.switch-zone{margin-top:8px}}
+</style>
+</head>
+<body>
+
+<canvas id="labbg" aria-hidden="true"></canvas>
+
+<header class="topbar" id="topbar">
+  <a class="logo" href="../index.html" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span><span class="logo__lab">/ labs</span></a>
+  <span class="sim-name" id="simName"></span>
+  <nav class="lvlmap" id="lvlmap" aria-label="Levels"></nav>
+  <div class="hud">
+    <div class="pill" id="scorePill" title="Points"><b id="score">0</b></div>
+    <a class="exit" href="index.html" title="All labs"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>all labs</span></a>
+  </div>
+</header>
+
+<main class="stage" id="stage"><div class="screen" id="screen" aria-live="polite"></div></main>
+
+<div class="nojs" id="nojs"><div class="box"><p class="badge">shautech labs</p><h2>This simulator needs JavaScript.</h2><p class="muted">It runs entirely in your browser, nothing is sent anywhere. Enable JavaScript, or <a href="index.html" style="color:var(--accent2)">go back to all labs</a>.</p></div></div>
+
+<script src="../assets/js/lab-engine.js"></script>
+<script>
+/* © 2026 shautech. Patch Night — game logic. */
+(function(){
+'use strict';
+const { icon, say, btn, avatar, sev, scoreAt, addScore, show, goto, toast, mood, util } = Lab;
+const { esc, pick, shuffle, clamp } = util;
+const $ = s => document.querySelector(s);
+const setProgress = v => { if (Lab.scene) Lab.scene.set('progress', clamp(v, 0, 1)); };
+
+/* ---------------- ambient scene: the fleet from above ---------------- */
+const scene = {
+  state: { level: 0, mood: '', progress: 0, waveT: 99 },
+  init(s, W, H) {
+    const cols = W < 600 ? 8 : 12, rows = 6, n = cols * rows;
+    const cw = W / (cols + 1), ch = (H * 0.46) / (rows + 1);
+    const order = shuffle([...Array(n).keys()]);
+    s.devs = [];
+    for (let i = 0; i < n; i++) {
+      const col = i % cols, row = Math.floor(i / cols);
+      s.devs.push({ x: cw * (col + 1), y: H * 0.5 + ch * (row + 1), rank: order[i] / n, ph: Math.random() * 6.28 });
+    }
+    s.w = Math.min(cw * 0.5, 26); s.h = s.w * 0.66;
+  },
+  onChange(s, k) { if (k === 'progress') s.waveT = 0; },
+  draw(ctx, s, W, H, t, dt) {
+    s.waveT += dt;
+    const C = Lab.colors, night = s.level === 6 || s.mood === 'night';
+    if (night) { ctx.fillStyle = Lab.rgba(C.violet, .045); ctx.fillRect(0, 0, W, H); }
+    if (!s.devs) return;
+    const p = s.progress || 0, w = s.w, h = s.h;
+    ctx.lineWidth = 1;
+    for (const d of s.devs) {
+      let col, a, arc = 0;
+      if (d.rank < p) { col = C.mint; a = night ? .42 : .5; }
+      else if (d.rank < p + 0.07) { col = C.accent; a = .7; arc = 1 - (d.rank - p) / 0.07; }
+      else if (d.rank < p + 0.35) { col = C.amber; a = .32; }
+      else { col = C.ink3; a = .26; }
+      const pulse = arc ? 1 + 0.08 * Math.sin(t * 4 + d.ph) : 1;
+      const ww = w * pulse, hh = h * pulse, x = d.x - ww / 2, y = d.y - hh / 2;
+      ctx.strokeStyle = Lab.rgba(col, a);
+      ctx.fillStyle = Lab.rgba(col, a * .14);
+      Lab.draw.rr(ctx, x, y, ww, hh, 3); ctx.fill(); ctx.stroke();
+      // screen hinge line + status LED
+      ctx.strokeStyle = Lab.rgba(col, a * .5); ctx.beginPath(); ctx.moveTo(x + 3, y + hh - 4); ctx.lineTo(x + ww - 3, y + hh - 4); ctx.stroke();
+      ctx.fillStyle = Lab.rgba(col, Math.min(1, a + .25)); ctx.beginPath(); ctx.arc(x + ww - 4, y + 4, 1.4, 0, 7); ctx.fill();
+      if (arc) {
+        ctx.strokeStyle = Lab.rgba(C.accent, .75); ctx.lineWidth = 1.5; ctx.beginPath();
+        ctx.arc(d.x, d.y, w * .82, -Math.PI / 2, -Math.PI / 2 + arc * Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1;
+      }
+    }
+    // the upgrade wave: a thin vertical sweep across the fleet when progress changes, plus a faint idle sweep
+    const sweep = (fx, alpha) => {
+      const x = fx * W, g = ctx.createLinearGradient(0, H * .48, 0, H);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.5, Lab.rgba(night ? C.violet : C.accent, alpha)); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.strokeStyle = g; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, H * .48); ctx.lineTo(x, H); ctx.stroke(); ctx.lineWidth = 1;
+    };
+    if (s.waveT < 2.6) sweep(s.waveT / 2.6, .55 * (1 - s.waveT / 2.6) + .1);
+    sweep(((t * 0.045) % 1.25) - 0.12, .12);
+    // fleet counter
+    Lab.draw.text(ctx, `fleet  ${Math.round(p * 1000)} / 1000 compliant`, W - 18, H - 16, { align: 'right', color: Lab.rgba(p >= 1 ? C.mint : C.ink2, .6) });
+  }
+};
+
+/* ---------------- L0 : briefing ---------------- */
+const DEFS = [
+  ['cloud', 'Intune', 'Microsoft’s cloud service that configures, secures and updates laptops and phones wherever they are, no office network needed.'],
+  ['box', 'Autopilot', 'A new laptop is shipped straight to the user; on first boot it joins the company, installs its apps and policies by itself.'],
+  ['layers', 'Co-management', 'A device is managed by the old on-site tool (SCCM) and Intune at the same time while you move workloads to the cloud.'],
+  ['shield-check', 'Compliance policy', 'The list of rules a device must meet (encrypted, up to date, antivirus on) before it is allowed to open company data.'],
+  ['lock', 'BitLocker', 'Full-disk encryption built into Windows. A lost laptop becomes a useless brick instead of a data breach, if the recovery key is stored safely.'],
+  ['key', 'LAPS', 'Local Administrator Password Solution: every device gets its own unique local admin password, rotated automatically and stored in Entra.']
+];
+function L0(){
+  mood('');
+  setProgress(0);
+  show(`
+    ${Lab.badge('Level 0 · briefing','play')}
+    <h1>Welcome to <em>Patch Night</em>. The fleet is yours.</h1>
+    ${say('the cfo', `We have <b>1,000 laptops</b>. Windows 10 support ended, the auditors noticed, and the cyber-insurance renewal has a question about “endpoint compliance” that I cannot answer.
+      Half the fleet was bought by departments on their own card, everyone is a local administrator, and I have been told the word <b>“Autopilot”</b> three times today.
+      Get us to Windows 11, managed and encrypted. And do it <b>without stopping sales for a single hour</b>. No weekend outage, no “please come to IT with your laptop”.`)}
+    ${say('your guide', `You do not need to be an engineer to run this well. Modern endpoint work is mostly <b>inventory, sequencing and communication</b>, with a handful of policies behind it.
+      Six words you will hear all evening, in one sentence each:`, 'tip')}
+    <div class="defs">
+      ${DEFS.map(d => `<div class="def">${icon(d[0])}<span><b>${d[1]}</b>${d[2]}</span></div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="L.goto(1)">${icon('arrow-right')}Accept the mission</button>
+  `);
+}
+
+/* ---------------- L1 : discovery ---------------- */
+const TILES = [
+  { ic:'laptop',    nm:'Windows 10 laptops',      found:'<b>612 laptops</b> on Windows 10. 470 are in SCCM; 142 report to nothing at all. Most have TPM 2.0, but a 2019 batch of 86 does not.' },
+  { ic:'building',  nm:'Lobby kiosks',            found:'<b>9 kiosks</b> running Windows 7. Yes, 7. The visitor check-in app has not been updated since the vendor was a different company.' },
+  { ic:'monitor',   nm:'Marketing’s Macs',        found:'<b>38 Macs</b>. Nobody manages them, nobody encrypts them, and two of them have the entire brand archive.' },
+  { ic:'phone',     nm:'BYOD phones',             found:'<b>~400 personal phones</b> with Outlook and Teams. Some run an OS version older than the intern.' },
+  { ic:'scan',      nm:'Warehouse scanners',      found:'<b>60 handheld scanners</b> on an embedded Windows build. They hold the logistics system together. Treat with respect.' },
+  { ic:'briefcase', nm:'The CEO’s “special” laptop', found:'<b>1 laptop</b>, bought at an airport, never joined to anything, local admin, and “must never restart during a call”.' },
+  { ic:'cpu',       nm:'Domain-joined desktop pool', found:'<b>280 desktops</b> in finance and support, domain-joined and SCCM-managed. Tidy, but 70 are down to a few GB of free disk.' }
+];
+const COLLECT = [
+  ['cpu',        'Hardware readiness',  'TPM 2.0, supported CPU, 4 GB RAM, 64 GB disk. Windows 11 refuses to install without them; find out now, not on the night.'],
+  ['settings',   'Management state',    'Who manages each device today: SCCM, Intune, both, or nobody. “Nobody” is your real project.'],
+  ['key',        'Local administrators', 'Which accounts hold admin rights on which devices. Usually the answer is “everyone, since 2016”.'],
+  ['boxes',      'Application inventory', 'Every installed app and whether the vendor supports it on Windows 11. The kiosk app is the first one to ask about.'],
+  ['lock',       'Encryption and keys', 'Which disks are already encrypted and, crucially, where the recovery keys live. A key nobody can find is the same as no key.'],
+  ['user-check', 'Identity join type',  'On-site domain, Entra joined, or hybrid. It decides which Autopilot and compliance features you can use.']
+];
+let found = 0, collected = 0;
+function L1(){
+  found = 0; collected = 0;
+  setProgress(0.02);
+  show(`
+    ${Lab.badge('Level 1 · discovery','search')}
+    <h2>You cannot upgrade what you have not counted</h2>
+    ${say('your guide', `Everyone wants to start with the shiny part (Autopilot). Start with the boring part: <b>the inventory</b>. Click each group of devices to find out what is really out there. (+5 per group)`, 'tip')}
+    <div class="grid grid--auto">
+      ${TILES.map((t, i) => `<button class="tile" id="tile${i}" onclick="L.disc(${i},event)">${icon(t.ic)}<span class="nm">${t.nm}</span></button>`).join('')}
+    </div>
+    <div class="inv" id="inv">${icon('sheet')} <b>Inventory:</b> empty. Click the device groups.</div>
+    <div id="sheetZone"></div>
+    <div class="spacer"></div>
+    <button class="btn" id="sheetBtn" style="display:none" onclick="L.sheet()">${icon('sheet')}Open the readiness sheet</button>
+    <button class="btn blue" id="l1next" style="display:none" onclick="L.goto(2)">${icon('arrow-right')}Inventory done. To the decisions</button>
+  `);
+}
+function disc(i, e){
+  const el = $('#tile' + i); if (!el || el.classList.contains('found')) return;
+  el.classList.add('found'); found++;
+  scoreAt(5, e);
+  setProgress(0.02 + found * 0.01);
+  Lab.patch('#inv', `${icon('sheet')} <b>Found:</b> ${TILES[i].found}<br><small class="small">${found}/${TILES.length} groups inventoried</small>`);
+  if (found === TILES.length) {
+    Lab.patch('#inv', `${icon('check-circle')} <b>Every group counted.</b> Roughly 1,000 Windows devices plus the Macs and phones. Clicking around is not an inventory, though. A real one ends in a sheet.`);
+    const b = $('#sheetBtn'); if (b) b.style.display = 'inline-flex';
+  }
+}
+function sheet(){
+  const b = $('#sheetBtn'); if (b) b.style.display = 'none';
+  Lab.patch('#sheetZone', `
+    ${say('your guide', `This is the readiness sheet, exported from SCCM and Intune (and a script for the orphans). It is dull and it is the most valuable document of the project, because it already shows the <b>blockers</b>: the highlighted rows cannot go to Windows 11 as they are.`, 'tip')}
+    <div class="sheet"><table>
+      <tr><th>Device group</th><th>Count</th><th>OS today</th><th>TPM 2.0</th><th>Disk free</th><th>Managed</th><th>Note</th></tr>
+      <tr><td>Laptops, 2021+ models</td><td>526</td><td>Windows 10 22H2</td><td>yes</td><td>&gt; 40 GB</td><td>SCCM 384 · none 142</td><td>in-place upgrade candidates</td></tr>
+      <tr class="hot"><td>Laptops, 2019 batch</td><td>86</td><td>Windows 10 21H2</td><td>no</td><td>&gt; 30 GB</td><td>SCCM</td><td>hardware refresh, cannot run Windows 11</td></tr>
+      <tr class="bad"><td>Lobby kiosks</td><td>9</td><td>Windows 7</td><td>no</td><td>8 GB</td><td>none</td><td>out of support twice over; app not Windows 11 ready</td></tr>
+      <tr><td>Marketing Macs</td><td>38</td><td>macOS 14</td><td>n/a</td><td>ok</td><td>none</td><td>enrol in Intune, add Defender, enable FileVault</td></tr>
+      <tr><td>BYOD phones</td><td>~400</td><td>iOS / Android, mixed</td><td>n/a</td><td>n/a</td><td>none</td><td>app protection, not device management</td></tr>
+      <tr><td>Warehouse scanners</td><td>60</td><td>Windows 10 IoT LTSC</td><td>yes</td><td>ok</td><td>SCCM</td><td>LTSC is supported until 2029, leave them alone</td></tr>
+      <tr class="hot"><td>CEO laptop</td><td>1</td><td>Windows 10 Home</td><td>yes</td><td>ok</td><td>none</td><td>Home edition cannot join Entra; needs a managed replacement</td></tr>
+      <tr class="hot"><td>Desktop pool, finance &amp; support</td><td>280</td><td>Windows 10 22H2</td><td>yes</td><td>70 under 10 GB</td><td>SCCM</td><td>disk cleanup before upgrade or the install fails halfway</td></tr>
+    </table></div>
+    ${say('the checklist', `Here is <b>what a discovery must collect</b>, so the sheet above can exist. Tick each one to confirm it is on your list. (+5 each)`, 'tip')}
+    <div class="clist">
+      ${COLLECT.map((c, i) => `<button class="citem" id="ci${i}" onclick="L.check(${i},event)"><span class="box">${icon('check')}</span>${icon(c[0])}<span><b>${c[1]}</b>${c[2]}</span></button>`).join('')}
+    </div>
+  `);
+}
+function check(i, e){
+  const el = $('#ci' + i); if (!el || el.classList.contains('checked')) return;
+  el.classList.add('checked'); collected++;
+  scoreAt(5, e);
+  if (collected === COLLECT.length) {
+    setProgress(0.12);
+    const n = $('#l1next'); if (n) { n.style.display = 'inline-flex'; n.scrollIntoView({ behavior: Lab.reduced ? 'auto' : 'smooth', block: 'nearest' }); }
+  }
+}
+
+/* ---------------- L2 : decisions ---------------- */
+const DECISIONS = [
+  { q:'How do we get 1,000 devices onto Windows 11?',
+    opts:[
+      { t:'In-place upgrade for everything', s:'Run the Windows 11 upgrade on every device as it sits today.', v:'meh', pts:5,
+        fb:'Fast and cheap for the healthy, managed devices. But the 142 orphan laptops carry their junk, their local admins and their unknown apps straight into the new OS. You upgrade the problem instead of fixing it.' },
+      { t:'Two lanes: upgrade the managed, reset the unmanaged', s:'In-place upgrade for devices already in SCCM/Intune; Autopilot reset for the orphans so they come back clean and managed.', v:'good', pts:10,
+        fb:'Right. Eligible, managed devices take the upgrade in place over a lunch break. The unmanaged half gets a one-time Autopilot reset: user data synced to OneDrive first, device wiped, rebuilt by itself into a managed Windows 11 state.' },
+      { t:'Email everyone the Windows 11 download link', s:'They are adults. They can click “Upgrade now”.', v:'bad', pts:0,
+        fb:'Some will, most will not, a few will upgrade their personal gaming PC by mistake. You also learn nothing about who succeeded. Self-service is fine for choosing a wallpaper, not for an operating system.' }
+    ]},
+  { q:'In what order do devices get the upgrade?',
+    opts:[
+      { t:'Big bang', s:'Push to all 1,000 on Friday night. Monday is Windows 11 day.', v:'bad', pts:0,
+        fb:'If 3% fail, that is 30 people who cannot work on Monday, all at once, all calling the same two helpdesk staff. Big bang is how an upgrade becomes an outage.' },
+      { t:'Rings: pilot, early adopters, broad', s:'50 IT and friendly volunteers first, then 200, then everyone, with a pause rule between rings.', v:'good', pts:10,
+        fb:'Exactly. Every ring teaches you something before the next one. The pause rule (“stop if more than 5% fail”) is what turns a surprise into a small, contained incident instead of a company-wide one.' },
+      { t:'Department by department, sales last', s:'Finance this week, support next week, sales when they are quiet.', v:'meh', pts:5,
+        fb:'Better than big bang, but a department is not a test group. If finance has a problem, it is every accountant at month-end. Rings mix roles and locations on purpose so that one failure does not take out one team.' }
+    ]},
+  { q:'The upgrade needs a restart. How do we handle it during business hours?',
+    opts:[
+      { t:'Force restart as soon as the install finishes', s:'Done means done. 15-minute warning, then reboot.', v:'bad', pts:0,
+        fb:'That is the sales call that drops mid-demo, and the spreadsheet that was not saved. The CFO said “without stopping sales”; a forced restart at 14:00 is exactly that.' },
+      { t:'Deadline with a grace period', s:'Install silently in the background; the user gets 5 days and clear notifications to restart when it suits them. After the deadline, Windows restarts outside active hours.', v:'good', pts:10,
+        fb:'This is the modern pattern. The heavy lifting happens while people work; the restart is theirs to schedule for almost a week, and a quiet-hours deadline guarantees it eventually happens. Nobody is surprised, everybody is upgraded.' },
+      { t:'Never force anything, just ask nicely', s:'A toast notification, forever, until they feel like it.', v:'meh', pts:5,
+        fb:'Kind, but 10% of the fleet will still be on Windows 10 at the next audit. A grace period is kindness with an end date.' }
+    ]},
+  { q:'SCCM manages 730 devices today. What is the management plan?',
+    opts:[
+      { t:'Keep SCCM only', s:'It works. Why change?', v:'meh', pts:5,
+        fb:'It does work, for devices that come into the office. The 142 orphans and anyone working from home never see the SCCM server. You also need Intune for compliance policy and Conditional Access, which SCCM alone cannot give you.' },
+      { t:'Co-management now, Intune-only later', s:'Enrol the SCCM devices into Intune as well; move workloads (compliance, updates, apps) to Intune ring by ring; retire SCCM when nothing depends on it.', v:'good', pts:10,
+        fb:'The right order. Co-management keeps everything that works today working, while Intune takes over one workload at a time. New Autopilot devices are Intune-only from day one; the old estate converges over a few months.' },
+      { t:'Switch off SCCM on Friday, Intune on Monday', s:'Clean break.', v:'bad', pts:0,
+        fb:'Every app deployment, every driver package and every maintenance window lives in SCCM today. Switching it off before Intune has those is a self-inflicted outage on 730 devices.' }
+    ]},
+  { q:'Everyone is a local administrator. What do we do about it?',
+    opts:[
+      { t:'Remove admin rights from everyone tonight', s:'One policy, one night, problem solved.', v:'bad', pts:0,
+        fb:'Monday: the finance macro that needed admin, the sales plug-in that needed admin, the printer driver that needed admin. All at once, with no alternative in place. The helpdesk will not forgive you.' },
+      { t:'LAPS plus a request-based elevation path, removed in rings', s:'Turn on LAPS so each device has a unique, rotating local admin password held in Entra; give the helpdesk a way to elevate on request; strip standing admin rights ring by ring.', v:'good', pts:10,
+        fb:'Yes. Removing standing admin rights is the single biggest security gain of the whole project, and LAPS is what makes it survivable: when something genuinely needs admin, IT has a controlled, audited way to provide it.' },
+      { t:'Remove admin from everyone except managers', s:'They have earned it.', v:'meh', pts:5,
+        fb:'Managers are the most phished people in the building and travel with the most sensitive data. Admin rights follow a need, not a job title.' }
+    ]}
+];
+let di = 0;
+function L2(){
+  di = 0;
+  setProgress(0.14);
+  show(`
+    ${Lab.badge('Level 2 · decisions','map')}
+    <h2>Five decisions that decide the whole project</h2>
+    ${say('your guide', `Now we know <b>what</b> is out there. These five choices decide <b>how</b> it moves. Each answer has consequences on Monday morning, so think like the helpdesk.`, 'tip')}
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d = DECISIONS[di];
+  Lab.patch('#dzone', `
+    <h3 style="margin-top:14px">Decision ${di + 1} of ${DECISIONS.length}: ${d.q}</h3>
+    <div class="choices">
+      ${d.opts.map((o, i) => `<button class="choice" id="ch${i}" onclick="L.pick(${i},event)"><b>${o.t}</b><small>${o.s}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none" onclick="L.dnext()"></button>
+  `);
+}
+function pickD(i, e){
+  const d = DECISIONS[di], o = d.opts[i];
+  d.opts.forEach((x, j) => { const el = $('#ch' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add(o.v); });
+  if (o.pts > 0) scoreAt(o.pts, e);
+  Lab.patch('#verdict', say(o.v === 'good' ? 'good call' : o.v === 'meh' ? 'half right' : 'that will hurt', `${o.fb} <b>(+${o.pts})</b>`, o.v === 'good' ? 'tip' : o.v === 'meh' ? 'warn' : 'alert'));
+  const v = $('#verdict'); if (v) v.classList.add('show');
+  const b = $('#dnext'); if (!b) return;
+  b.style.display = 'inline-flex';
+  b.innerHTML = di < DECISIONS.length - 1 ? `${icon('arrow-right')}Next decision` : `${icon('arrow-right')}Plan agreed. Build the baseline`;
+}
+function dnext(){
+  if (di < DECISIONS.length - 1) { di++; setProgress(0.14 + di * 0.01); renderDecision(); }
+  else goto(3);
+}
+
+/* ---------------- L3 : baseline board ---------------- */
+const POLICIES = [
+  { ic:'lock', nm:'BitLocker disk encryption', s:'Silently encrypt every system drive; back the recovery key up to Entra.', want:'on',
+    why:'Enforce. Silent encryption needs no user action, and the key is escrowed to Entra before the disk locks. There is nothing to “observe” first, and every day unencrypted is a day a lost laptop is a breach.' },
+  { ic:'shield-check', nm:'Defender antivirus + attack surface reduction (ASR) rules', s:'Defender AV is already on. ASR rules block risky behaviours such as Office spawning scripts.', want:'report',
+    why:'Report-only first. Defender AV stays on regardless. ASR rules can break a legitimate finance macro or an old installer, so run them in audit mode for two weeks, read what they would have blocked, add exclusions, then enforce.' },
+  { ic:'key', nm:'LAPS (local admin password rotation)', s:'A unique local administrator password per device, rotated every 30 days, stored in Entra.', want:'on',
+    why:'Enforce. LAPS changes nothing for users; it only replaces the shared “Admin123” that half the company knows with a unique, rotating secret that the helpdesk retrieves when needed.' },
+  { ic:'user-check', nm:'Windows Hello for Business', s:'Sign in with PIN or fingerprint bound to the device instead of the password.', want:'on',
+    why:'Enforce. Hello is additive: users enrol a PIN or fingerprint the next time they sign in, the password still works. It removes the password from daily use, which is where it gets stolen.' },
+  { ic:'refresh', nm:'Update rings with deadlines and grace', s:'Pilot, early adopters, broad. Feature update to Windows 11; 5-day deadline, 2-day grace, restart outside active hours.', want:'on',
+    why:'Enforce. The ring itself is the safety valve: only the pilot ring receives the upgrade on day one. Deadlines and grace periods are what make the restart predictable instead of a surprise.' },
+  { ic:'shield-alert', nm:'Device compliance policy (with grace period)', s:'Mark a device non-compliant if it is unencrypted, unpatched or has no Defender; Conditional Access blocks non-compliant devices.', want:'report',
+    why:'Report-only first. Today half the fleet would fail this. Enforce it now and 500 people lose access to email by lunch. Mark non-compliant, grant a grace period, watch the numbers fall, then flip enforcement on the night when the fleet is ready.' },
+  { ic:'phone', nm:'App protection policy for BYOD phones', s:'Protect company data inside Outlook and Teams on personal phones: PIN, no copy-paste to personal apps, selective wipe. The phone itself stays personal.', want:'on',
+    why:'Enforce. App protection does not manage the phone, only the company data inside the apps, so there is no privacy argument and nothing to pilot except the PIN prompt. It also sets a minimum OS version, which the old phones will meet or lose access.' }
+];
+let polDone = 0, ringPicked = false;
+function L3(){
+  polDone = 0; ringPicked = false;
+  setProgress(0.2);
+  show(`
+    ${Lab.badge('Level 3 · build','list-check')}
+    <h2>The compliance and configuration baseline</h2>
+    ${say('your guide', `These seven policies are the whole security story of the project. For each one decide: <b>enforce now</b>, or <b>report-only first</b> (observe what it would do before it does it). Some policies are harmless to switch on; others would lock half the company out if enforced on day one. (+8 for the right call, +3 otherwise)`, 'tip')}
+    <div id="board" style="margin-top:14px">
+      ${POLICIES.map((p, i) => `
+        <div class="policy" id="pol${i}">
+          ${icon(p.ic)}
+          <span class="who"><b>${p.nm}</b><small>${p.s}</small></span>
+          <span class="acts">
+            <button class="btn small" onclick="L.pol(${i},'report',event)">${icon('eye')}Report-only first</button>
+            <button class="btn small blue" onclick="L.pol(${i},'on',event)">${icon('bolt')}Enforce now</button>
+          </span>
+          <span class="state" id="pst${i}">not assigned</span>
+          <span class="why" id="pwhy${i}"></span>
+        </div>`).join('')}
+    </div>
+    <div id="ringZone"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="L.goto(4)">${icon('arrow-right')}Baseline assigned. To the exceptions queue</button>
+  `);
+}
+function pol(i, choice, e){
+  const p = POLICIES[i], el = $('#pol' + i); if (!el || el.classList.contains('on') || el.classList.contains('report')) return;
+  el.classList.add(choice);
+  const ok = choice === p.want;
+  scoreAt(ok ? 8 : 3, e);
+  Lab.patch('#pst' + i, choice === 'on' ? 'enforced' : 'report-only');
+  Lab.patch('#pwhy' + i, `${ok ? sev('ok', 'good call') : sev('warn', 'reconsider')} ${p.why}`);
+  polDone++;
+  setProgress(0.2 + polDone * 0.015);
+  if (polDone === POLICIES.length) {
+    Lab.patch('#ringZone', `
+      ${say('your guide', `One more thing before the baseline goes live. <b>Which devices receive it first?</b>`, 'tip')}
+      <div class="choices">
+        <button class="choice" id="rg0" onclick="L.ring(0,event)"><b>All 1,000 devices</b><small>It is the baseline. Everyone should have it.</small></button>
+        <button class="choice" id="rg1" onclick="L.ring(1,event)"><b>The pilot ring: 50 devices, IT and volunteers</b><small>Watch for a week, then widen.</small></button>
+      </div>
+      <div class="verdict" id="ringv"></div>`);
+    const z = $('#ringZone'); if (z) z.scrollIntoView({ behavior: Lab.reduced ? 'auto' : 'smooth', block: 'nearest' });
+  }
+}
+function ring(i, e){
+  if (ringPicked) return; ringPicked = true;
+  [0, 1].forEach(j => { const el = $('#rg' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add(i === 1 ? 'good' : 'bad'); });
+  if (i === 1) scoreAt(10, e);
+  Lab.patch('#ringv', i === 1
+    ? say('good call', `Even “report-only” policies go to the pilot ring first. You will find a typo in a policy, a device that cannot encrypt, an ASR rule that fires on the payroll tool. Finding it on 50 devices costs an afternoon; on 1,000 it costs a week. <b>(+10)</b>`, 'tip')
+    : say('that will hurt', `Policies have bugs too. A single wrong setting assigned to “All devices” reaches 1,000 machines in an hour, and undoing it takes much longer. Baseline or not, it goes to the pilot ring first. <b>(+0)</b>`, 'alert'));
+  const v = $('#ringv'); if (v) v.classList.add('show');
+  const n = $('#l3next'); if (n) n.style.display = 'inline-flex';
+}
+
+/* ---------------- L4 : scenario verdicts ---------------- */
+const SCEN = [
+  { ic:'cpu', t:'Finance laptop fails the TPM 2.0 check', who:'Anca, payroll, month-end is in 3 days',
+    a:'Use the registry bypass so Windows 11 installs anyway.', d:'Exclude it from the ring; add it to the hardware refresh list; keep it patched on Windows 10 ESU until the new laptop arrives.', b:'Block the laptop from the network until it is replaced.',
+    ans:'d', part:null,
+    ex:'A device without TPM 2.0 cannot do the things you are upgrading for: BitLocker key protection, Windows Hello, measured boot. The bypass gives you a Windows 11 badge on an unsupported configuration that Microsoft may stop updating. Defer it properly: refresh the hardware, keep it patched meanwhile, and never at month-end.' },
+  { ic:'battery-low', t:'Sales rep in an airport, 8% battery, upgrade deadline is today', who:'Radu, on his way to close a deal',
+    a:'Trigger the install now; the deadline is the deadline.', d:'Do nothing. The grace period covers this: the device installs tonight once it is on power and Wi-Fi.', b:'Mark the device non-compliant and cut his access until he upgrades.',
+    ans:'d', part:null,
+    ex:'This is exactly what the grace period is for. Windows will not even start a feature update on battery below 40%, and a deadline that ignores reality is just a forced restart with extra steps. He closes the deal; the laptop upgrades at the hotel tonight.' },
+  { ic:'building', t:'The lobby kiosk app is not Windows 11 ready', who:'The vendor says “Q2, probably”',
+    a:'Upgrade the kiosks anyway; the app will probably run.', d:'Postpone the kiosks two weeks and ask the vendor again.', b:'Block the kiosks from the upgrade ring, move them to an isolated network segment with no access to company data, and put a replacement date in the contract.',
+    ans:'b', part:'d',
+    ex:'Nine Windows 7 kiosks are the most dangerous devices you own and the least important to upgrade. Fence them off: their own network segment, no path to company data, a firm date. “Probably runs” on a visitor-facing screen is a Monday-morning lobby full of people who cannot check in.' },
+  { ic:'briefcase', t:'The CEO refuses the restart and asks for a permanent exemption', who:'Via his assistant, twice',
+    a:'Grant the exemption. He is the CEO.', d:'No permanent exemption. Offer him a restart slot of his choosing within the grace window; after that the same quiet-hours deadline applies to everyone.', b:'Lock his account until the device restarts.',
+    ans:'d', part:null,
+    ex:'The most-targeted person in the company on the least-protected laptop is how real breaches start. But nobody needs to be bullied either: the grace period exists so he can pick 19:00 on Thursday himself. One rule for the whole fleet, with flexibility inside it, is what you can defend to an auditor.' },
+  { ic:'monitor', t:'Marketing asks whether the Macs need Defender too', who:'Ioana, marketing lead, slightly hoping the answer is no',
+    a:'Yes. Enrol the Macs in Intune, deploy Defender for Endpoint for macOS, turn on FileVault, and include them in the compliance policy.', d:'Macs are safe enough. Revisit next year.', b:'Ban Macs; standardise on Windows.',
+    ans:'a', part:null,
+    ex:'“Macs do not get viruses” stopped being true a long time ago, and the two Macs with the brand archive are unencrypted today. Intune manages macOS, Defender runs on it, FileVault is the BitLocker equivalent. Same rules, different icon.' }
+];
+let scenDone = 0;
+function L4(){
+  scenDone = 0;
+  setProgress(0.33);
+  show(`
+    ${Lab.badge('Level 4 · scenarios','map')}
+    <h2>The exceptions queue</h2>
+    ${say('your guide', `Rings are running and the requests arrive. For each one choose a verdict: <b>Approve</b>, <b>Defer</b> or <b>Block</b>. Read what each verdict means in that case; the right call is rarely the loudest one. (+10 for the right verdict)`, 'tip')}
+    <div id="szone" style="margin-top:14px">
+      ${SCEN.map((s, i) => `
+        <div class="scen" id="sc${i}">
+          <div class="tx">${icon(s.ic)}<span><b>${s.t}</b><small>${s.who}</small></span></div>
+          <div class="opts">
+            <span><b>approve</b>${s.a}</span>
+            <span><b>defer</b>${s.d}</span>
+            <span><b>block</b>${s.b}</span>
+          </div>
+          <div class="verdict-btns">
+            <button class="btn small green" onclick="L.verdict(${i},'a',event)">${icon('check')}Approve</button>
+            <button class="btn small" onclick="L.verdict(${i},'d',event)">${icon('clock')}Defer</button>
+            <button class="btn small red" onclick="L.verdict(${i},'b',event)">${icon('x')}Block</button>
+          </div>
+          <div class="verdict" id="scv${i}"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="L.goto(5)">${icon('arrow-right')}Queue cleared. Start the upgrade wave</button>
+  `);
+}
+function verdict(i, v, e){
+  const s = SCEN[i], el = $('#sc' + i); if (!el || el.classList.contains('done') || el.classList.contains('bad')) return;
+  el.querySelectorAll('.verdict-btns .btn').forEach(b => b.disabled = true);
+  const ok = v === s.ans, part = v === s.part;
+  el.classList.add(ok ? 'done' : 'bad');
+  if (ok) scoreAt(10, e); else if (part) scoreAt(5, e);
+  Lab.patch('#scv' + i, say(ok ? 'right verdict' : part ? 'defensible, not ideal' : 'wrong verdict', `${s.ex} <b>(+${ok ? 10 : part ? 5 : 0})</b>`, ok ? 'tip' : part ? 'warn' : 'alert'));
+  const vv = $('#scv' + i); if (vv) vv.classList.add('show');
+  scenDone++;
+  setProgress(0.33 + scenDone * 0.01);
+  if (scenDone === SCEN.length) { const n = $('#l4next'); if (n) { n.style.display = 'inline-flex'; n.scrollIntoView({ behavior: Lab.reduced ? 'auto' : 'smooth', block: 'nearest' }); } }
+}
+
+/* ---------------- L5 : arcade "Upgrade Wave" ---------------- */
+const ARC = { raf: null, timer: null, spawn: null, items: [], on: false, pts: 0, t: 0, dur: 50, up: 0, fail: 0, total: 44, spawned: 0, arena: null, id: 0 };
+const ARC_CAP = 80;
+const AMBER = [['battery-low', 'low battery'], ['hard-drive', 'disk full'], ['cpu', 'no TPM 2.0']];
+function arcScore(n, e){
+  if (n > 0) { const room = ARC_CAP - ARC.pts; n = Math.min(n, Math.max(0, room)); if (!n) return; }
+  ARC.pts += n; if (e) scoreAt(n, e); else addScore(n);
+}
+function stopArcade(){
+  ARC.on = false;
+  if (ARC.raf) cancelAnimationFrame(ARC.raf); ARC.raf = null;
+  clearInterval(ARC.timer); clearInterval(ARC.spawn); ARC.timer = ARC.spawn = null;
+}
+function L5(){
+  stopArcade();
+  setProgress(0.4);
+  show(`
+    ${Lab.badge('Level 5 · arcade','laptop')}
+    <h2>Upgrade Wave: the broad ring goes live</h2>
+    ${say('your guide', `Devices travel from Windows 10 to <b>Windows 11 · compliant</b>. Healthy ones arrive by themselves. Devices flashing <b>amber</b> have a problem (low battery, disk full, no TPM): click them to send them to the <b>fix lane</b> before they fail mid-upgrade. Devices in <b>red</b> are unknown machines trying to enrol: click to <b>block</b> them. ${Lab.reduced ? '35' : '50'} seconds.`, 'tip')}
+    <div class="row" style="margin-top:14px">
+      ${sev('ok', 'healthy arrives: +1')} ${sev('warn', 'amber fixed: +4 · unfixed: -3')} ${sev('crit', 'unknown blocked: +5 · let in: -5')}
+    </div>
+    <div class="arena" id="arena" aria-label="Upgrade wave arena">
+      <div class="hud-strip"><span>time <b id="aT">${Lab.reduced ? 35 : 50}</b>s</span><span>upgraded <b id="aU">0</b></span><span>failed <b id="aF">0</b></span></div>
+      <div class="house house--l">${icon('laptop')}Windows 10<small>fleet</small></div>
+      <div class="house house--r" id="houseR">${icon('shield-check')}Windows 11<small>compliant</small></div>
+      <div class="lane" style="top:26%"></div><div class="lane" style="top:44%"></div><div class="lane" style="top:62%"></div>
+      <div class="fixlane"></div>
+      <div class="event-banner info start show" id="aBanner">Ready to open the broad ring?<small>Devices start moving as soon as you press start.</small><button class="btn small blue" onclick="L.arcStart()">${icon('play')}Start the wave</button></div>
+      <div class="bigbar" id="aBar"><i id="aBarI"></i><span id="aBarT">fleet 0% upgraded</span></div>
+    </div>
+    <div class="spacer"></div>
+    <div id="aAfter"></div>
+  `);
+}
+function arcStart(){
+  const arena = $('#arena'); if (!arena || ARC.on) return;
+  const banner = $('#aBanner'); if (banner) banner.classList.remove('show');
+  Object.assign(ARC, { items: [], on: true, pts: 0, t: 0, dur: Lab.reduced ? 35 : 50, up: 0, fail: 0, spawned: 0, arena, id: 0 });
+  ARC.total = Lab.reduced ? 30 : 44;
+  const interval = (ARC.dur * 1000 - 9000) / ARC.total;
+  ARC.timer = setInterval(() => {
+    if (!document.body.contains(arena)) return stopArcade();
+    ARC.t++;
+    const left = ARC.dur - ARC.t; Lab.patch('#aT', String(Math.max(0, left)));
+    if (left <= 0) arcEnd();
+  }, 1000);
+  ARC.spawn = setInterval(() => {
+    if (!document.body.contains(arena)) return stopArcade();
+    if (ARC.spawned >= ARC.total) { clearInterval(ARC.spawn); ARC.spawn = null; return; }
+    spawnItem(arena); ARC.spawned++;
+  }, interval);
+  spawnItem(arena); ARC.spawned++;
+  let last = performance.now();
+  const tick = now => {
+    if (!ARC.on) return;
+    if (!document.body.contains(arena)) return stopArcade();
+    const dt = Math.min((now - last) / 1000, 0.05); last = now;
+    const W = arena.clientWidth, goal = W - 84;
+    for (const it of ARC.items) {
+      if (it.gone) continue;
+      it.x += it.v * dt * W;
+      it.el.style.left = it.x + 'px';
+      if (it.x >= goal) arrive(it);
+    }
+    ARC.raf = requestAnimationFrame(tick);
+  };
+  ARC.raf = requestAnimationFrame(tick);
+}
+function spawnItem(arena){
+  const r = Math.random(), kind = r < 0.56 ? 'ok' : r < 0.84 ? 'warn' : 'bad';
+  const it = { id: ARC.id++, kind, x: 60, v: (Lab.reduced ? 0.085 : 0.1) + Math.random() * 0.05, gone: false };
+  const el = document.createElement('button');
+  el.className = 'item' + (kind === 'warn' ? ' warn' : kind === 'bad' ? ' bad' : '');
+  const lane = [26, 44, 62][Math.floor(Math.random() * 3)];
+  el.style.top = `calc(${lane}% - 24px)`; el.style.left = '60px';
+  let label = 'healthy device';
+  if (kind === 'warn') { const a = pick(AMBER); it.issue = a[1]; label = 'device with ' + a[1] + ', send to fix lane'; el.innerHTML = icon('laptop') + `<span class="mini">${icon(a[0])}</span>`; }
+  else if (kind === 'bad') { label = 'unknown device, block it'; el.innerHTML = icon('laptop') + `<span class="mini">${icon('alert')}</span>`; }
+  else el.innerHTML = icon('laptop');
+  el.setAttribute('aria-label', label);
+  el.onclick = e => hit(it, e);
+  it.el = el; arena.appendChild(el); ARC.items.push(it);
+}
+function hit(it, e){
+  if (it.gone || !ARC.on) return;
+  it.gone = true;
+  if (it.kind === 'warn') { it.el.classList.add('sink'); arcScore(4, e); toast(`Sent to the fix lane: ${it.issue}. It upgrades once fixed.`, 'wrench'); ARC.up++; }
+  else if (it.kind === 'bad') { it.el.classList.add('pop'); arcScore(5, e); toast('Unknown device blocked. Not in the Autopilot hardware list.', 'shield-off'); }
+  else { it.el.classList.add('sink'); toast('That one was healthy. It will still upgrade, just later.', 'info'); ARC.up++; }
+  setTimeout(() => it.el.remove(), 700);
+  hud();
+}
+function arrive(it){
+  it.gone = true;
+  it.el.classList.add('pop');
+  if (it.kind === 'ok') { arcScore(1); ARC.up++; }
+  else if (it.kind === 'warn') { arcScore(-3); ARC.fail++; flash(`Upgrade failed on a device with ${it.issue}. Rolled back to Windows 10.`); }
+  else { arcScore(-5); ARC.fail++; flash('An unknown device enrolled and got company access. Block those.'); }
+  setTimeout(() => it.el.remove(), 400);
+  hud();
+}
+let flashT = null;
+function flash(msg){
+  const b = $('#aBanner'); if (!b) return;
+  b.className = 'event-banner show'; b.innerHTML = esc(msg);
+  clearTimeout(flashT); flashT = setTimeout(() => b.classList.remove('show'), 1500);
+}
+function hud(){
+  Lab.patch('#aU', String(ARC.up)); Lab.patch('#aF', String(ARC.fail));
+  const pct = Math.round(100 * ARC.up / ARC.total);
+  const bar = $('#aBarI'); if (bar) bar.style.width = pct + '%';
+  Lab.patch('#aBarT', `fleet ${pct}% upgraded`);
+  const bb = $('#aBar'); if (bb) bb.classList.toggle('danger', ARC.fail > 3);
+  setProgress(0.4 + 0.45 * (ARC.up / ARC.total));
+}
+function arcEnd(){
+  stopArcade();
+  ARC.items.forEach(it => { if (!it.gone) { it.gone = true; it.el.classList.add('sink'); setTimeout(() => it.el.remove(), 500); } });
+  const pct = Math.round(100 * ARC.up / ARC.total);
+  const b = $('#aBanner');
+  if (b) { b.className = 'event-banner ok show'; b.innerHTML = `Wave closed: ${pct}% of the fleet upgraded, ${ARC.fail} failure${ARC.fail === 1 ? '' : 's'}.<small>${ARC.fail <= 2 ? 'Under the 5% pause threshold. The ring stays open.' : 'Above the 5% threshold. In real life you would pause the ring now.'}</small>`; }
+  Lab.patch('#aAfter', `
+    ${say('your guide', `Notice what you were doing: not upgrading devices, but <b>removing the reasons they fail</b> before they fail. Battery, disk space and hardware eligibility are checked by Intune before the upgrade is offered; the unknown devices never get in because Autopilot only enrols hardware you registered. Arcade points this round: <b>${ARC.pts}</b> of ${ARC_CAP}.`, 'tip')}
+    <button class="btn blue" onclick="L.goto(6)">${icon('arrow-right')}To deadline night</button>`);
+}
+
+/* ---------------- L6 : deadline night ---------------- */
+const STEPS = [
+  { t:'Ring 2 reports 7% failures in the first hour', s:'The pause rule is 5%. 14 of 200 devices rolled back.',
+    opts:[
+      { t:'Pause the ring and read the failure codes before anything else', ok:true,
+        log:[['warn','ring-2  failure rate 7.0%  threshold 5%  -> PAUSED'],['dim','reading setupdiag.log on 14 devices…'],['p','root cause: 0xC1900101 driver conflict, legacy VPN client v3.2 on 14 laptops'],['ok','fix: push VPN client v4.1 to ring 2 first, resume tomorrow 06:00']] },
+      { t:'Push on. 93% success is excellent', ok:false, log:[['crit','ring-2 continued at 7% failures; 3 more rollbacks overnight']] },
+      { t:'Roll everyone in ring 2 back to Windows 10', ok:false, log:[['warn','186 healthy devices rolled back for 14 broken ones; a day lost']] }
+    ],
+    ex:'A pause rule only works if you honour it. Seven percent means something systematic, not bad luck, and the failure codes tell you what. Here it is an old VPN driver on 14 laptops, fixable in an hour. Pushing on spreads the problem; rolling everyone back punishes the 186 devices that worked.' },
+  { t:'Autopilot: 12 new laptops stuck at the Enrollment Status Page', s:'“Account setup, installing apps” for 40 minutes. The new starters are watching a progress ring.',
+    opts:[
+      { t:'Tell them to hold the power button and try again', ok:false, log:[['crit','12 devices hard-reset; ESP restarts from zero, same block']] },
+      { t:'Check which required app is blocking the ESP, make it not-required there, set a sane ESP timeout', ok:true,
+        log:[['dim','ESP tracking: Adobe Reader (required, 410 MB) failing on 12 devices'],['p','change: Adobe Reader removed from ESP blocking list, installs after sign-in'],['p','ESP timeout 60 min -> 30 min, allow use on failure: yes'],['ok','12 devices reached the desktop in 6 minutes']] },
+      { t:'Wait. Autopilot is slow sometimes', ok:false, log:[['warn','waited 60 more minutes; ESP timed out with error, users still blocked']] }
+    ],
+    ex:'The Enrollment Status Page waits for every app you marked “required during setup”. One large or failing installer holds twelve people hostage. Keep the ESP list short (security agent, VPN, nothing else), set a timeout, and let the rest install after sign-in.' },
+  { t:'Before enforcing compliance: are all BitLocker recovery keys escrowed to Entra?', s:'If a device locks and the key is not in Entra, the data is gone.',
+    opts:[
+      { t:'They should be. The policy says to back them up', ok:false, log:[['crit','assumed yes. 38 devices had no key in Entra. Discovered at the first recovery prompt']] },
+      { t:'Run the recovery-key report; for every device missing a key, trigger a backup before enforcing anything', ok:true,
+        log:[['dim','query: devices where bitlockerKeys = 0 and encryptionState = encrypted…'],['warn','38 devices encrypted with no escrowed key (encrypted before enrolment)'],['p','remediation: BackupToAAD-BitLockerKeyProtector on 38 devices'],['ok','38/38 keys now in Entra. Report clean.']] },
+      { t:'Turn BitLocker off until we are sure, then back on', ok:false, log:[['crit','decrypting 1,000 disks takes days and leaves them exposed meanwhile']] }
+    ],
+    ex:'Devices encrypted before they were enrolled often have their key on a sticky note, or nowhere. Enforcing compliance will reboot devices and sometimes trigger a recovery prompt. Confirm every key is in Entra first, with a report, not with faith.' },
+  { t:'Communicate the restart', s:'Tonight at 22:00 the broad ring hits its deadline. 400 devices will restart outside active hours.',
+    opts:[
+      { t:'Send nothing. It happens outside working hours anyway', ok:false, log:[['warn','Monday 08:10: 61 tickets titled “my laptop restarted by itself, was I hacked?”']] },
+      { t:'A short message now: what happens, when, why, what to do (save your work, leave it on power), and who to call', ok:true,
+        log:[['p','notice sent to 1,000 users and the service desk script updated'],['dim','subject: Your laptop will restart tonight after 22:00 - here is why'],['ok','Monday: 4 tickets, all answered from the FAQ']] },
+      { t:'A 40-slide deck about the security roadmap', ok:false, log:[['warn','nobody read slide 31 where the restart was mentioned']] }
+    ],
+    ex:'People forgive a restart they were told about and resent one they were not. Four sentences, sent today, save the helpdesk a Monday. This is the cheapest control in the whole project.' }
+];
+let stepIdx = 0, flipped = false, logQ = Promise.resolve();
+function logLines(lines){
+  const el = $('#nightLog'); if (!el) return;
+  logQ = logQ.then(() => Lab.typeLines(el, lines, 6)).catch(() => {});
+}
+function L6(){
+  stopArcade();
+  stepIdx = 0; flipped = false; logQ = Promise.resolve();
+  mood('night');
+  setProgress(0.86);
+  show(`
+    ${Lab.badge('Level 6 · deadline night','moon')}
+    <h2>Thursday, 21:40. The broad ring hits its deadline tonight.</h2>
+    <p class="muted">Rings 0 and 1 are done. Ring 2 is running. In twenty minutes the compliance policy you built in report-only mode is supposed to become real: non-compliant devices lose access to company data. Four things to settle first, in order.</p>
+    <div class="night-grid">
+      <div>
+        <div class="steps" id="steps">${STEPS.map((s, i) => stepHTML(i)).join('')}</div>
+        <div class="log" id="nightLog" aria-live="polite"><div class="dim">rollout log · ${new Date().getFullYear()}-11-20 21:40</div><div class="ok">ring-0 pilot 50/50 complete · ring-1 early 200/200 complete</div><div class="p">ring-2 broad 400 devices in progress…</div></div>
+      </div>
+      <div class="switch-zone">
+        <button class="big-switch" id="bigSwitch" onclick="L.flip()" aria-label="Enforce compliance" disabled><div class="knob" id="knob">REPORT</div></button>
+        <div class="dns-line" id="swLine">Compliance: report-only. Settle the four steps to unlock.</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="L.goto(7)">${icon('arrow-right')}Enforced. On to Monday morning</button></div>
+  `);
+}
+function stepHTML(i){
+  const s = STEPS[i], state = i < stepIdx ? 'ok' : i === stepIdx ? '' : 'locked';
+  return `<div class="step ${state}" id="step${i}">
+    <span class="num">${i < stepIdx ? icon('check') : i + 1}</span>
+    <span class="body"><b>${s.t}</b><small>${s.s}</small>
+      ${i === stepIdx ? `<div class="choices">${s.opts.map((o, j) => `<button class="choice" id="st${i}o${j}" onclick="L.step(${i},${j},event)">${o.t}</button>`).join('')}</div><div class="verdict" id="stv${i}"></div>` : ''}
+    </span></div>`;
+}
+function step(i, j, e){
+  if (i !== stepIdx) return;
+  const s = STEPS[i], o = s.opts[j], el = $('#step' + i); if (!el) return;
+  s.opts.forEach((x, k) => { const b = $(`#st${i}o${k}`); if (!b) return; b.disabled = true; if (k === j) b.classList.add(o.ok ? 'good' : 'bad'); });
+  if (o.ok) scoreAt(10, e);
+  logLines(o.log);
+  Lab.patch('#stv' + i, say(o.ok ? 'right' : 'costly', `${s.ex} <b>(+${o.ok ? 10 : 0})</b>`, o.ok ? 'tip' : 'alert'));
+  const v = $('#stv' + i); if (v) v.classList.add('show');
+  el.classList.add('ok'); el.querySelector('.num').innerHTML = icon('check');
+  stepIdx++;
+  setProgress(0.86 + stepIdx * 0.02);
+  if (stepIdx < STEPS.length) {
+    const next = $('#step' + stepIdx); if (next) next.outerHTML = stepHTML(stepIdx);
+    Lab.hydrateIcons($('#steps'));
+  } else {
+    const sw = $('#bigSwitch'); if (sw) sw.disabled = false;
+    Lab.patch('#swLine', 'All four settled. Flip the switch: compliance goes from report-only to enforced.');
+    if (sw) sw.scrollIntoView({ behavior: Lab.reduced ? 'auto' : 'smooth', block: 'nearest' });
+  }
+}
+function flip(){
+  if (flipped || stepIdx < STEPS.length) return; flipped = true;
+  const sw = $('#bigSwitch'); if (sw) { sw.classList.add('on'); sw.disabled = true; }
+  Lab.patch('#knob', 'ENFORCE');
+  addScore(20, innerWidth / 2, innerHeight / 2);
+  Lab.patch('#swLine', 'Compliance enforced. Non-compliant devices now lose access after their grace period. (+20)');
+  setProgress(0.97);
+  logLines([
+    ['p', '22:00  compliance policy: report-only -> ENFORCED'],
+    ['dim', 'conditional access: require compliant device = on'],
+    ['', 'fleet 1,000 · compliant 941 · in grace 47 · non-compliant 12'],
+    ['warn', '12 non-compliant: 9 kiosks (isolated), 2 refresh-list laptops, 1 Home-edition laptop (replacement shipped)'],
+    ['dim', '22:00-23:30  ring-2 restarts outside active hours: 388 restarted, 0 recovery prompts'],
+    ['ok', '23:41  rollout night closed. No sales hour lost.']
+  ]);
+  logQ.then(() => { const n = $('#l6next'); if (n) n.style.display = 'inline-flex'; });
+}
+
+/* ---------------- L7 : Monday tickets ---------------- */
+const TICKETS = [
+  { ic:'printer', t:'“The office printer is gone from my laptop since the upgrade.”', who:'Dana, reception, 08:05',
+    opts:[
+      { o:'Windows 11 removed the old shared-printer driver; publish the printer through the cloud print service / Intune so it installs itself, no admin rights needed', ok:true },
+      { o:'Give her local admin back so she can install the driver', ok:false },
+      { o:'Printers are legacy; tell her to use PDF', ok:false }
+    ],
+    ex:'Old printer drivers installed by hand are the first casualty of an OS upgrade, and the first excuse to hand admin rights back. Do not. Publish printers centrally so they install without elevation; it also means the next new laptop finds them automatically.' },
+  { ic:'vpn', t:'“VPN says it cannot connect. I am at the client site.”', who:'Radu, sales, 08:20',
+    opts:[
+      { o:'Tell him to come to the office and plug in', ok:false },
+      { o:'The legacy VPN client was replaced in ring 2 after the driver conflict; push the new client through Intune (it reaches him over the internet), and remind him most apps now work without VPN anyway', ok:true },
+      { o:'Disable the firewall on his laptop', ok:false }
+    ],
+    ex:'This is the same VPN client that caused the ring-2 failures, so the fix already exists. Intune delivers it wherever the device is, which is exactly why you moved management to the cloud. And modern apps (Teams, SharePoint, the CRM) do not need a VPN at all.' },
+  { ic:'boxes', t:'“The expense app will not launch. It says it is not compatible.”', who:'Anca, finance, 08:30',
+    opts:[
+      { o:'Roll her laptop back to Windows 10 permanently', ok:false },
+      { o:'Check the app inventory from discovery: the vendor has a Windows 11 build; deploy it. If not, run the old one in compatibility mode or as a virtualised app while the vendor catches up', ok:true },
+      { o:'Tell finance to use a spreadsheet instead', ok:false }
+    ],
+    ex:'This is why discovery collected the application inventory with vendor support status. Most apps have a supported build; a few need compatibility mode or a short-term virtual app. Rolling a device back is the last resort, never the first.' },
+  { ic:'key', t:'“I used to be able to install things. Now it asks for an admin password I do not have.”', who:'Mihai, marketing, 09:00',
+    opts:[
+      { o:'Working as designed. Standing admin rights were removed. If he genuinely needs something installed, the helpdesk retrieves the LAPS password for his device, or approves a time-limited elevation, and installs it', ok:true },
+      { o:'Give him the shared admin password from the wiki', ok:false },
+      { o:'Add him to the local administrators group again', ok:false }
+    ],
+    ex:'The request is legitimate; the standing right is not. LAPS means his device has a unique admin password that the helpdesk can look up in Entra, use once, and that rotates afterwards. The shared password on the wiki is the thing you have just retired.' },
+  { ic:'lock', t:'“My laptop is asking for a 48-digit BitLocker recovery key!”', who:'Ioana, marketing, 09:15, after a BIOS update',
+    opts:[
+      { o:'There is nothing we can do; reinstall Windows', ok:false },
+      { o:'Look up the recovery key in Entra for her device, read it to her after verifying her identity, then check why the firmware update triggered it', ok:true },
+      { o:'Ask her to guess her password a few times', ok:false }
+    ],
+    ex:'This is the moment the escrow check on deadline night pays off: the key is in Entra, the helpdesk reads it out, she is working in two minutes. A firmware update changing the boot measurements is a classic trigger; the prompt is BitLocker doing its job.' },
+  { ic:'box', t:'“My new laptop has been stuck on the setup screen since I unboxed it.”', who:'New starter, 09:40',
+    opts:[
+      { o:'Check the ESP status in Intune for that device; a blocking required app or missing network is the usual cause. If the ESP list is already short, let it continue past the timeout and install the rest after sign-in', ok:true },
+      { o:'Ship the laptop back to the supplier', ok:false },
+      { o:'Install Windows from a USB stick like the old days', ok:false }
+    ],
+    ex:'Autopilot stuck at the Enrollment Status Page is almost always a required app that has not installed yet, or a device that lost Wi-Fi. The fix is in the Intune portal, not in a USB stick; you shortened the ESP list on deadline night for exactly this reason.' },
+  { ic:'phone', t:'“Outlook on my phone says my device is not compliant and will not open.”', who:'Dana again, 10:00, personal Android from 2019',
+    opts:[
+      { o:'Her phone OS is below the minimum version in the app protection policy. Show her the update path; if the phone cannot update, mail and Teams stay available in the browser or on her laptop', ok:true },
+      { o:'Lower the minimum OS version so her phone passes', ok:false },
+      { o:'Buy everyone a company phone', ok:false }
+    ],
+    ex:'App protection sets a minimum OS because old phone systems do not receive security fixes. Lowering the bar for one phone lowers it for all 400. Explain the rule, offer the update or the browser, and hold the line.' }
+];
+let tdone = 0, firstTry = {};
+function L7(){
+  stopArcade();
+  tdone = 0; firstTry = {};
+  mood('');
+  setProgress(0.97);
+  show(`
+    ${Lab.badge('Level 7 · tickets','check-circle')}
+    <h2>Monday, 08:00. The helpdesk hour.</h2>
+    ${say('your guide', `A rollout is not finished when the devices are upgraded; it is finished when <b>people can work</b> and nobody has quietly handed admin rights back. Seven tickets. Choose the fix for each. (+10 first try, +5 on a retry)`, 'tip')}
+    <div id="tzone" style="margin-top:14px">
+      ${TICKETS.map((tk, i) => `
+        <div class="ticket" id="tk${i}">
+          <div class="tx">${icon(tk.ic)}<span><b>${tk.t}</b><small>${tk.who}</small></span></div>
+          <div class="choices">${tk.opts.map((op, j) => `<button class="choice" id="tk${i}o${j}" onclick="L.solve(${i},${j},event)">${op.o}</button>`).join('')}</div>
+          <div class="verdict" id="tk${i}v"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+function solve(i, j, e){
+  const tk = TICKETS[i], card = $('#tk' + i); if (!card || card.classList.contains('done')) return;
+  const b = $(`#tk${i}o${j}`); if (!b) return;
+  if (tk.opts[j].ok) {
+    card.classList.add('done');
+    tk.opts.forEach((op, k) => { const x = $(`#tk${i}o${k}`); if (!x) return; x.disabled = true; if (k === j) x.classList.add('good'); });
+    const pts = firstTry[i] === undefined ? 10 : 5;
+    scoreAt(pts, e);
+    Lab.patch(`#tk${i}v`, say('solved', `${tk.ex} <b>(+${pts})</b>`, 'tip'));
+    const v = $(`#tk${i}v`); if (v) v.classList.add('show');
+    tdone++;
+    if (tdone === TICKETS.length) { setProgress(1); Lab.finale({ into: '#finale', heading: 'Fleet modernised. No sales hour lost.' }); }
+  } else {
+    firstTry[i] = false;
+    b.classList.add('bad'); b.disabled = true;
+    setTimeout(() => b.classList.remove('bad'), 500);
+  }
+}
+
+/* expose handlers used by inline onclick="" */
+window.L = {
+  goto: n => { stopArcade(); Lab.goto(n); },
+  disc, sheet, check, pick: pickD, dnext, pol, ring, verdict, arcStart, step, flip, solve
+};
+
+Lab.init({
+  title: 'Patch Night',
+  codename: 'operation: patch night',
+  levels: [
+    { icon:'play', name:'Briefing' },
+    { icon:'search', name:'Discovery' },
+    { icon:'map', name:'Decisions' },
+    { icon:'list-check', name:'Baseline' },
+    { icon:'laptop', name:'Scenarios' },
+    { icon:'bolt', name:'Wave' },
+    { icon:'moon', name:'Night' },
+    { icon:'check-circle', name:'Tickets' }
+  ],
+  render: [L0, L1, L2, L3, L4, L5, L6, L7],
+  maxScore: 441,
+  ranks: [
+    { min: 400, title: 'Fleet Commander', icon: 'trophy', msg: 'Flawless. You could run this for 40,000 endpoints in 24 countries. Some of us have.' },
+    { min: 330, title: 'Ring Master', icon: 'medal', msg: 'Very solid. You understand why rings, grace periods and escrowed keys exist.' },
+    { min: 240, title: 'Patch Pilot', icon: 'badge', msg: 'Good work. Play again and catch the decisions that cost you Monday morning.' },
+    { min: 0, title: 'Reboot Rookie', icon: 'star', msg: 'You finished the mission. Next time, inventory first and never big bang.' }
+  ],
+  summary: 'Every endpoint modernisation follows the same shape: <b>inventory first</b> (hardware readiness, management state, admins, apps, keys); move in <b>rings, never big bang</b>, with a pause rule you honour; install in the background and restart with a <b>deadline plus a grace period</b>; put <b>compliance before access</b>, in report-only mode until the fleet is ready, then enforce; <b>escrow every BitLocker key</b> to Entra before you rely on it; <b>remove standing local admin with LAPS</b> and a request path, not with a cliff; and <b>communicate the restart</b> in four plain sentences. Zero downtime is not luck. It is sequencing.',
+  scene
+});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<!-- © 2026 shautech. All rights reserved. shautech labs — interactive workshop simulators. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Restore Point — shautech labs</title>
+<meta name="description" content="Restore Point — an interactive backup and ransomware recovery simulator by shautech. Friday 17:40, the files turn .locked: find what you really have, decide, plan, restore and harden.">
+<meta name="theme-color" content="#0A0B0D">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.shautech.com/labs/ransomware-recovery.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="shautech labs">
+<meta property="og:title" content="Restore Point — shautech labs">
+<meta property="og:description" content="Restore Point — an interactive backup and ransomware recovery simulator by shautech. Friday 17:40, the files turn .locked: find what you really have, decide, plan, restore and harden.">
+<meta property="og:url" content="https://www.shautech.com/labs/ransomware-recovery.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='34' fill='%230A0B0D'/%3E%3Crect x='30' y='30' width='120' height='120' rx='26' fill='none' stroke='%234D9FFF' stroke-width='10'/%3E%3Ctext x='90' y='122' font-family='ui-monospace,monospace' font-size='98' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="../assets/css/labs.css">
+<style>
+  /* lab-specific styles only (keep short; shared components live in labs.css) */
+  .defs{display:grid;gap:8px;margin-top:14px}
+  .def{display:flex;gap:12px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.45;color:var(--ink2)}
+  .def .ic{color:var(--accent2);flex:none;margin-top:2px}
+  .def b{color:var(--ink)}
+  .def b:first-child{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.04em}
+  .tile .st{font-family:var(--mono);font-size:10px;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase}
+  button.card-sm{width:100%;text-align:left;color:var(--ink)}
+  .card-sm .num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--mint);min-width:18px;margin-top:2px}
+  .card-sm.locked{opacity:.55}
+  .arena .house--r{color:var(--ink2)}
+  .arena .house.hit .ic{color:var(--red);filter:drop-shadow(0 0 14px rgba(255,92,122,.6))}
+  .item.skull{color:var(--amber);border-color:rgba(255,184,77,.6);background:rgba(255,184,77,.08)}
+  .item.skull.open{border-color:var(--red);color:var(--red);background:rgba(255,92,122,.1)}
+  .nstep{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:12px 14px;margin-bottom:10px;text-align:left;width:100%;cursor:pointer;color:var(--ink);transition:border-color .2s,transform .2s var(--ease)}
+  .nstep:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .nstep .ic{color:var(--accent2);flex:none;margin-top:3px}
+  .nstep b{display:block;font-size:14.5px}
+  .nstep small{color:var(--ink2);font-size:13px;line-height:1.45;display:block}
+  .nstep.done{border-color:rgba(124,242,196,.5);background:rgba(124,242,196,.05);cursor:default}
+  .nstep.done:hover{transform:none}
+  .nstep.done .ic{color:var(--mint)}
+  .nstep:disabled{cursor:default}
+  .nstep.locked{opacity:.45}
+  .big-switch:disabled{opacity:.45;cursor:not-allowed}
+  .clock-wrap{text-align:center;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:14px 16px;margin:16px 0;max-width:420px}
+  .clock-wrap .small{display:block}
+</style>
+</head>
+<body>
+
+<canvas id="labbg" aria-hidden="true"></canvas>
+
+<header class="topbar" id="topbar">
+  <a class="logo" href="../index.html" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span><span class="logo__lab">/ labs</span></a>
+  <span class="sim-name" id="simName"></span>
+  <nav class="lvlmap" id="lvlmap" aria-label="Levels"></nav>
+  <div class="hud">
+    <div class="pill" id="scorePill" title="Points"><b id="score">0</b></div>
+    <a class="exit" href="index.html" title="All labs"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>all labs</span></a>
+  </div>
+</header>
+
+<main class="stage" id="stage"><div class="screen" id="screen" aria-live="polite"></div></main>
+
+<div class="nojs" id="nojs"><div class="box"><p class="badge">shautech labs</p><h2>This simulator needs JavaScript.</h2><p class="muted">It runs entirely in your browser, nothing is sent anywhere. Enable JavaScript, or <a href="index.html" style="color:var(--accent2)">go back to all labs</a>.</p></div></div>
+
+<script src="../assets/js/lab-engine.js"></script>
+<script>
+/* © 2026 shautech. Restore Point — game logic. */
+(function(){
+'use strict';
+const { icon, say, btn, avatar, sev, scoreAt, addScore, show, goto, toast, mood, util } = Lab;
+const { esc, pick, shuffle, clamp } = util;
+const D = Lab.draw, C = Lab.colors;
+const $ = s => document.querySelector(s);
+
+/* ---------------- ambient scene: file server (left) -> backup vault (right) ---------------- */
+const scene = {
+  state: { level: 0, mood: '', infected: false, restored: 0, inf: 0 },
+  init(s, W, H) {
+    const small = W < 700;
+    const rw = small ? 36 : 58, rh = clamp(H * 0.42, 170, 320), ry = H * 0.56 - rh / 2;
+    const lx = small ? 8 : Math.round(W * 0.11), rx = small ? W - 8 - rw : Math.round(W * 0.9) - rw;
+    s.g = { rw, rh, ry, lx, rx, slots: 10, small };
+    s.lanes = [0, 1].map(i => {
+      const y0 = ry + rh * (0.32 + 0.36 * i), y1 = ry + rh * (0.32 + 0.36 * (1 - i));
+      const bend = small ? 30 : 70;
+      return D.curve([lx + rw, y0], [W * 0.42, y0 + (i ? bend : -bend)], [W * 0.58, y1 + (i ? -bend : bend)], [rx, y1], 110);
+    });
+    const n = small ? 14 : 24;
+    s.parts = Array.from({ length: n }, () => ({ lane: Math.random() < .5 ? 0 : 1, t: Math.random(), v: .05 + Math.random() * .06, s: 4 + Math.random() * 2, back: false, bad: false }));
+  },
+  draw(ctx, s, W, H, t, dt) {
+    const g = s.g; if (!g) return;
+    if (s.infected) s.inf = Math.min(1, s.inf + dt * 0.12); else s.inf = Math.max(0, s.inf - dt * 0.6);
+    const inf = s.inf, res = clamp(s.restored || 0, 0, 1), n = g.slots;
+    D.grid(ctx, W, H, 64, 'rgba(255,255,255,.025)');
+    /* red haze while infected */
+    if (inf > 0.01) {
+      const cx = g.lx + g.rw / 2, cy = g.ry + g.rh / 2;
+      const a = inf * (1 - res) * (0.07 + 0.03 * Math.sin(t * 2.2));
+      const gr = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(W, H) * 0.32);
+      gr.addColorStop(0, Lab.rgba(C.red, Math.max(0, a))); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+    }
+    /* lanes */
+    s.lanes.forEach(p => D.path(ctx, p, res > 0.5 ? 'rgba(124,242,196,.16)' : 'rgba(140,194,255,.14)', 1, [3, 8]));
+    /* racks */
+    const redSlots = Math.round(inf * n), mintSlots = Math.round(res * n);
+    const leftCol = res > 0.5 ? 'rgba(124,242,196,.4)' : (inf > 0.5 ? 'rgba(255,92,122,.4)' : 'rgba(77,159,255,.4)');
+    const fill = 'rgba(16,19,23,.45)';
+    D.rack(ctx, g.lx, g.ry, g.rw, g.rh, { slots: n, label: g.small ? '' : 'FS01 · FILE SERVER', color: leftCol, fill,
+      led: i => (i < mintSlots ? C.mint : (i < redSlots ? C.red : C.accent)) });
+    D.rack(ctx, g.rx, g.ry, g.rw, g.rh, { slots: n, label: g.small ? '' : 'BACKUP VAULT', color: 'rgba(124,242,196,.38)', fill, led: () => C.mint });
+    /* lock glyphs on the infected LEDs */
+    for (let i = mintSlots; i < redSlots; i++) {
+      const sy = g.ry + 10 + i * ((g.rh - 20) / n) + 5;
+      D.glyph(ctx, 'lock', g.lx + g.rw / 2 - 4, sy, 4, Lab.rgba(C.red, .55 + .2 * Math.sin(t * 3 + i)));
+    }
+    /* vault padlock badge */
+    D.glyph(ctx, 'shield', g.rx + g.rw / 2, g.ry + g.rh + 22, 7, 'rgba(124,242,196,.45)');
+    /* packets */
+    for (const p of s.parts) {
+      p.t += dt * p.v * (p.back ? -1 : 1);
+      if (!p.back && p.t >= 1) { p.t = 0; p.lane = Math.random() < .5 ? 0 : 1; p.back = Math.random() < res; p.bad = !p.back && Math.random() < inf * 0.7; if (p.back) p.t = 1; }
+      if (p.back && p.t <= 0) { p.t = 1; p.lane = Math.random() < .5 ? 0 : 1; p.back = Math.random() < res; p.bad = !p.back && Math.random() < inf * 0.7; if (!p.back) p.t = 0; }
+      const [x, y] = D.posOn(s.lanes[p.lane], p.t);
+      const col = p.back ? Lab.rgba(C.mint, .8) : (p.bad ? Lab.rgba(C.red, .8) : Lab.rgba(C.accent2, .7));
+      D.glyph(ctx, p.bad ? 'lock' : 'file', x, y, p.s, col);
+    }
+  }
+};
+const sset = (k, v) => { if (Lab.scene) Lab.scene.set(k, v); };
+
+/* ---------------- shared cleanup for timers ---------------- */
+let arc = null, nightTimer = null;
+function cleanup() {
+  if (arc) { arc.live = false; if (arc.raf) cancelAnimationFrame(arc.raf); arc = null; }
+  if (nightTimer) { clearInterval(nightTimer); nightTimer = null; }
+}
+
+/* ---------------- L0 : briefing ---------------- */
+function L0() {
+  cleanup(); mood('alert'); sset('infected', true); sset('restored', 0);
+  show(`
+    ${Lab.badge('Level 0 · Friday, 17:40', 'play')}
+    <h1>Every file just turned <em>.locked</em>.</h1>
+    ${say('the boss', `Everyone is leaving for the weekend and the F: drive is full of files called <b>Q3-forecast.xlsx.locked</b>.
+      There is a <b>README_RESTORE.txt</b> on every desktop asking for 4 bitcoin, "price doubles Sunday midnight".
+      The SharePoint "Projects" library looks the same. You are the IT lead. Tell me we have backups.`, 'alert')}
+    ${say('your guide', `Welcome to <b>Restore Point</b> at Vector Freight, 140 people, trucks across Europe, one file server too many.
+      Ransomware is not a storage problem, it is a <b>recovery</b> problem: companies with a tested copy the attacker cannot reach have a bad weekend;
+      companies without one have a bad year. Three terms you will hear all night:`, 'tip')}
+    <div class="defs">
+      <div class="def">${icon('layers')}<div><b>3-2-1 BACKUP</b>Three copies of your data, on two different kinds of storage, one of them somewhere else. The modern version is <b>3-2-1-1-0</b>: plus one copy offline or immutable, and zero errors on a tested restore.</div></div>
+      <div class="def">${icon('lock')}<div><b>IMMUTABLE</b>A copy that nobody can change or delete before its retention date passes, not even an administrator holding stolen passwords.</div></div>
+      <div class="def">${icon('clock')}<div><b>RPO / RTO</b>RPO: how much work you can afford to lose (the gap between the last good backup and the incident). RTO: how long you can afford to be down.</div></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="L.goto(1)">${icon('arrow-right')}Take the incident</button>
+  `);
+}
+
+/* ---------------- L1 : discovery ---------------- */
+const assets = [
+  { ic: 'server', nm: 'FS01 file server', st: 'on-prem', prot: 'Encrypted', imm: 'No', last: 'Azure vault, Thu 23:10', verdict: 'Isolate now, rebuild later', cls: 'bad',
+    ex: `<b>FS01, 2.1 TB, every share.</b> The encryption started 16:52 from a service account. Windows shadow copies have been deleted, which ransomware always does first. The server itself is lost as a <i>system</i>; what matters is which clean copy of its <i>data</i> exists elsewhere.` },
+  { ic: 'cloud', nm: 'Microsoft 365', st: 'OneDrive · SharePoint · Exchange', prot: 'Versions only', imm: 'No', last: 'Version history (93 days)', verdict: 'Roll back library versions; buy a real backup', cls: 'warn',
+    ex: `<b>The "Projects" library was encrypted through a synced OneDrive client</b> on an infected PC, the files were simply uploaded in their locked form. Good news: SharePoint keeps previous versions and a 93-day recycle bin, so a library-level restore to Thursday is possible.
+      Hard truth for the boss: <b>Microsoft 365 retention is not a backup.</b> Retention policies keep what is deleted for compliance; they do not protect you from a tenant-wide attack, a malicious admin, a licence lapse or a sync disaster, and Microsoft's own terms say so. A third-party Microsoft 365 backup is a line item, not a luxury.` },
+  { ic: 'hard-drive', nm: 'NAS + USB disks', st: 'server room', prot: 'NAS encrypted · USB offline', imm: 'USB only (air gap)', last: 'USB, Tue 18:00', verdict: 'Fallback only, stale', cls: 'warn',
+    ex: `<b>The NAS was mapped as drive B: on FS01 with write access</b>, so the backup share got encrypted a minute after the data did. A backup the server can write to is just a second copy of the problem.
+      The USB disk rotated weekly sits in the drawer, last swapped Tuesday: <b>offline, so it survived</b>, but it is three days old (RPO 72 h) and nobody has ever tried restoring from it.` },
+  { ic: 'cloud-check', nm: 'Azure Backup vault', st: 'cloud · geo-redundant', prot: 'Yes', imm: 'Yes (soft delete + immutability)', last: 'Thu 23:10', verdict: 'Primary restore source', cls: 'ok',
+    ex: `<b>Nightly backup of the FS01 VM, the SQL databases and the domain controllers' system state</b>, with soft delete and an immutability lock enabled. The attacker had domain admin, tried to delete these at 17:05, and the vault refused. This is the <b>"1" in 3-2-1-1</b>: the copy nobody can touch. RPO about 19 hours. Last restore test: never. Tonight changes that.` },
+  { ic: 'laptop', nm: "Daniel's laptop", st: 'the backup guy · on holiday', prot: 'n/a', imm: 'No', last: 'n/a', verdict: 'Single point of knowledge', cls: 'warn',
+    ex: `<b>Daniel is in Greece with no signal.</b> His laptop holds the backup console password in a text file, the only copy of the restore procedure, and the vault's recovery key export. All of it was also synced to FS01. A backup nobody but one person knows how to restore has an RTO of "when Daniel is back". Recovery documentation belongs in a <b>printed, offline runbook</b> and a password vault with break-glass access.` },
+  { ic: 'network', nm: 'Domain controllers', st: 'DC01 · DC02', prot: 'Compromised', imm: 'System state in vault', last: 'Thu 23:10', verdict: 'Treat every password as stolen', cls: 'bad',
+    ex: `<b>The ransom note is on DC01's desktop.</b> The attacker ran the encryption with a domain admin account, which means they had every credential in the company. Containment is not finished until <b>every</b> password, service account and the Kerberos ticket-signing key is reset, and the DCs are rebuilt or restored from a point before the intrusion.` }
+];
+let found = 0;
+function L1() {
+  cleanup(); mood('alert'); found = 0;
+  show(`
+    ${Lab.badge('Level 1 · discovery', 'search')}
+    <h2>What do we <em>actually</em> have?</h2>
+    ${say('your guide', `Before any decision: inventory. Click each system to learn whether it is protected, whether the copy is immutable, and how old the last clean point is. (+10 each, +10 for the full picture)`, 'tip')}
+    <div class="grid grid--3" id="tiles">
+      ${assets.map((a, i) => `
+        <button class="tile" id="tile${i}" onclick="L.found(${i},event)">${icon(a.ic)}<span class="nm">${a.nm}</span><span class="st">${a.st}</span></button>`).join('')}
+    </div>
+    <div class="inv" id="inv"><b>Inventory 0/6</b> · click a system above.</div>
+    <div id="sheet"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l1next" style="display:none" onclick="L.goto(2)">${icon('arrow-right')}Picture clear. Decisions</button>
+  `);
+}
+function foundAsset(i, e) {
+  const a = assets[i], el = $('#tile' + i);
+  if (!el || el.classList.contains('found')) return;
+  el.classList.add('found'); if (a.cls === 'bad') el.classList.add('bad');
+  found++; scoreAt(10, e);
+  Lab.patch('#inv', `<b>Inventory ${found}/6</b> · ${sev(a.cls === 'ok' ? 'ok' : a.cls === 'bad' ? 'crit' : 'warn', a.verdict)}<br>${a.ex}`);
+  if (found === assets.length) {
+    addScore(10);
+    Lab.patch('#sheet', `
+      <div class="sheet"><table>
+        <thead><tr><th>Asset</th><th>Protected?</th><th>Immutable?</th><th>Last clean point</th><th>Verdict</th></tr></thead>
+        <tbody>${assets.map(x => `<tr class="${x.cls === 'bad' ? 'bad' : x.cls === 'warn' ? 'hot' : ''}"><td>${x.nm}</td><td>${x.prot}</td><td>${x.imm}</td><td>${x.last}</td><td>${x.verdict}</td></tr>`).join('')}</tbody>
+      </table></div>
+      ${say('the picture', `Six systems, <b>one</b> copy the attacker could not reach: the immutable Azure vault, 19 hours old. The NAS proves the point in reverse: online backups the server can write to die with the server. Microsoft 365 will recover through version history this time, and gets a proper backup next week. Inventory complete, +10.`, 'tip')}`);
+    const nb = $('#l1next'); if (nb) nb.style.display = 'inline-flex';
+  }
+}
+
+/* ---------------- L2 : decisions ---------------- */
+const decisions = [
+  { q: 'The note says 4 BTC, doubling Sunday. Pay or not?', opts: [
+    { t: 'Do not pay by default. We have a clean immutable copy: report, recover, rebuild.', s: 'Payment is a last resort decided with insurer and legal, not under a countdown.', v: 'good', pts: 10,
+      fb: 'Right. You have a copy the attacker could not touch, so paying buys nothing you do not already own. Decryptors from criminals are slow, buggy, and arrive roughly two times out of three; paying marks you as a payer, may breach sanctions law, and the data they copied is still theirs. Paying is a business decision for the insurer and legal counsel, never a reflex at 17:45.' },
+    { t: 'Open a channel with the attacker through a negotiator to stall, but pay nothing yet.', s: 'Buys time and learns what they took.', v: 'meh', pts: 5,
+      fb: 'Defensible, but only with the insurer and legal in the room: negotiators can learn what was stolen and slow the clock. On your own it costs hours you need for recovery, and the countdown is theatre designed to rush you.' },
+    { t: 'Pay now, before the price doubles. Cheaper than a week of downtime.', s: 'Be pragmatic, get the key, move on.', v: 'bad', pts: 0,
+      fb: 'The countdown worked on you. No guarantee of a working key, the stolen data stays stolen, you may have just funded a sanctioned group, and the group now knows you pay. With an immutable copy in the vault you paid for something you already had.' } ] },
+  { q: 'FS01 and DC01 are still encrypting. Isolate or shut down?', opts: [
+    { t: 'Isolate: disable the switch ports and VPN, keep the machines powered on.', s: 'Cut the network, not the power.', v: 'good', pts: 10,
+      fb: 'Containment with the evidence intact. Pulling the network stops the spread and the attacker\'s remote control; keeping power preserves memory, running processes and logs that show how they got in. Isolation first, forensics second, rebuild third.' },
+    { t: 'Hard power-off everything in the server room, right now.', s: 'No electricity, no encryption.', v: 'meh', pts: 5,
+      fb: 'It does stop the encryption, and if you have no way to isolate it is better than nothing. But you lose the memory evidence that tells you what happened, risk corrupting disks mid-write, and some strains encrypt faster on the next boot. Prefer the network cable.' },
+    { t: 'Leave it running and start deleting the .locked files so people can see what is left.', s: 'Clean as you go.', v: 'bad', pts: 0,
+      fb: 'Still connected means still spreading, and you are now destroying evidence and anything a decryptor or forensic tool could have recovered. Never clean before you contain.' } ] },
+  { q: 'It is 18:05. Who do you call, in what order?', opts: [
+    { t: 'Insurer hotline, then legal/DPO, note the time: the GDPR 72-hour clock started when we became aware. Then CERT and police.', s: 'The calls that have deadlines attached, first.', v: 'good', pts: 10,
+      fb: 'Correct order. Cyber insurers require notice within hours and usually bring an incident-response firm with them. The DPO decides whether personal data is at risk; if so, the supervisory authority must be told within <b>72 hours of awareness</b>, Friday 17:40 to Monday 17:40, weekend included. The national CERT and the police want the ransom note and indicators; they may know the group and whether a decryptor exists.' },
+    { t: 'Call the police, then post on LinkedIn to warn partners we have been hit.', s: 'Transparency, fast.', v: 'meh', pts: 5,
+      fb: 'The police call is right. The public post is early: you do not yet know what was taken, your insurer may require approval of external statements, and customers will call a helpdesk that has no answers. Inform partners directly, with facts, after the first assessment.' },
+    { t: 'Nobody yet. Fix it over the weekend, brief people Monday.', s: 'Why worry everyone before we know?', v: 'bad', pts: 0,
+      fb: 'Silence is the most expensive option: it can void the insurance, burns the 72-hour GDPR window over a weekend, and every hour the attacker\'s stolen data gets closer to publication. The people on the phone exist precisely for Friday evenings.' } ] },
+  { q: 'Restore the servers from last night, or rebuild?', opts: [
+    { t: 'Rebuild servers from clean OS images, then restore only the DATA from the Thursday 23:10 immutable point.', s: 'Fresh systems, old data.', v: 'good', pts: 10,
+      fb: 'Yes. The first suspicious login was Tuesday 02:14; any VM snapshot after that may contain the attacker\'s tools and scheduled tasks. Rebuilding the operating systems from known-good images and restoring data gives you a clean house with the furniture back. Slower RTO, no encore.' },
+    { t: 'Restore the whole FS01 VM from Thursday night and reconnect, fastest path.', s: 'Everything exactly as it was.', v: 'meh', pts: 5,
+      fb: 'Fast, and if the attacker only got in Friday it would be enough. But the logs say Tuesday, so Thursday\'s image includes their backdoor. You would restore the infection with the files. Full-VM restores are fine only when the point predates the intrusion.' },
+    { t: 'Use the NAS copy, it is the newest.', s: 'Minutes of lost work instead of a day.', v: 'bad', pts: 0,
+      fb: 'The NAS was encrypted with the server. Newer does not matter when the copy is unreadable; an online backup the attacker can write to is not a backup, it is a second victim.' } ] }
+];
+let di = 0;
+function L2() {
+  cleanup(); mood('alert'); di = 0;
+  show(`
+    ${Lab.badge('Level 2 · decisions', 'route')}
+    <h2>Four calls that decide the <em>weekend</em>.</h2>
+    ${say('your guide', `The first hour decides whether this is a story you tell or a story told about you. Pick the best option for each situation.`, 'tip')}
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision() {
+  const d = decisions[di];
+  Lab.patch('#dzone', `
+    <h3 style="margin-top:16px">Decision ${di + 1}/${decisions.length}: ${d.q}</h3>
+    <div class="choices">
+      ${d.opts.map((o, i) => `<button class="choice" id="ch${i}" onclick="L.decide(${i},event)"><b>${o.t}</b><small>${o.s}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none" onclick="L.dnext()"></button>
+  `);
+}
+function decide(i, e) {
+  const d = decisions[di], o = d.opts[i];
+  d.opts.forEach((x, j) => { const el = $('#ch' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add(o.v); });
+  if (o.pts > 0) scoreAt(o.pts, e);
+  Lab.patch('#verdict', say(o.v === 'good' ? 'good call' : o.v === 'meh' ? 'defensible' : 'costly', o.fb, o.v === 'good' ? 'tip' : o.v === 'meh' ? 'warn' : 'alert'));
+  const v = $('#verdict'); if (v) v.classList.add('show');
+  const b = $('#dnext'); if (!b) return;
+  b.style.display = 'inline-flex';
+  b.innerHTML = di < decisions.length - 1 ? icon('arrow-right') + 'Next decision' : icon('arrow-right') + 'Decisions made. Build the plan';
+}
+function dnext() { if (di < decisions.length - 1) { di++; renderDecision(); } else goto(3); }
+
+/* ---------------- L3 : the recovery plan board ---------------- */
+const steps = [
+  { ic: 'shield-off', t: 'Contain', d: 'Isolate infected machines, disable VPN and the compromised accounts.', why: 'Nothing else is safe while the attacker is still inside and the encryption is still running. Containment is always the first move.' },
+  { ic: 'camera', t: 'Preserve evidence', d: 'Export logs, image one infected machine, keep the ransom note and sample files.', why: 'Evidence disappears the moment you rebuild or reset. Capture it right after containment, before anything is touched.' },
+  { ic: 'search', t: 'Identify the entry point', d: 'Find how and when they got in: VPN logs, first suspicious login, which account.', why: 'Resetting credentials or restoring before you know the door is open means the attacker walks straight back in.' },
+  { ic: 'key', t: 'Reset credentials', d: 'Every password, service account, the Kerberos signing key; enable MFA on remote access.', why: 'Resetting too early is wasted if the backdoor remains; too late and the attacker uses the old credentials against the restored systems.' },
+  { ic: 'rotate-ccw', t: 'Restore from a clean point', d: 'Rebuild OS from images, restore data from the immutable copy that predates the intrusion.', why: 'Restoring into a network that is not contained, with credentials not yet reset, means the restored files get encrypted again within minutes.' },
+  { ic: 'check-circle', t: 'Validate', d: 'Scan the restored systems, open real files, compare checksums, confirm the entry point is closed.', why: 'You cannot validate what has not been restored yet, and you must validate before you announce anything.' },
+  { ic: 'send', t: 'Communicate the all-clear', d: 'Staff, customers, insurer and authority get the timeline and what changed.', why: 'The all-clear comes after validation, or you will be sending a second message on Tuesday. Status updates run all weekend; the all-clear waits.' }
+];
+let planIdx = 0, planOrder = [];
+function L3() {
+  cleanup(); mood('alert'); planIdx = 0; planOrder = shuffle(steps.map((_, i) => i));
+  show(`
+    ${Lab.badge('Level 3 · build the plan', 'list-check')}
+    <h2>Seven steps. One <em>right order</em>.</h2>
+    ${say('your guide', `Every ransomware recovery follows the same shape, and doing the right things in the wrong order is how companies get encrypted twice in one weekend. Click the cards in the order you would run them. Wrong picks cost nothing but tell you why.`, 'tip')}
+    <div class="board">
+      <div class="col"><h4>Backlog <span id="bl">7 left</span></h4><div id="backlog">
+        ${planOrder.map(i => `<button class="card-sm" id="pc${i}" onclick="L.plan(${i},event)">${icon(steps[i].ic)}<span><b>${steps[i].t}</b><small>${steps[i].d}</small></span></button>`).join('')}
+      </div></div>
+      <div class="col"><h4>Recovery plan <span id="pl">0 / 7</span></h4><div id="plan"></div></div>
+    </div>
+    <div class="inv" id="planlog"><b>Next step?</b> · think: what must be true before this can happen?</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="L.goto(4)">${icon('arrow-right')}Plan approved. Run it</button>
+  `);
+}
+function plan(i, e) {
+  const card = $('#pc' + i); if (!card || card.classList.contains('done')) return;
+  if (i === planIdx) {
+    card.classList.add('done'); planIdx++; scoreAt(10, e);
+    const p = $('#plan'); if (p) { p.insertAdjacentHTML('beforeend', `<div class="card-sm done"><span class="num">${planIdx}</span>${icon(steps[i].ic)}<span><b>${steps[i].t}</b><small>${steps[i].d}</small></span></div>`); Lab.hydrateIcons(p); }
+    card.remove();
+    Lab.patch('#bl', `${7 - planIdx} left`); Lab.patch('#pl', `${planIdx} / 7`);
+    Lab.patch('#planlog', `<b>Step ${planIdx}: ${steps[i].t}.</b> ${planIdx < 7 ? 'What has to be true before the next one?' : 'The plan is complete.'}`);
+    if (planIdx === steps.length) {
+      Lab.patch('#planlog', `<b>Plan complete.</b> Contain, preserve, identify, reset, restore, validate, communicate. Print this order and put it in the runbook; on the night, nobody should have to invent it.`);
+      const nb = $('#l3next'); if (nb) nb.style.display = 'inline-flex';
+    }
+  } else {
+    card.classList.add('bad'); setTimeout(() => card.classList.remove('bad'), 600);
+    Lab.patch('#planlog', `${sev('warn', 'not yet')} <b>${steps[i].t}</b> comes after <b>${steps[planIdx].t}</b>. ${steps[i].why}`);
+  }
+}
+
+/* ---------------- L4 : restore scenarios ---------------- */
+const scenarios = [
+  { s: 'The backup server\'s own repository shows .locked files. The attacker encrypted the backups too.', opts: [
+    { t: 'Restore from the immutable Azure vault copy', ok: true },
+    { t: 'Pay for the decryptor, it is the only fast path now', ok: false },
+    { t: 'Rebuild everything from the Tuesday USB disk', ok: false } ],
+    ex: 'This is exactly why the rule grew an extra "1": one copy offline or immutable. A backup server joined to the same domain, writable by the same admin account, falls with the domain. The vault refused the delete at 17:05 because immutability does not care who is asking. The USB disk is the fallback if the vault had failed, three days older.' },
+  { s: 'The Thursday 23:10 restore came back readable, but the antivirus flags a scheduled task that relaunches the malware at boot.', opts: [
+    { t: 'Go back further: restore data from a point before the Tuesday 02:14 intrusion, OS rebuilt from clean images', ok: true },
+    { t: 'Delete the task and go live, the data is fine', ok: false },
+    { t: 'Restore Thursday again, it was probably a glitch', ok: false } ],
+    ex: 'The restore point contains the attacker because the attacker was already inside when it was taken. The last clean point is the last one before the first sign of intrusion, not the most recent one. Data restored from Thursday is fine for files that were not touched; the operating system is rebuilt, never restored, from any point after Tuesday.' },
+  { s: 'Restoration is running. Mara in accounting shouts that new .locked files are appearing on her laptop right now.', opts: [
+    { t: 'Isolate the laptop from the network before reconnecting anything else', ok: true },
+    { t: 'Reconnect the file server anyway, it is only one laptop', ok: false },
+    { t: 'Format the laptop immediately', ok: false } ],
+    ex: 'One still-infected device will re-encrypt the restored shares the moment they come back online. Isolate first, then check the other endpoints with the EDR tool before any server is reconnected. Formatting destroys the evidence of how this one got missed; isolate, image, then rebuild.' },
+  { s: 'SharePoint "Projects": 14,000 files encrypted through one user\'s OneDrive sync client.', opts: [
+    { t: 'Stop that user\'s sync, then use the library-level "Restore this library" to roll back to Thursday 17:00', ok: true },
+    { t: 'Delete the library and ask people to re-upload from their desktops', ok: false },
+    { t: 'Open a Microsoft ticket and wait', ok: false } ],
+    ex: 'SharePoint keeps version history; the library restore rolls every file back to a chosen time in one operation. Stop the sync client first or it uploads the locked versions again. Desktop copies are the infected copies. Microsoft support will tell you to do exactly this, hours later; and remember, if the library had simply been deleted and purged, version history would not have saved you. That is the third-party backup conversation.' },
+  { s: 'The HR share was never added to the Azure backup job. The Tuesday USB disk is the only copy.', opts: [
+    { t: 'Restore it on an isolated clean machine, scan it, copy it in, then add HR to the backup job', ok: true },
+    { t: 'Plug the USB disk into FS01 to copy it fast', ok: false },
+    { t: 'Tell HR the data is gone', ok: false } ],
+    ex: 'Never connect your last copy to a machine you have not rebuilt; if anything is still running there, you lose the last copy too. Mount it on a clean, isolated machine, scan, copy, and only then plug the gap in the backup scope. The 0 in 3-2-1-1-0 means zero surprises: a quarterly restore test would have found the missing share in July.' }
+];
+let scenDone = 0, scenTry = {};
+function L4() {
+  cleanup(); mood('alert'); scenDone = 0; scenTry = {};
+  show(`
+    ${Lab.badge('Level 4 · restore scenarios', 'save')}
+    <h2>Saturday morning: the <em>restore</em> gets complicated.</h2>
+    ${say('your guide', `Real restores never go as the plan says. Five surprises, one right move each. First try +10, second try +5.`, 'tip')}
+    ${scenarios.map((sc, i) => `
+      <div class="ticket" id="sc${i}">
+        <div class="tx">${icon('alert')}<div><b>Surprise ${i + 1}</b><small>${sc.s}</small></div></div>
+        <div class="verdict-btns">${sc.opts.map((o, j) => `<button class="btn small" id="sc${i}o${j}" onclick="L.scen(${i},${j},event)">${o.t}</button>`).join('')}</div>
+        <div class="verdict" id="sc${i}v"></div>
+      </div>`).join('')}
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="L.goto(5)">${icon('arrow-right')}Restore night begins</button>
+  `);
+}
+function scen(i, j, e) {
+  const sc = scenarios[i], card = $('#sc' + i), b = $(`#sc${i}o${j}`);
+  if (!card || !b || card.classList.contains('done')) return;
+  if (sc.opts[j].ok) {
+    card.classList.add('done');
+    sc.opts.forEach((_, k) => { const x = $(`#sc${i}o${k}`); if (x) x.disabled = true; });
+    b.classList.add('green');
+    scoreAt(scenTry[i] ? 5 : 10, e);
+    Lab.patch('#sc' + i + 'v', say('why', sc.ex, 'tip')); const v = $('#sc' + i + 'v'); if (v) v.classList.add('show');
+    scenDone++;
+    if (scenDone === scenarios.length) { const nb = $('#l4next'); if (nb) nb.style.display = 'inline-flex'; }
+  } else {
+    scenTry[i] = true; b.classList.add('red'); b.disabled = true;
+    toast('Not that one. Think: what could make it worse?', 'alert');
+  }
+}
+
+/* ---------------- L5 : arcade "Restore Night" ---------------- */
+const ARC_CAP = 90;
+function L5() {
+  cleanup(); mood('alert'); sset('restored', 0);
+  const dur = Lab.reduced ? 36000 : 50000;
+  show(`
+    ${Lab.badge('Level 5 · restore night', 'bolt')}
+    <h2>Keep the <em>clean</em> restores flowing.</h2>
+    ${say('your guide', `Restore jobs stream from the vault to the rebuilt FS01. Encrypted leftovers from infected laptops try to ride along.
+      <b>Click the red locked files</b> to quarantine them (+5). <b>Let the mint restore jobs reach the server</b> (+3 each). Do not click the restores, and whatever you do, do not click the ransom note twice.`, 'tip')}
+    <div class="arena" id="arena" aria-label="Restore night arena">
+      <div class="house house--l">${icon('cloud-check')}VAULT<small>immutable</small></div>
+      <div class="house house--r" id="srv">${icon('server')}FS01<small>rebuilt</small></div>
+      <div class="hud-strip" style="left:auto;right:14px;top:auto;bottom:44px"><span>quarantined <b id="hq">0</b></span><span>restored <b id="hr">0</b></span></div>
+      <div class="event-banner" id="banner"></div>
+      <div class="bigbar"><i id="bar"></i><span id="barlbl">restore night · 0%</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="L.goto(6)">${icon('arrow-right')}Night shift: communicate and switch on</button>
+  `);
+  arc = { live: true, t0: performance.now(), dur, items: [], pts: 0, q: 0, r: 0, seq: 0, lastSpawn: 0, raf: null, skullSeen: false };
+  arc.raf = requestAnimationFrame(arcTick);
+}
+function arcAdd(n, e) {
+  if (!arc) return;
+  if (n > 0) n = Math.max(0, Math.min(n, ARC_CAP - arc.pts));
+  arc.pts += n;
+  if (n !== 0) scoreAt(n, e);
+}
+function arcSpawn(arena, now) {
+  const W = arena.clientWidth, H = arena.clientHeight;
+  const roll = Math.random();
+  let kind = roll < 0.42 ? 'bad' : (roll < 0.9 || arc.skullSeen) ? 'good' : 'skull';
+  if (kind === 'skull') arc.skullSeen = true;
+  const el = document.createElement('button');
+  el.className = 'item ' + (kind === 'bad' ? 'bad' : kind === 'good' ? 'good' : 'skull');
+  el.setAttribute('aria-label', kind === 'bad' ? 'Encrypted file, quarantine' : kind === 'good' ? 'Clean restore job' : 'Ransom note');
+  el.innerHTML = icon(kind === 'bad' ? 'file-lock' : kind === 'good' ? 'save' : 'skull');
+  const speed = (Lab.reduced ? 9000 : 4200 + Math.random() * 2200);
+  const it = { el, kind, born: now, dur: speed, y: 64 + Math.random() * Math.max(40, H - 170), clicks: 0, dead: false };
+  el.style.left = '70px'; el.style.top = it.y + 'px';
+  el.addEventListener('click', ev => arcClick(it, ev));
+  arena.appendChild(el); arc.items.push(it);
+  return W;
+}
+function arcClick(it, e) {
+  if (!arc || !arc.live || it.dead) return;
+  if (it.kind === 'bad') {
+    it.dead = true; it.el.classList.add('pop'); arc.q++; arcAdd(5, e);
+    setTimeout(() => it.el.remove(), 360);
+  } else if (it.kind === 'good') {
+    it.dead = true; it.el.classList.add('sink'); arcAdd(-5, e);
+    toast('That was a clean restore job. Let the mint ones through.', 'save');
+    setTimeout(() => it.el.remove(), 500);
+  } else {
+    it.clicks++;
+    if (it.clicks === 1) { it.el.classList.add('open'); toast('Ransom note opened: 4 BTC, "doubles Sunday". Clicking again means paying.', 'skull'); }
+    else { it.dead = true; it.el.classList.add('sink'); arcAdd(-20, e); toast('You paid. No key arrived, and you just funded the next attack.', 'alert'); setTimeout(() => it.el.remove(), 500); }
+  }
+  const hq = $('#hq'); if (hq) hq.textContent = arc.q;
+}
+function arcTick(now) {
+  if (!arc || !arc.live) return;
+  const arena = $('#arena');
+  if (!arena || !arena.isConnected) { cleanup(); return; }
+  const prog = (now - arc.t0) / arc.dur;
+  if (prog >= 1) { endArcade(); return; }
+  const W = arena.clientWidth;
+  const alive = arc.items.filter(i => !i.dead).length;
+  const gap = Lab.reduced ? 1600 : 950;
+  if (now - arc.lastSpawn > gap && alive < 6 && prog < 0.92) { arcSpawn(arena, now); arc.lastSpawn = now; }
+  const endX = W - 118;
+  for (const it of arc.items) {
+    if (it.dead) continue;
+    const f = (now - it.born) / it.dur;
+    const x = 70 + f * (endX - 70);
+    it.el.style.left = Math.round(x) + 'px';
+    if (f >= 1) {
+      it.dead = true;
+      const srv = $('#srv');
+      if (it.kind === 'good') { arc.r++; arcAdd(3); if (srv) { srv.classList.add('ok'); setTimeout(() => srv.classList.remove('ok'), 350); } }
+      else if (it.kind === 'bad') { arcAdd(-3); if (srv) { srv.classList.add('hit'); setTimeout(() => srv.classList.remove('hit'), 450); } }
+      it.el.remove();
+    }
+  }
+  arc.items = arc.items.filter(i => !i.dead || i.el.isConnected);
+  const hr = $('#hr'); if (hr) hr.textContent = arc.r;
+  const bar = $('#bar'); if (bar) bar.style.width = Math.round(prog * 100) + '%';
+  const lbl = $('#barlbl'); if (lbl) lbl.textContent = `restore night · ${Math.round(prog * 100)}%`;
+  sset('restored', prog * 0.6);
+  arc.raf = requestAnimationFrame(arcTick);
+}
+function endArcade() {
+  if (!arc) return;
+  arc.live = false; if (arc.raf) cancelAnimationFrame(arc.raf);
+  arc.items.forEach(i => i.el.remove());
+  const b = $('#banner');
+  if (b) { b.className = 'event-banner ok show'; b.innerHTML = `Restore night done: ${arc.q} encrypted files quarantined, ${arc.r} clean restores landed.<small>Arcade points this level: ${Math.max(0, arc.pts)} of ${ARC_CAP}. Now the paperwork.</small>`; }
+  const lbl = $('#barlbl'); if (lbl) lbl.textContent = 'restore night · complete';
+  const bar = $('#bar'); if (bar) bar.style.width = '100%';
+  const nb = $('#l5next'); if (nb) nb.style.display = 'inline-flex';
+}
+
+/* ---------------- L6 : night shift, communication, switch ---------------- */
+const nsteps = [
+  { ic: 'phone', t: 'Update the insurer', d: 'Clean immutable copy confirmed, no payment, restore underway, entry point identified (contractor VPN account, no MFA). Their forensics firm joins at 08:00.',
+    w: 'Insurers decide coverage on what you did in the first hours. A calm, timestamped update is worth more than a heroic one on Monday.' },
+  { ic: 'users', t: 'Message the staff', d: 'Short and factual: what happened, systems are offline until further notice, do not connect old laptops, new passwords issued in person Monday, who to call.',
+    w: 'Rumour fills any silence. Tell people what to do, not how scared to be. And say thank you to Mara, who reported the laptop instead of hiding it.' },
+  { ic: 'mail', t: 'Message the customers', d: 'Which customers, which data (shipment manifests, contact details), what you are doing, what they should watch for (invoice-change emails pretending to be you).',
+    w: 'Customers forgive an incident handled honestly; they do not forgive learning about it from someone else, or from a fake invoice.' },
+  { ic: 'file-text', t: 'GDPR assessment with the DPO', d: 'Was personal data accessed or exfiltrated? Logs show 40 GB left on Wednesday night. Risk to individuals: yes. Decision: notify the supervisory authority, document the reasoning.',
+    w: 'The 72 hours count from awareness, Friday 17:40, so the deadline is Monday 17:40. A notification can be partial and updated later; a late one cannot be undone. In Romania the authority is ANSPDCP; every EU country has one.' },
+  { ic: 'flag', t: 'Report to CERT and police', d: 'Ransom note, sample encrypted file, the indicators of compromise and the timeline go to the national CERT (DNSC) and the police.',
+    w: 'Authorities often know the group, sometimes hold a decryptor, and the report is required for the insurance file. It also helps the next company.' },
+  { ic: 'check-circle', t: 'Validate before switching on', d: 'Every endpoint scanned with EDR, all passwords reset, MFA on the VPN, firmware patched, 20 random restored files opened and checksummed, HR share verified.',
+    w: 'Bringing systems back is a one-way door. Validation is the boring hour that saves you from doing this twice.' }
+];
+let nIdx = 0, switched = false, gdprLeft = 63 * 3600 + 25 * 60;
+function L6() {
+  cleanup(); mood('night'); nIdx = 0; switched = false; gdprLeft = 63 * 3600 + 25 * 60;
+  show(`
+    ${Lab.badge('Level 6 · night shift', 'moon')}
+    <h2>Saturday, 02:15. The restore is running. Now the <em>people</em> part.</h2>
+    <p class="muted">Technology recovers on its own schedule; trust does not. Six conversations have to happen before anything is switched back on, and one of them has a legal deadline.</p>
+    <div class="clock-wrap">
+      <span class="small">GDPR notification window closes Monday 17:40</span>
+      <div class="countdown" id="gdpr">63:25:00</div>
+      <span class="small">time left since awareness, Friday 17:40</span>
+    </div>
+    <div id="nzone">
+      ${nsteps.map((s, i) => `<button class="nstep${i ? ' locked' : ''}" id="ns${i}" onclick="L.nstep(${i},event)" ${i ? 'disabled' : ''}>${icon(s.ic)}<span><b>${s.t}</b><small>${s.d}</small></span></button>`).join('')}
+    </div>
+    <div id="nnote"></div>
+    <div class="switch-zone">
+      <button class="big-switch" id="bigSwitch" onclick="L.flip()" aria-label="Bring systems back online" disabled><div class="knob" id="knob">OFFLINE</div></button>
+      <div class="dns-line" id="swline">Systems stay offline until all six steps are done.</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="L.goto(7)">${icon('arrow-right')}Monday morning: the aftermath</button></div>
+  `);
+  nightTimer = setInterval(() => {
+    const el = $('#gdpr'); if (!el) { clearInterval(nightTimer); nightTimer = null; return; }
+    gdprLeft = Math.max(0, gdprLeft - 1);
+    const h = Math.floor(gdprLeft / 3600), m = Math.floor((gdprLeft % 3600) / 60), s = gdprLeft % 60;
+    el.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }, 1000);
+}
+function nstep(i, e) {
+  if (i !== nIdx) return;
+  const el = $('#ns' + i); if (!el || el.classList.contains('done')) return;
+  el.classList.add('done'); el.disabled = true; nIdx++; scoreAt(5, e);
+  Lab.patch('#nnote', say(`step ${i + 1} · why it matters`, nsteps[i].w, 'tip'));
+  if (i === 3) { const g = $('#gdpr'); if (g) g.classList.add('ok'); }
+  const nx = $('#ns' + nIdx);
+  if (nx) { nx.classList.remove('locked'); nx.disabled = false; }
+  else {
+    const sw = $('#bigSwitch'); if (sw) sw.disabled = false;
+    Lab.patch('#swline', 'All six done. Validation passed. Flip the switch to bring systems back online.');
+  }
+}
+function flip() {
+  if (switched || nIdx < nsteps.length) return;
+  switched = true;
+  const sw = $('#bigSwitch'); if (sw) { sw.classList.add('on'); sw.disabled = true; }
+  const k = $('#knob'); if (k) k.textContent = 'ONLINE';
+  addScore(20, innerWidth / 2, innerHeight / 2);
+  sset('infected', false); sset('restored', 1); mood('calm');
+  Lab.patch('#swline', 'Sunday 16:30. FS01 online, SharePoint rolled back, domain rebuilt, MFA on the VPN. RTO: 47 hours. RPO: 19 hours. Watch the background: the lanes run mint again.');
+  const nb = $('#l6next'); if (nb) nb.style.display = 'inline-flex';
+}
+
+/* ---------------- L7 : Monday tickets ---------------- */
+const tickets = [
+  { t: 'The entry point was a contractor VPN account with a password only. It was phished two weeks ago.', who: 'the forensics report, page 1', ic: 'vpn',
+    opts: [ { o: 'MFA on every remote login, VPN and admin first; contractor accounts expire automatically', ok: true }, { o: 'Change the VPN port number', ok: false }, { o: 'A longer password policy', ok: false } ],
+    ex: 'A stolen password with MFA in front of it is a stolen nothing. The VPN and anything administrative come first; contractor accounts get an expiry date the day they are created.' },
+  { t: 'The VPN appliance firmware was 14 months old with a publicly known exploit.', who: 'the boss, reading the same report', ic: 'wrench',
+    opts: [ { o: 'A patch cycle: critical fixes within days, everything else monthly, with an inventory of what faces the internet', ok: true }, { o: 'Replace the appliance with a different brand', ok: false }, { o: 'Switch the VPN off for good', ok: false } ],
+    ex: 'Brands do not matter, cadence does. Anything exposed to the internet is patched within days of a critical advisory, and you cannot patch what is not on the inventory.' },
+  { t: 'The NAS backup died because the file server could write to it.', who: 'Daniel, back from Greece, slightly pale', ic: 'lock',
+    opts: [ { o: 'An immutable or offline copy that no domain account can modify, with retention locked', ok: true }, { o: 'A bigger NAS', ok: false }, { o: 'Rotate the USB disks daily instead of weekly', ok: false } ],
+    ex: 'The rule is 3-2-1-1-0 and the extra 1 saved the company this weekend. Immutable cloud storage, object lock, or a copy that is physically offline: pick one, ideally two. Daily USB rotation shortens the RPO but still depends on someone remembering on a Friday.' },
+  { t: 'The Azure backups "always succeeded". Nobody had ever restored one before Friday.', who: 'you, writing the calendar entry', ic: 'history',
+    opts: [ { o: 'A scheduled restore test every quarter: timed, documented, including one full server and one random file', ok: true }, { o: 'Trust the green ticks, they are green for a reason', ok: false }, { o: 'Test restores only after an incident', ok: false } ],
+    ex: 'A backup is a hope; a tested restore is a plan. The quarterly test measures the real RTO, finds missing shares like HR, and trains more than one person to do it.' },
+  { t: 'The backup service account was a Domain Admin. The attacker used it.', who: 'the forensics report, page 7', ic: 'user-check',
+    opts: [ { o: 'A dedicated backup account with only the rights it needs, and a backup server that is not part of the production domain', ok: true }, { o: 'Rename the administrator account', ok: false }, { o: 'Same account, much longer password', ok: false } ],
+    ex: 'Least privilege: the backup account needs to read data and write to the repository, not run the company. Keeping the backup infrastructure out of the production domain means a domain compromise is not automatically a backup compromise.' },
+  { t: 'The phishing email that stole the contractor password sailed through unfiltered.', who: 'Mara, who found the laptop', ic: 'mail',
+    opts: [ { o: 'Modern email filtering with link and attachment scanning, a report button for staff, and short regular practice', ok: true }, { o: 'Block all external email', ok: false }, { o: 'Ban attachments', ok: false } ],
+    ex: 'Filtering catches most, the report button catches the rest: you do not need everyone to spot every phish, you need one person to report it fast, and a culture where reporting is thanked.' },
+  { t: 'Last ticket: what do we write down, so the next night shift is not improvised?', who: 'the boss, closing the laptop', ic: 'file-text',
+    opts: [ { o: 'A one-page incident runbook: who to call, where the backups are, restore order, printed and stored offline, rehearsed yearly', ok: true }, { o: 'Nothing, we will remember', ok: false }, { o: 'A 60-page policy document nobody reads', ok: false } ],
+    ex: 'The runbook was the thing Vector Freight missed most on Friday: it was on Daniel\'s laptop, encrypted. One page, printed, in the safe and in the password vault, with a tabletop rehearsal once a year. Memory of an incident has a half-life of about four days.' }
+];
+let tdone = 0, tTry = {};
+function L7() {
+  cleanup(); mood('calm'); tdone = 0; tTry = {};
+  show(`
+    ${Lab.badge('Level 7 · Monday aftermath', 'check-circle')}
+    <h2>Monday, 09:00. Seven tickets that make sure this <em>never repeats</em>.</h2>
+    ${say('your guide', `An incident you do not learn from is just damage. Close the seven tickets with the right fix. First try +10, retry +5.`, 'tip')}
+    ${tickets.map((tk, i) => `
+      <div class="ticket" id="tk${i}">
+        <div class="tx">${icon(tk.ic)}<div><b>${tk.t}</b><small>${tk.who}</small></div></div>
+        <div class="choices">${tk.opts.map((op, j) => `<button class="choice" id="tk${i}o${j}" onclick="L.solve(${i},${j},event)">${op.o}</button>`).join('')}</div>
+        <div class="verdict" id="tk${i}v"></div>
+      </div>`).join('')}
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+function solve(i, j, e) {
+  const tk = tickets[i], card = $('#tk' + i), b = $(`#tk${i}o${j}`);
+  if (!card || !b || card.classList.contains('done')) return;
+  if (tk.opts[j].ok) {
+    card.classList.add('done');
+    tk.opts.forEach((_, k) => { const x = $(`#tk${i}o${k}`); if (x) { x.disabled = true; if (k === j) x.classList.add('good'); } });
+    scoreAt(tTry[i] ? 5 : 10, e);
+    Lab.patch('#tk' + i + 'v', say('solved', tk.ex, 'tip')); const v = $('#tk' + i + 'v'); if (v) v.classList.add('show');
+    tdone++;
+    if (tdone === tickets.length) {
+      sset('infected', false); sset('restored', 1);
+      Lab.finale({ into: '#finale', heading: 'Restore Point: recovered.' });
+    }
+  } else {
+    tTry[i] = true; b.classList.add('bad'); b.disabled = true;
+    setTimeout(() => b.classList.remove('bad'), 500);
+  }
+}
+
+/* expose handlers used by inline onclick="" */
+window.L = { goto: Lab.goto, found: foundAsset, decide, dnext, plan, scen, nstep, flip, solve };
+
+Lab.init({
+  title: 'Restore Point',
+  codename: 'operation: restore point',
+  levels: [
+    { icon: 'play', name: 'Start' },
+    { icon: 'search', name: 'Discovery' },
+    { icon: 'route', name: 'Decisions' },
+    { icon: 'list-check', name: 'Plan' },
+    { icon: 'save', name: 'Restore' },
+    { icon: 'bolt', name: 'Night' },
+    { icon: 'moon', name: 'Comms' },
+    { icon: 'check-circle', name: 'Harden' }
+  ],
+  render: [L0, L1, L2, L3, L4, L5, L6, L7],
+  maxScore: 440,
+  ranks: [
+    { min: 400, title: 'Recovery Commander', icon: 'trophy', msg: 'Flawless. You contained fast, never paid, restored from the right point and closed every gap. You could run this tabletop for your own team on Monday.' },
+    { min: 330, title: 'Restore Specialist', icon: 'medal', msg: 'Very strong. You understood what a backup is, what it is not, and the order a recovery has to follow. One more run and the last points are yours.' },
+    { min: 240, title: 'Backup Believer', icon: 'badge', msg: 'Solid. You got the company back; a few decisions cost hours or evidence. Replay the plan board and the scenarios and see what changes.' },
+    { min: 0, title: 'Patient Zero', icon: 'star', msg: 'You survived the weekend, which is more than many do. Now you know what 3-2-1-1-0 means in practice. Play again and watch the score climb.' }
+  ],
+  summary: `Seven things to remember: <b>1)</b> follow the 3-2-1-1-0 rule, three copies, two media, one off-site, one offline or immutable, zero restore errors; <b>2)</b> immutable copies are the only backups ransomware cannot take with it, and Microsoft 365 retention is not one of them; <b>3)</b> test restores on a calendar, because an untested backup is a hope; <b>4)</b> isolate fast and keep the power on, so the spread stops and the evidence stays; <b>5)</b> do not pay by default, decide with insurer and legal, never under a countdown; <b>6)</b> the GDPR clock gives you 72 hours from awareness, weekends included; <b>7)</b> write the runbook on one page, print it, and keep it where the attacker cannot encrypt it.`,
+  scene
+});
+})();
+</script>
+</body>
+</html>

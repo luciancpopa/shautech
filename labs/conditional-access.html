@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<!-- © 2026 shautech. All rights reserved. shautech labs — interactive workshop simulators. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Bouncer Protocol — shautech labs</title>
+<meta name="description" content="An interactive Conditional Access simulator: learn the six sign-in signals, build the five baseline policies, and decide who gets in, who gets challenged and who bounces.">
+<meta name="theme-color" content="#0A0B0D">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.shautech.com/labs/conditional-access.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="shautech labs">
+<meta property="og:title" content="The Bouncer Protocol — shautech labs">
+<meta property="og:description" content="An interactive Conditional Access simulator: learn the six sign-in signals, build the five baseline policies, and decide who gets in, who gets challenged and who bounces.">
+<meta property="og:url" content="https://www.shautech.com/labs/conditional-access.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='34' fill='%230A0B0D'/%3E%3Crect x='30' y='30' width='120' height='120' rx='26' fill='none' stroke='%234D9FFF' stroke-width='10'/%3E%3Ctext x='90' y='122' font-family='ui-monospace,monospace' font-size='98' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="../assets/css/labs.css">
+<style>
+  /* lab-specific styles only (shared components live in labs.css) */
+  .toast{pointer-events:none} /* hidden toast must never intercept clicks */
+  .signals{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .signal{min-height:44px}
+  .signal.on{cursor:default}
+  button.policy{width:100%;text-align:left;cursor:pointer;font:inherit;transition:border-color .2s,background .2s,transform .2s var(--ease)}
+  button.policy:hover{border-color:var(--accent)}
+  .policy>.ic{width:22px;height:22px;stroke-width:1.5}
+  .policy.on>.ic{color:var(--mint)}
+  .policy.report>.ic{color:var(--amber)}
+  .policy.on,.policy.report{cursor:default}
+  .policy.nope{border-color:rgba(255,92,122,.6);background:rgba(255,92,122,.06);animation:shake .4s}
+  .policy.nope>.ic{color:var(--red)}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+  .btn.shake{animation:shake .4s}
+  .ticket .tx small{display:block}
+  /* arcade: sign-in items carry a short name under the icon; details appear in the call bar */
+  .item .lbl{position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);white-space:nowrap;pointer-events:none}
+  .item.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent),0 8px 20px -8px rgba(0,0,0,.7)}
+  .item.dim{opacity:.25}
+  .arena .callbar{position:absolute;left:14px;right:14px;bottom:44px;z-index:7;background:rgba(10,11,13,.82);border:1px solid var(--line2);border-radius:12px;padding:8px 10px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .arena .callbar .who{font-family:var(--mono);font-size:11px;color:var(--ink2);min-height:17px;text-align:center;line-height:1.5}
+  .arena .callbar .who b{color:var(--ink)}
+  .arena .callbar .verdict-btns{justify-content:center;margin-top:6px;gap:8px}
+  .arena .callbar .btn{min-height:42px}
+  .enf-done{font-family:var(--mono);font-size:12px;color:var(--mint);margin-bottom:6px;display:flex;gap:8px;align-items:center}
+  .enf-done .ic{flex:none}
+  .arena .hud-strip{left:50%;transform:translateX(-50%)}
+  @media (max-width:640px){#arena.arena{height:400px}.arena .callbar .btn{padding:.6em .75em;font-size:.74rem}}
+</style>
+</head>
+<body>
+
+<canvas id="labbg" aria-hidden="true"></canvas>
+
+<header class="topbar" id="topbar">
+  <a class="logo" href="../index.html" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span><span class="logo__lab">/ labs</span></a>
+  <span class="sim-name" id="simName"></span>
+  <nav class="lvlmap" id="lvlmap" aria-label="Levels"></nav>
+  <div class="hud">
+    <div class="pill" id="scorePill" title="Points"><b id="score">0</b></div>
+    <a class="exit" href="index.html" title="All labs"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>all labs</span></a>
+  </div>
+</header>
+
+<main class="stage" id="stage"><div class="screen" id="screen" aria-live="polite"></div></main>
+
+<div class="nojs" id="nojs"><div class="box"><p class="badge">shautech labs</p><h2>This simulator needs JavaScript.</h2><p class="muted">It runs entirely in your browser, nothing is sent anywhere. Enable JavaScript, or <a href="index.html" style="color:var(--accent2)">go back to all labs</a>.</p></div></div>
+
+<script src="../assets/js/lab-engine.js"></script>
+<script>
+/* © 2026 shautech. The Bouncer Protocol — game logic. */
+(function(){
+'use strict';
+const { icon, say, btn, avatar, sev, scoreAt, addScore, show, goto, toast, mood, util } = Lab;
+const { esc, pick, shuffle, clamp } = util;
+const $ = s => document.querySelector(s);
+
+/* ---------------- timers (cleared on every level change) ---------------- */
+let timers = [];
+let rushTimer = null;
+function later(fn, ms){ const id = setTimeout(fn, ms); timers.push(id); return id; }
+function clearTimers(){ timers.forEach(clearTimeout); timers = []; if (rushTimer) { clearInterval(rushTimer); rushTimer = null; } }
+function setGate(m){ if (Lab.scene) Lab.scene.set('gate', m); }
+
+/* ---------------- ambient scene: sign-ins meet the policy gate ---------------- */
+const scene = {
+  state: { level: 0, mood: '', gate: 'none', flash: 0, T: 0 },
+  init(s, W, H) {
+    const span = Math.min(H * 0.46, 360), y0 = (H - span) / 2, y1 = y0 + span;
+    const rackW = 40, gx = W / 2;
+    s.g = { gx, y0, y1, span, lx: 14, rx: W - 14 - rackW, rackW };
+    const ax = 14 + rackW + 6, bx = W - 14 - rackW - 6, lanes = 6;
+    s.lanes = [];
+    for (let i = 0; i < lanes; i++) {
+      const ya = y0 + span * (0.08 + 0.84 * i / (lanes - 1));
+      const gy = y0 + span * (0.14 + 0.72 * Math.random());
+      const yb = y0 + span * (0.08 + 0.84 * Math.random());
+      const a = Lab.draw.curve([ax, ya], [W * 0.26, ya + (Math.random() - .5) * span * .4], [gx - W * 0.12, gy], [gx, gy], 70);
+      const b = Lab.draw.curve([gx, gy], [gx + W * 0.12, gy], [W * 0.74, yb + (Math.random() - .5) * span * .4], [bx, yb], 70);
+      s.lanes.push(a.concat(b.slice(1)));
+    }
+    const n = clamp(Math.round(W / 40), 14, 34);
+    s.parts = []; for (let i = 0; i < n; i++) { const p = newPart(s); p.t = Math.random(); s.parts.push(p); }
+    s.pulses = [];
+  },
+  onChange(s, k) { if (k === 'gate') s.flash = 1; },
+  draw(ctx, s, W, H, t, dt) {
+    if (!s.g) return;
+    const C = Lab.colors, g = s.g, GATE = 0.5, HOLD = 0.6;
+    s.T += dt; s.flash = Math.max(0, s.flash - dt * 1.1);
+    const speed = s.level === 5 ? 1.7 : 1;
+    /* racks */
+    Lab.draw.rack(ctx, g.lx, g.y0, g.rackW, g.span, { color: Lab.rgba(C.amber, .35), slots: 8, label: 'SIGN-INS' });
+    Lab.draw.rack(ctx, g.rx, g.y0, g.rackW, g.span, { color: Lab.rgba(s.mood === 'calm' ? C.mint : C.accent, .4), slots: 8, label: 'YOUR APPS' });
+    /* lanes */
+    ctx.save(); ctx.lineDashOffset = -t * 9;
+    s.lanes.forEach(l => Lab.draw.path(ctx, l, 'rgba(140,194,255,.07)', 1, [2, 7]));
+    ctx.restore();
+    /* the gate: two pillars + a bar */
+    let col, a, label;
+    if (s.gate === 'none') { col = C.ink2; a = .12; label = 'NO POLICIES'; }
+    else if (s.gate === 'report') { col = C.amber; a = .35 + s.flash * .3; label = 'CA GATE · REPORT-ONLY'; }
+    else { col = C.accent; a = .45 + s.flash * .4; label = 'CA GATE · ENFORCED'; }
+    if (s.mood === 'night' && s.gate !== 'enforced') col = C.violet;
+    ctx.save();
+    ctx.fillStyle = 'rgba(16,19,23,.8)'; ctx.strokeStyle = Lab.rgba(col, a); ctx.lineWidth = 1.2;
+    [g.gx - 28, g.gx + 16].forEach(x => { Lab.draw.rr(ctx, x, g.y0 - 10, 12, g.span + 20, 5); ctx.fill(); ctx.stroke(); });
+    if (s.gate === 'none') {
+      ctx.setLineDash([3, 7]); ctx.beginPath(); ctx.moveTo(g.gx - 28, g.y0 - 22); ctx.lineTo(g.gx + 28, g.y0 - 22); ctx.stroke(); ctx.setLineDash([]);
+    } else {
+      ctx.fillStyle = Lab.rgba(col, a * .5); Lab.draw.rr(ctx, g.gx - 28, g.y0 - 18, 56, 8, 3); ctx.fill(); ctx.stroke();
+      if (s.gate === 'enforced') { ctx.shadowBlur = 12; ctx.shadowColor = Lab.rgba(col, .7); ctx.lineWidth = 1.6; }
+      else ctx.setLineDash([4, 6]);
+      ctx.beginPath(); ctx.moveTo(g.gx, g.y0 - 10); ctx.lineTo(g.gx, g.y1 + 10); ctx.stroke();
+    }
+    ctx.restore();
+    Lab.draw.text(ctx, label, g.gx, g.y0 - 30, { color: Lab.rgba(col, Math.min(a + .3, .8)), size: 9 });
+    /* packets */
+    for (const p of s.parts) {
+      const held = p.hold > s.T;
+      if (!held) p.t += p.v * speed * dt;
+      const pts = s.lanes[p.lane];
+      if (p.t >= GATE && !p.flagged && !p.passed && s.gate !== 'none') {
+        const [hx, hy] = Lab.draw.posOn(pts, GATE);
+        if (s.gate === 'report') {
+          if (p.cls === 'bad') { s.pulses.push({ x: hx, y: hy, r: 2, a: .35, c: C.amber }); s.flash = Math.min(s.flash + .2, 1); }
+          p.flagged = true;
+        } else {
+          if (p.cls === 'bad') { s.pulses.push({ x: hx, y: hy, r: 2, a: .4, c: C.red }); s.flash = Math.min(s.flash + .3, 1); Object.assign(p, newPart(s)); continue; }
+          if (p.cls === 'mfa' && !p.hold) { p.hold = s.T + HOLD; p.t = GATE; continue; }
+          if (p.cls === 'mfa' && p.hold && p.hold <= s.T) { s.pulses.push({ x: hx, y: hy, r: 2, a: .3, c: C.mint }); p.cls = 'ok'; p.passed = true; p.hold = 0; }
+          else if (p.cls === 'ok') p.passed = true;
+        }
+      }
+      if (p.t >= 1) {
+        const [ex, ey] = Lab.draw.posOn(pts, 1);
+        if (Math.random() < .5) s.pulses.push({ x: ex, y: ey, r: 2, a: .3, c: p.cls === 'bad' ? C.red : C.mint });
+        Object.assign(p, newPart(s)); continue;
+      }
+      const col2 = p.cls === 'ok' ? C.mint : (p.cls === 'mfa' ? C.amber : C.red);
+      for (let k = 4; k >= 1; k--) {
+        const [qx, qy] = Lab.draw.posOn(pts, p.t - k * .012);
+        ctx.fillStyle = Lab.rgba(col2, .14 * (1 - k / 5)); ctx.beginPath(); ctx.arc(qx, qy, Math.max(p.sz * .45 * (1 - k * .15), .3), 0, 7); ctx.fill();
+      }
+      const [x, y] = Lab.draw.posOn(pts, p.t);
+      if (held) { ctx.save(); ctx.strokeStyle = Lab.rgba(C.amber, .7); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, p.sz + 5 + Math.sin(s.T * 10) * 1.5, 0, 7); ctx.stroke(); ctx.restore(); }
+      Lab.draw.glyph(ctx, p.k, x, y, p.sz, Lab.rgba(col2, .8));
+    }
+    s.pulses = s.pulses.filter(q => q.a > .01);
+    for (const q of s.pulses) {
+      q.r += 34 * dt; q.a -= .5 * dt;
+      ctx.strokeStyle = Lab.rgba(q.c, Math.max(q.a, 0)); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 7); ctx.stroke();
+    }
+  }
+};
+function roll(s){ const r = Math.random(); if (s.mood === 'calm') return r < .7 ? 'ok' : (r < .92 ? 'mfa' : 'bad'); return r < .4 ? 'ok' : (r < .7 ? 'mfa' : 'bad'); }
+function newPart(s){ return { lane: Math.floor(Math.random() * s.lanes.length), t: 0, v: .05 + Math.random() * .07, sz: 3.5 + Math.random() * 2, k: pick(['user', 'user', 'user', 'key']), cls: roll(s), flagged: false, hold: 0, passed: false }; }
+
+/* ---------------- L0 : briefing ---------------- */
+function L0(){
+  clearTimers(); mood(''); setGate('none');
+  show(`
+    ${Lab.badge('Level 0 · the new front door', 'play')}
+    <h1>Your office has walls.<br>Your cloud has a <em>bouncer</em>.</h1>
+    ${say('the boss', 'Quick one. My nephew says our data is "in the cloud", so where is the firewall? What is actually stopping someone in another country from simply logging in as me? Asking for a friend.')}
+    ${say('your guide', `Good question. In the cloud there is no wall: anyone on Earth can reach your login page. What stands between them and your data is <b>the bouncer</b>: a set of rules that checks every single sign-in (who you are, where you are coming from, what device you are on) and decides <b>come in</b>, <b>show me more ID</b>, or <b>not tonight</b>.<br><br>In Microsoft terms the bouncer is called <b>Conditional Access</b>. Today you write the rulebook. Look at the background: right now there are no rules, so everything walks straight in, including the red ones.`, 'tip')}
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="L.goto(1)">${icon('arrow-right')}Hand me the rulebook</button>
+  `);
+}
+
+/* ---------------- L1 : the six signals ---------------- */
+const signals = [
+  { ic: 'user',   nm: 'Who is asking',          found: 'The account and its groups. An intern and a Global Admin should not face the same door policy: admins get the strict list.' },
+  { ic: 'pin',    nm: 'Where from',             found: 'Country and network. Your office IP at 9 AM is one story; a country you have never traded with at 3 AM is another.' },
+  { ic: 'laptop', nm: 'What device',            found: 'A company laptop that is enrolled, encrypted and healthy, or a hotel lobby PC with seven toolbars. The bouncer can tell the difference.' },
+  { ic: 'phone',  nm: 'Which client and protocol', found: 'Modern Outlook on a known platform plays by the rules. Ancient protocols like IMAP and POP cannot even do MFA, which is exactly why attackers love them. Remember this one.' },
+  { ic: 'alert',  nm: 'How risky it looks',     found: 'Live risk signals: a password seen in a breach dump, "impossible travel", anonymous VPN exit nodes. The bouncer reads the news.' },
+  { ic: 'box',    nm: 'What they are opening',  found: 'The lunch menu app and the finance system are not the same door. Sensitive apps can demand extra proof.' }
+];
+let foundCount = 0;
+function L1(){
+  clearTimers(); mood('');
+  foundCount = 0;
+  show(`
+    ${Lab.badge('Level 1 · signals', 'radar')}
+    <h2>What the bouncer can see</h2>
+    ${say('your guide', 'Before writing rules, know your inputs. Every sign-in arrives carrying six signals. Switch each one on to see what it tells you. (+10 each)', 'tip')}
+    <div class="signals">
+      ${signals.map((o, i) => `<button class="signal" id="sig${i}" onclick="L.signal(${i},event)" aria-pressed="false">${icon(o.ic)}${esc(o.nm)}</button>`).join('')}
+    </div>
+    <div class="inv" id="inv">${icon('radar')} <b>Signals learned: 0/6</b> — pick one to inspect.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l1next" style="display:none" onclick="L.goto(2)">${icon('arrow-right')}Signals mastered. On to the big decisions</button>
+  `);
+}
+function signal(i, e){
+  const el = $('#sig' + i); if (!el || el.classList.contains('on')) return;
+  el.classList.add('on'); el.setAttribute('aria-pressed', 'true');
+  foundCount++; scoreAt(10, e);
+  Lab.patch('#inv', `${icon(signals[i].ic)} <b>Signal ${foundCount}/${signals.length} · ${esc(signals[i].nm)}:</b> ${signals[i].found}`);
+  if (foundCount === signals.length) {
+    Lab.patch('#inv', `${icon('check-circle')} <b>All six signals learned.</b> The point of Conditional Access is that it combines them. "Known user + healthy device + usual country" sails through; change any one signal and the door tightens, automatically, at 4 AM, without you.`);
+    const n = $('#l1next'); if (n) n.style.display = 'inline-flex';
+  }
+}
+
+/* ---------------- L2 : rollout decisions ---------------- */
+const decisions = [
+  { q: 'Where does your rulebook come from?', opts: [
+    { t: 'Start from proven baseline templates, adapt to us', s: 'Microsoft and the community already wrote the greatest hits.', v: 'good', pts: 10,
+      fb: 'Correct. MFA for all, block legacy auth, protect admins: these are solved problems with ready templates. Your creativity is better spent on the exceptions. (+10)' },
+    { t: 'Write every policy from scratch', s: 'Hand-crafted, small-batch security rules.', v: 'meh', pts: 5,
+      fb: 'You would arrive at the same baseline three weeks later, with two typos. Start from templates and customise where your business is genuinely different. (+5)' },
+    { t: 'No rules. MFA prompts annoy people', s: 'Happy users, open door.', v: 'bad', pts: 0,
+      fb: 'A door with no bouncer gets a visit eventually, and you saw in Breach Day what a visit costs. A few prompts a week is the cheapest insurance that exists. (0)' }
+  ]},
+  { q: 'How do you switch the rules on?', opts: [
+    { t: 'Report-only first: watch who would be blocked', s: 'The rules run silently and just take notes.', v: 'good', pts: 10,
+      fb: 'The professional move. Report-only mode shows you every would-be block before anyone gets locked out. You find the old scanner and the sales tablets while they still work. (+10)' },
+    { t: 'Enforce everything Friday at 5 PM', s: 'Rip the plaster off. See you Monday.', v: 'bad', pts: 0,
+      fb: 'Monday, 8 AM: 30 people locked out, the boss among them, and you are on holiday. Enforcement without a report-only phase is how Conditional Access gets a bad reputation. (0)' },
+    { t: 'Enforce for everyone except the loud complainers', s: 'Path of least resistance.', v: 'meh', pts: 5,
+      fb: 'Now your most-targeted users (executives are always the loudest) have the weakest door. Exceptions by volume of complaint is security by squeaky wheel. (+5)' }
+  ]},
+  { q: 'The break-glass account: the emergency key when everything goes wrong?', opts: [
+    { t: 'Two emergency admin accounts, excluded from CA, credentials in a safe, tested', s: 'For the night a bad policy locks everyone out.', v: 'good', pts: 10,
+      fb: 'Yes, and this one is not optional. One misconfigured policy can lock out every admin including you, and then nobody can fix the policy. Two break-glass accounts, monitored for any use, credentials offline. (+10)' },
+    { t: 'No exceptions. Ever. Maximum security', s: 'Rules are rules.', v: 'bad', pts: 0,
+      fb: 'Brave, until the Friday you enforce a broken policy and realise the only accounts that could repair it are locked out by it. That support ticket takes days. (0)' },
+    { t: 'Exclude the whole IT department, to be safe', s: 'IT would never get phished, right?', v: 'meh', pts: 5,
+      fb: 'That is not a break-glass, that is a barn door. IT admins are the juiciest phishing targets in the building. Two named accounts, not a department. (+5)' }
+  ]}
+];
+const philosophies = [
+  { ic: 'target', t: 'Balanced: strict where it hurts, invisible where it does not', s: 'Tight rules on admins and finance, frictionless for daily work.',
+    fb: 'The crowd favourite: users barely notice the bouncer on a normal day, and that is exactly why they do not fight him on the abnormal one. (+10)' },
+  { ic: 'shield-check', t: 'Zero-trust maximalist: verify everything, always', s: 'Every session proves itself, every time.',
+    fb: 'The gold standard if you invest in making it smooth: compliant devices and phishing-resistant MFA make "always verify" nearly invisible. Budget for the tuning. (+10)' },
+  { ic: 'chart', t: 'Start small, tighten monthly', s: 'Baseline now, one notch stricter each review.',
+    fb: 'The pragmatist’s path: a modest baseline today beats a perfect policy set next quarter. The review calendar does the rest. (+10)' }
+];
+let di = 0;
+function L2(){
+  clearTimers(); mood('');
+  di = 0;
+  show(`
+    ${Lab.badge('Level 2 · decide', 'map')}
+    <h2>Three calls before the first rule</h2>
+    ${say('your guide', 'Conditional Access failures are almost never technical. They are rollout failures. These three decisions prevent all the famous ones.', 'tip')}
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d = decisions[di];
+  Lab.patch('#dzone', `
+    <h3 style="margin-top:14px">Decision ${di + 1}/${decisions.length}: ${esc(d.q)}</h3>
+    <div class="choices">
+      ${d.opts.map((o, i) => `<button class="choice" id="ch${i}" onclick="L.pick(${i},event)"><b>${esc(o.t)}</b><small>${esc(o.s)}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none"></button>
+  `);
+}
+function pickOpt(i, e){
+  const d = decisions[di], o = d.opts[i];
+  d.opts.forEach((x, j) => { const el = $('#ch' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add(o.v); });
+  if (o.pts > 0) scoreAt(o.pts, e);
+  Lab.patch('#verdict', say(o.v === 'good' ? 'nice' : 'hmm', o.fb, o.v === 'good' ? 'tip' : (o.v === 'bad' ? 'alert' : 'warn')));
+  const v = $('#verdict'); if (v) v.classList.add('show');
+  const b = $('#dnext'); if (!b) return;
+  b.style.display = 'inline-flex';
+  if (di < decisions.length - 1) { b.innerHTML = icon('arrow-right') + 'Next decision'; b.onclick = () => { di++; renderDecision(); }; }
+  else { b.innerHTML = icon('arrow-right') + 'One more thing: your door philosophy'; b.onclick = renderPhilosophy; }
+}
+function renderPhilosophy(){
+  Lab.patch('#dzone', `
+    <h3 style="margin-top:14px">Pick your door philosophy</h3>
+    ${say('your guide', 'No wrong answers here, only what fits your users, budget and appetite. Choose one.', 'tip')}
+    <div class="choices">
+      ${philosophies.map((o, i) => `<button class="choice" id="tl${i}" onclick="L.pickTool(${i},event)"><b>${icon(o.ic)} ${esc(o.t)}</b><small>${esc(o.s)}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="tverdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="tnext" style="display:none" onclick="L.goto(3)">${icon('arrow-right')}Philosophy set. Build the baseline</button>
+  `);
+}
+function pickTool(i, e){
+  philosophies.forEach((x, j) => { const el = $('#tl' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add('good'); });
+  scoreAt(10, e);
+  Lab.patch('#tverdict', say('nice', philosophies[i].fb, 'tip'));
+  const v = $('#tverdict'); if (v) v.classList.add('show');
+  const n = $('#tnext'); if (n) n.style.display = 'inline-flex';
+}
+
+/* ---------------- L3 : build the baseline ---------------- */
+const policies = [
+  { ic: 'key',       t: 'Require MFA for all users',                  d: 'A stolen password alone opens nothing.', ok: true,
+    ex: 'The cornerstone. The vast majority of account-takeover attacks die right here.' },
+  { ic: 'history',   t: 'Block legacy authentication',                d: 'IMAP, POP, basic SMTP: protocols that cannot do MFA.', ok: true,
+    ex: 'The side door is bricked up. Attackers who cannot beat MFA go around it via IMAP. Not any more.' },
+  { ic: 'laptop',    t: 'Require healthy devices for company data',   d: 'Enrolled, encrypted, compliant, or no entry.', ok: true,
+    ex: 'Now a stolen password and a stolen MFA code still are not enough: you would need a company-managed device too.' },
+  { ic: 'badge',     t: 'Extra-strict rules for admins',              d: 'MFA every time, compliant device, no exceptions.', ok: true,
+    ex: 'The keys to the kingdom get a vault door. Admin accounts are 1% of users and 100% of the catastrophic breaches.' },
+  { ic: 'globe',     t: 'Challenge or block unfamiliar countries',    d: 'Business in 3 countries does not mean sign-ins from 90.', ok: true,
+    ex: 'Sign-ins from where you actually operate flow free; the rest meet the bouncer. Travellers get the challenge, not the wall.' },
+  { ic: 'clock',     t: 'Require MFA every 5 minutes',                d: 'Cannot be too careful.', ok: false,
+    ex: 'By lunch, users approve prompts without reading them, which is exactly how MFA-fatigue attacks work. Friction is not security.' },
+  { ic: 'phone',     t: 'Block all mobile phones',                    d: 'Phones are small and scary.', ok: false,
+    ex: 'Now nobody can read email in the field, so they forward everything to a personal mailbox. An enrolled phone is a friendly device: use compliance, not bans.' },
+  { ic: 'file-text', t: 'Allow everything, but log it thoroughly',    d: 'We will know exactly how we got breached.', ok: false,
+    ex: 'Logs without enforcement are a diary of your regrets. The bouncer has to actually bounce.' }
+];
+const BASE = policies.filter(p => p.ok);
+let actDone = 0;
+function policyRow(p, id, state, clickable){
+  const cls = state === 'on' ? ' on' : (state === 'report' ? ' report' : '');
+  const lbl = state === 'on' ? 'Enforced' : (state === 'report' ? 'Report-only' : 'Off');
+  const inner = `${icon(p.ic)}<span class="who"><b>${esc(p.t)}</b><small>${esc(p.d)}</small></span><span class="state">${lbl}</span>`;
+  return clickable
+    ? `<button class="policy${cls}" id="pol${id}" onclick="L.policy(${id},event)">${inner}</button>`
+    : `<div class="policy${cls}" id="pol${id}">${inner}</div>`;
+}
+function L3(){
+  clearTimers(); mood('');
+  actDone = 0;
+  show(`
+    ${Lab.badge('Level 3 · baseline', 'list-check')}
+    <h2>Five rules that do 95% of the work</h2>
+    ${say('your guide', 'Every strong tenant stands on the same five policies. Switch them on (into report-only for now) and dodge the three classic mistakes hiding among them. (+10 each)', 'tip')}
+    <div style="margin-top:16px">${policies.map((p, i) => policyRow(p, i, 'off', true)).join('')}</div>
+    <div class="inv" id="actLog">${icon('list-check')} <b>Baseline: 0/5</b> — choose your policies.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="L.goto(4)">${icon('arrow-right')}Baseline built. Test your judgement</button>
+  `);
+}
+function policy(i, e){
+  const p = policies[i], el = $('#pol' + i);
+  if (!el || el.classList.contains('report') || el.disabled) return;
+  if (p.ok) {
+    el.classList.add('report'); el.querySelector('.state').textContent = 'Report-only';
+    actDone++; scoreAt(10, e);
+    Lab.patch('#actLog', `${icon('check')} <b>Baseline: ${actDone}/5</b> — ${p.ex}`);
+    if (actDone === 5) {
+      setGate('report');
+      Lab.patch('#actLog', `${icon('shield-check')} <b>Baseline complete, now in report-only.</b> Look at the background: the gate is up and amber, taking notes. Risky sign-ins get flagged as they pass; nobody is blocked yet. That is exactly where a careful rollout sits for a week or two.`);
+      const n = $('#l3next'); if (n) n.style.display = 'inline-flex';
+    }
+  } else {
+    el.classList.add('nope'); el.disabled = true;
+    Lab.patch('#actLog', `${icon('x')} <b>Baseline: ${actDone}/5</b> — ${p.ex}`);
+    later(() => el.classList.remove('nope'), 500);
+  }
+}
+
+/* ---------------- L4 : verdicts ---------------- */
+const scen = [
+  { t: 'Anna · office laptop (compliant) · office network · opening email, 9:04 AM', who: 'the everyday case', ans: 1,
+    why: 'Every signal is green: known user, healthy device, usual place, normal app. The bouncer nods her through. Good security is invisible for normal work, and that invisibility is what buys you goodwill for the strict cases.' },
+  { t: 'The boss · hotel Wi-Fi in Paris · his enrolled laptop · opening SharePoint', who: 'the business trip', ans: 2,
+    why: 'New country, but a healthy known device: that is a "prove it is you" moment, not a wall. One MFA tap in the hotel lobby and he is in. If your policy blocked every travelling executive, Conditional Access would be switched off by Thursday.' },
+  { t: 'Someone with the boss’s correct password · unknown device · a country you have never traded with · 3:12 AM', who: 'the main event', ans: 3,
+    why: 'This is the attacker from Breach Day. Right password, and it does not matter: the unknown device fails compliance, the location fails geography, the hour smells wrong. Blocked cold. This sign-in is the whole reason Conditional Access exists.' },
+  { t: 'Mia · her personal home PC (not enrolled) · opening the finance folder', who: 'the awkward one', ans: 3,
+    why: 'Harsh but right: an unmanaged home PC opening finance data fails your device policy, because malware on that PC would read everything she reads. The fix is not an exception: give her a sanctioned path (an enrolled device or a protected browser-only mode).' },
+  { t: 'The old warehouse scanner · IMAP protocol · trying to email inventory reports', who: 'the dinosaur', ans: 3,
+    why: 'Legacy auth means no MFA is possible, so it is permanently blocked even with the right password. And you knew in advance: report-only mode flagged this scanner two weeks ago, so it got modern auth before enforcement night. No surprises.' },
+  { t: 'Rudy · enrolled phone · usual city · opening Teams like every morning', who: 'the mobile case', ans: 1,
+    why: 'An enrolled phone is a friendly device: encrypted, wipeable, compliant. Usual user, usual city, usual app: through he goes. Compare with the "block all phones" idea from Level 3. This is what you would have broken.' }
+];
+const VERDICTS = { 1: ['green', 'check', 'Allow'], 2: ['blue', 'key', 'Require MFA'], 3: ['red', 'x', 'Block'] };
+let scDone = 0, scFirst = {};
+function verdictBtns(prefix, onclickFor){
+  return `<div class="verdict-btns">${[1, 2, 3].map(v => `<button class="btn small ${VERDICTS[v][0]}" id="${prefix}v${v}" onclick="${onclickFor(v)}">${icon(VERDICTS[v][1])}${VERDICTS[v][2]}</button>`).join('')}</div>`;
+}
+function L4(){
+  clearTimers(); mood('');
+  scDone = 0; scFirst = {};
+  show(`
+    ${Lab.badge('Level 4 · verdicts', 'badge')}
+    <h2>You are the bouncer now</h2>
+    ${say('your guide', 'Your baseline is live in report-only. Six sign-ins approach the door. For each one, call the verdict your policies would give: allow, require MFA, or block. (+10 first try, +5 on a retry)', 'tip')}
+    ${scen.map((s, i) => `
+      <div class="ticket" id="sc${i}">
+        <div class="tx">${icon('door')}<div><b>${esc(s.t)}</b><small>${esc(s.who)}</small></div></div>
+        ${verdictBtns('sc' + i, v => `L.verdict(${i},${v},event)`)}
+        <div class="verdict" id="sc${i}x"></div>
+      </div>`).join('')}
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="L.goto(5)">${icon('arrow-right')}Verdicts delivered. Rush hour</button>
+  `);
+}
+function verdict(i, v, e){
+  const s = scen[i], card = $('#sc' + i); if (!card || card.classList.contains('done')) return;
+  const b = $('#sc' + i + 'v' + v); if (!b) return;
+  if (v === s.ans) {
+    card.classList.add('done');
+    [1, 2, 3].forEach(k => { const x = $('#sc' + i + 'v' + k); if (x) x.disabled = true; });
+    scoreAt(scFirst[i] === undefined ? 10 : 5, e);
+    Lab.patch('#sc' + i + 'x', say('verdict', s.why, 'tip'));
+    const x = $('#sc' + i + 'x'); if (x) x.classList.add('show');
+    scDone++;
+    if (scDone === scen.length) { const n = $('#l4next'); if (n) n.style.display = 'inline-flex'; }
+  } else {
+    scFirst[i] = false; b.disabled = true; b.classList.add('shake');
+    later(() => b.classList.remove('shake'), 450);
+    toast('Not that one. Read the signals again.', 'alert');
+  }
+}
+
+/* ---------------- L5 : rush hour arcade ---------------- */
+const SIGNINS = {
+  allow: [
+    { n: 'anna@', ic: 'laptop', d: 'office laptop (compliant) · Bucharest · Outlook' },
+    { n: 'rudy@', ic: 'phone',  d: 'enrolled phone · usual city · Teams' },
+    { n: 'vlad@', ic: 'laptop', d: 'compliant laptop · office Wi-Fi · SharePoint' },
+    { n: 'mia@',  ic: 'laptop', d: 'enrolled laptop · home Wi-Fi (usual) · Excel' }
+  ],
+  mfa: [
+    { n: 'boss@', ic: 'laptop', d: 'enrolled laptop · Paris hotel Wi-Fi · new country · SharePoint' },
+    { n: 'anna@', ic: 'phone',  d: 'enrolled phone · new city (client visit) · Outlook' },
+    { n: 'vlad@', ic: 'laptop', d: 'compliant laptop · home Wi-Fi · admin portal' },
+    { n: 'rudy@', ic: 'phone',  d: 'phone enrolled this morning · usual city · first sign-in from it' }
+  ],
+  block: [
+    { n: 'boss@',  ic: 'monitor', d: 'Windows XP · unknown country · IMAP' },
+    { n: 'admin@', ic: 'laptop',  d: 'anonymous VPN · 3:47 AM · unknown device' },
+    { n: 'anna@',  ic: 'monitor', d: 'password seen in a breach dump · far country' },
+    { n: 'vlad@',  ic: 'laptop',  d: 'impossible travel: Cluj to overseas in 9 minutes' },
+    { n: 'info@',  ic: 'mail',    d: 'legacy SMTP · 200 login attempts a minute' },
+    { n: 'mia@',   ic: 'monitor', d: 'unenrolled PC · foreign IP · finance app' }
+  ]
+};
+const WHY = {
+  allow: 'Every signal was green: known user, healthy device, usual place. Let them work.',
+  mfa:   'Known device, but something changed (new place, new device, or an admin role). Prove it, do not block it.',
+  block: 'Unknown device, impossible place, legacy protocol or a breached password. The door stays shut.'
+};
+const ANS = { allow: 1, mfa: 2, block: 3 };
+const RUSH_TARGET = 12;
+let correct = 0, rushLive = false, rushEventFired = false, rcSeq = 0, selected = null;
+function L5(){
+  clearTimers(); mood('');
+  correct = 0; rushLive = true; rushEventFired = false; rcSeq = 0; selected = null;
+  show(`
+    ${Lab.badge('Level 5 · rush hour', 'bolt')}
+    <h2>Monday, 8:58 AM. Everyone signs in at once.</h2>
+    ${say('your guide', `Before the policies enforce, feel the problem with your own hands: <b>you</b> are the door. Tap a sign-in to read its signals, then call it: <b>allow</b> the normal ones, <b>require MFA</b> when something changed, <b>block</b> the risky ones. +5 per correct call; ${RUSH_TARGET} correct calls end the shift. Read fast, the queue does not wait.`, 'tip')}
+    <div class="arena arena--tall" id="arena">
+      <div class="house house--l">${icon('users')}THE QUEUE<small>everyone at 9 AM</small></div>
+      <div class="house house--r ok">${icon('building')}YOUR APPS<small>the good stuff</small></div>
+      <div class="hud-strip"><span>slipped through: <b id="slipped">0</b></span></div>
+      <div class="event-banner" id="eventBanner"></div>
+      <div class="callbar">
+        <div class="who" id="callWho">Tap a sign-in to read its signals</div>
+        ${verdictBtns('call', v => `L.call(${v},event)`)}
+      </div>
+      <div class="bigbar"><i id="bigFill"></i><span id="bigLabel">0 / ${RUSH_TARGET} correct calls</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="L.goto(6)">${icon('arrow-right')}Point made. Automate the door</button>
+  `);
+  setCallEnabled(false);
+  rushTimer = setInterval(spawnSignin, 1100);
+  spawnSignin(); later(spawnSignin, 400);
+}
+function setCallEnabled(on){ [1, 2, 3].forEach(v => { const b = $('#callv' + v); if (b) b.disabled = !on; }); }
+function liveItems(arena){ return Array.from(arena.querySelectorAll('.item')).filter(i => !i.dataset.gone); }
+function spawnSignin(){
+  const arena = $('#arena');
+  if (!arena || !arena.isConnected) { clearTimers(); return; }
+  if (!rushLive) return;
+  const live = liveItems(arena);
+  if (live.length >= 3) return;
+  const r = Math.random(); const kind = r < .42 ? 'block' : (r < .68 ? 'mfa' : 'allow');
+  const data = pick(SIGNINS[kind]);
+  const used = live.map(i => +i.dataset.lane);
+  const lane = [0, 1, 2].find(l => !used.includes(l)); if (lane === undefined) return;
+  const item = document.createElement('button');
+  item.className = 'item'; item.id = 'rc' + (rcSeq++);
+  item.dataset.kind = kind; item.dataset.lane = lane; item.dataset.name = data.n; item.dataset.d = data.d;
+  item.setAttribute('aria-label', data.n + ' sign-in: ' + data.d);
+  item.innerHTML = `${icon(data.ic)}<span class="lbl">${esc(data.n)}</span>`;
+  item.style.left = (22 + lane * 19 + Math.random() * 5) + '%';
+  item.style.top = (28 + Math.random() * 12) + '%';
+  item.onclick = () => selectItem(item);
+  arena.appendChild(item);
+  const life = (kind === 'allow' ? 6500 : 7500) * (Lab.reduced ? 1.5 : 1);
+  later(() => {
+    if (!item.isConnected || item.dataset.gone) return;
+    item.dataset.gone = '1';
+    if (selected === item) deselect();
+    if (kind === 'allow') { item.classList.add('good', 'fly'); }
+    else { item.classList.add('bad', 'sink'); const s = $('#slipped'); if (s) s.textContent = (+s.textContent || 0) + 1; toast(`${data.n} slipped through: ${kind === 'block' ? 'a risky sign-in walked in' : 'nobody asked for a second factor'}.`, 'alert'); }
+    later(() => item.remove(), 800);
+  }, life);
+}
+function selectItem(item){
+  if (!rushLive || item.dataset.gone) return;
+  document.querySelectorAll('#arena .item.sel').forEach(i => i.classList.remove('sel'));
+  item.classList.add('sel'); selected = item;
+  Lab.patch('#callWho', `<b>${esc(item.dataset.name)}</b> · ${esc(item.dataset.d)}`);
+  setCallEnabled(true);
+}
+function deselect(){ selected = null; Lab.patch('#callWho', 'Tap a sign-in to read its signals'); setCallEnabled(false); }
+function call(v, e){
+  if (!rushLive) return;
+  const item = selected;
+  if (!item || !item.isConnected || item.dataset.gone) { toast('Tap a sign-in first.', 'info'); deselect(); return; }
+  const kind = item.dataset.kind;
+  item.dataset.gone = '1'; item.classList.remove('sel');
+  if (v === ANS[kind]) {
+    scoreAt(5, e); correct++;
+    if (kind === 'block') item.classList.add('bad', 'pop');
+    else if (kind === 'mfa') { item.classList.add('warn'); later(() => { item.classList.remove('warn'); item.classList.add('good', 'fly'); }, Lab.reduced ? 0 : 450); }
+    else item.classList.add('good', 'fly');
+    updateRushBar();
+  } else {
+    item.classList.add('bad', 'shake');
+    toast(`Wrong call for ${item.dataset.name}. ${WHY[kind]}`, 'alert');
+    later(() => item.classList.add('sink'), 400);
+  }
+  later(() => item.remove(), 1300);
+  deselect();
+  if (correct >= RUSH_TARGET) { endRush(); return; }
+  if (!rushEventFired && correct === Math.floor(RUSH_TARGET / 2)) rushEvent();
+}
+function updateRushBar(){
+  const f = $('#bigFill'), l = $('#bigLabel');
+  if (f) f.style.width = Math.min(100, Math.round(correct / RUSH_TARGET * 100)) + '%';
+  if (l) l.textContent = `${correct} / ${RUSH_TARGET} correct calls`;
+}
+function rushEvent(){
+  rushEventFired = true; rushLive = false;
+  document.querySelectorAll('#arena .item').forEach(c => c.classList.add('dim'));
+  const b = $('#eventBanner'); if (!b) return;
+  b.classList.remove('ok'); b.classList.add('show');
+  b.innerHTML = `Feeling it? A real tenant sees around 400 sign-ins a minute.<small>Your clicking finger is not a security architecture.</small><button class="btn small blue" onclick="L.autoDoor(event)">${icon('bolt')}Exactly. That is why policies exist</button>`;
+}
+function autoDoor(e){
+  scoreAt(10, e);
+  const b = $('#eventBanner'); if (!b) return;
+  b.classList.add('ok');
+  b.innerHTML = `${icon('check-circle')} The rules you wrote make this exact call, on every attempt, in milliseconds, forever. Finish the shift, then we automate.`;
+  later(() => { b.classList.remove('show', 'ok'); rushLive = true; document.querySelectorAll('#arena .item').forEach(c => c.classList.remove('dim')); }, 2000);
+}
+function endRush(){
+  rushLive = false; if (rushTimer) { clearInterval(rushTimer); rushTimer = null; }
+  document.querySelectorAll('#arena .item').forEach(c => c.remove());
+  const l = $('#bigLabel'); if (l) l.textContent = 'shift survived';
+  Lab.patch('#callWho', 'Shift over. Now imagine doing that 400 times a minute.');
+  setCallEnabled(false);
+  const n = $('#l5next'); if (n) n.style.display = 'inline-flex';
+}
+
+/* ---------------- L6 : enforcement night ---------------- */
+const enfSteps = [
+  { ic: 'chart',     t: 'Read the report-only results', d: 'Two weeks of notes from the silent bouncer: who would have been blocked, how often, and why. This list is gold: every Monday-morning disaster, pre-lived.',
+    w: 'Three findings need fixing before the switch: the warehouse scanner (IMAP), two sales tablets (not enrolled), and one executive’s ancient home browser.' },
+  { ic: 'wrench',    t: 'Fix the fallout list', d: 'The scanner gets modern auth, the tablets get enrolled, the executive gets a 10-minute enrolment call. Every name off the list is one angry ticket that never happens.',
+    w: 'Fix the list, do not exclude it. An exclusion "just for now" is a hole forever. That is how Swiss-cheese policies are born.' },
+  { ic: 'key',       t: 'Test the break-glass account', d: 'Sign in with it. Confirm it bypasses every policy. Confirm its use fires an alert. Print the credentials, seal the envelope, into the safe.',
+    w: 'An untested break-glass account is decorative. Test it tonight: the night you need it is the wrong night to learn it does not work.' },
+  { ic: 'users',     t: 'Enforce for the pilot ring', d: 'IT plus the volunteers go first. One week of the real thing: prompts, enrolments, edge cases, with people who signed up to find problems.',
+    w: 'Watch the pilot’s sign-in logs daily. A failure pattern (same app, same device type) is a policy bug. Fix it before wave two meets it.' },
+  { ic: 'globe',     t: 'Enforce for everyone, in waves', d: 'Team by team, with a heads-up email each wave: "you will see a new prompt, here is the 30-second setup, here is who to call".',
+    w: 'Brief the helpdesk first. The rollout’s reputation is decided by how the first confused caller gets treated on Monday morning.' },
+  { ic: 'bars',      t: 'Watch the logs, live', d: 'Enforcement day: sign-in failures on one screen, the helpdesk queue on the other. Clusters mean policy bugs; singletons mean coaching.',
+    w: 'Set an alert on break-glass usage and on admin sign-in failures. Those two signals must never be noise.' },
+  { ic: 'file-text', t: 'Document and date everything', d: 'Each policy: what it does, why it exists, who owns it. Each exclusion: why, and until when. Review calendar: quarterly.',
+    w: 'Exclusions without expiry dates become permanent security holes with excellent excuses. Date them all. The calendar is the enforcement.' }
+];
+let enfStep = 0, enfIdx = 0;
+function L6(){
+  clearTimers(); mood('night');
+  enfStep = 0; enfIdx = 0;
+  show(`
+    ${Lab.badge('Level 6 · enforce', 'moon')}
+    <h2>Thursday, 10 PM. The bouncer stops taking notes.</h2>
+    <p class="muted">Two weeks of report-only, the fallout list is fixed, the pilot ring is briefed. Time to turn the rulebook from <b>observations</b> into <b>decisions</b>. Flip it.</p>
+    <div class="switch-zone">
+      <button class="big-switch" id="bigSwitch" onclick="L.flip()" aria-label="Enforce the policies"><div class="knob" id="knob">REPORT-ONLY</div></button>
+      <div class="dns-line" id="enfLine">The gate is amber and advisory. Flip it to make it real.</div>
+    </div>
+    <div id="polBoard" style="max-width:680px;margin:22px auto 0">${BASE.map((p, i) => policyRow(p, 'b' + i, 'report')).join('')}</div>
+    <div id="enfZone" style="max-width:680px;margin:20px auto 0"></div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="L.goto(7)">${icon('arrow-right')}Enforced and calm. Last stop: tuning</button></div>
+  `);
+}
+function flip(){
+  if (enfStep > 0) return;
+  enfStep = 1;
+  const sw = $('#bigSwitch'); if (sw) sw.classList.add('on');
+  const k = $('#knob'); if (k) k.textContent = 'ENFORCED';
+  setGate('enforced');
+  addScore(20, innerWidth / 2, innerHeight / 2);
+  Lab.patch('#enfLine', 'Watch the background: red bounces off, amber pauses for MFA and turns green. The door works. Now the checklist below.');
+  BASE.forEach((p, i) => later(() => {
+    const row = $('#polb' + i); if (!row) return;
+    row.classList.remove('report'); row.classList.add('on'); row.querySelector('.state').textContent = 'Enforced';
+  }, Lab.reduced ? 0 : 250 * (i + 1)));
+  renderEnf(0);
+}
+function renderEnf(i){
+  enfIdx = i;
+  const s = enfSteps[i];
+  const doneList = enfSteps.slice(0, i).map(x => `<div class="enf-done">${icon('check')}${icon(x.ic)}${esc(x.t)}</div>`).join('');
+  Lab.patch('#enfZone', `
+    ${doneList}
+    <div class="say" data-who="step ${i + 1} / ${enfSteps.length}" style="margin-top:${i > 0 ? '16px' : '4px'}">
+      <b style="font-size:16px;display:inline-flex;gap:8px;align-items:center">${icon(s.ic)}${esc(s.t)}</b><br>
+      <span style="font-size:14.5px">${s.d}</span>
+      <div class="warnnote"><b>Pay attention:</b> ${s.w}</div>
+      ${i < enfSteps.length - 1 ? `<div style="margin-top:12px"><button class="btn small blue" onclick="L.enfNext(event)">${icon('arrow-right')}Next step</button></div>` : ''}
+    </div>`);
+  if (i === enfSteps.length - 1) { const n = $('#l6next'); if (n) n.style.display = 'inline-flex'; }
+}
+function enfNext(e){ scoreAt(5, e); renderEnf(enfIdx + 1); }
+
+/* ---------------- L7 : tuning tickets + finale ---------------- */
+const tickets = [
+  { t: '"Six MFA prompts today. Six. Make it stop."', who: 'the boss, day two',
+    opts: [
+      { o: 'Disable MFA for him. He is the boss', ok: false },
+      { o: 'Tune it: trusted enrolled devices and usual locations should not re-prompt. Frequent prompts mean a policy needs adjusting, not deleting', ok: true },
+      { o: 'Tell him prompts build character', ok: false }
+    ],
+    ex: 'Prompt fatigue is a real attack vector and a real usability bug. A healthy setup challenges on change (new device, new place, new risk), not on routine. If routine work triggers prompts, fix the policy, never by excluding the loudest executive.' },
+  { t: '"Our consultant flies to a new country every week."', who: 'finance, about the travelling auditor',
+    opts: [
+      { o: 'Delete the location policy entirely', ok: false },
+      { o: 'A scoped exception: her account + compliant device + strong MFA, reviewed quarterly, with an expiry date', ok: true },
+      { o: 'She can work when she gets home', ok: false }
+    ],
+    ex: 'Exceptions should be narrow (one person, extra conditions), documented and dated. The pattern "odd case, delete the whole policy" is how baselines dissolve; the pattern "odd case, precise exception" is how they survive reality.' },
+  { t: '"We bought 15 tablets for the warehouse."', who: 'operations, unboxing',
+    opts: [
+      { o: 'Exclude the warehouse from all policies', ok: false },
+      { o: 'Enrol them before handout. Then they are compliant devices and the policies just work', ok: true },
+      { o: 'Tablets do not count as computers', ok: false }
+    ],
+    ex: 'New hardware through enrolment first means zero exceptions needed. The rule of thumb: every device that touches company data is either managed or it meets a stricter door. There is no third category.' },
+  { t: '"What if Entra ID itself has an outage? Are we all locked out?"', who: 'Vlad, thinking ahead',
+    opts: [
+      { o: 'Yes. We become a candle-lit paper company', ok: false },
+      { o: 'That is the break-glass scenario: tested emergency accounts, printed procedures, and knowing which apps still work with existing sessions', ok: true },
+      { o: 'Outages never happen to us', ok: false }
+    ],
+    ex: 'Resilience thinking: existing sessions usually survive an identity outage, break-glass covers the admin path, and the printed one-pager covers the panic. You tested it on enforcement night. That is why it was on the checklist.' },
+  { t: '"The new intern cannot get in on day one."', who: 'HR, Monday 9:01 AM',
+    opts: [
+      { o: 'Give interns a shared account. What could go wrong', ok: false },
+      { o: 'Fix onboarding: account, MFA registration and device enrolment before day one. The door works when the paperwork precedes the person', ok: true },
+      { o: 'Interns do not need computers', ok: false }
+    ],
+    ex: 'Conditional Access turns sloppy onboarding into a visible outage, which is a feature: it forces the fix. New-starter checklist: account, MFA enrolled at the welcome desk, device enrolled, then the desk with the balloon.' },
+  { t: '"Attackers are stealing session tokens now, I read."', who: 'Anna, who reads the right newsletters',
+    opts: [
+      { o: 'Unplug everything, live in the woods', ok: false },
+      { o: 'Level up: phishing-resistant MFA (passkeys / FIDO2) and token protection policies. The bouncer’s next belt', ok: true },
+      { o: 'Tokens cannot be stolen, that is science fiction', ok: false }
+    ],
+    ex: 'She is right: the arms race moved past passwords to tokens and MFA phishing. The answer is the next tier of the same system: phishing-resistant credentials and binding sessions to devices. Your baseline is the floor, not the ceiling.' },
+  { t: '"Are we done now? Forever?"', who: 'the boss, hopeful',
+    opts: [
+      { o: 'Yes. Security: completed', ok: false },
+      { o: 'The quarterly review is the finish line that moves: new apps, new threats, expiring exceptions. 90 minutes, four times a year', ok: true },
+      { o: 'We will revisit when something breaks', ok: false }
+    ],
+    ex: 'Policies rot silently: apps change, people leave, "temporary" exceptions calcify. The quarterly review (policies, exceptions, sign-in reports, one improvement) is the cheapest security meeting on the calendar.' },
+  { t: 'Last one: the one number to watch weekly?', who: 'you, setting up the dashboard',
+    opts: [
+      { o: 'Total sign-ins. Big numbers feel important', ok: false },
+      { o: 'Risky sign-ins and failed-MFA patterns: the report that shows who is knocking and where the door is being tested', ok: true },
+      { o: 'The boss’s prompt count', ok: false }
+    ],
+    ex: 'One weekly glance at the risky sign-in report tells you who is being targeted, which legacy hole someone found, and whether a policy drifted. Five minutes, every Friday: the bouncer’s shift report.' }
+];
+let tdone = 0, firstTry = {};
+function L7(){
+  clearTimers(); mood('');
+  tdone = 0; firstTry = {};
+  show(`
+    ${Lab.badge('Level 7 · tune', 'check-circle')}
+    <h2>The first week: tuning without caving</h2>
+    ${say('your guide', 'Enforcement was the easy part. Now come the humans. Every ticket this week is a fork: <b>cave</b> (delete policies) or <b>tune</b> (keep the door, oil the hinges). Choose well. (+10 first try, +5 on a retry)', 'tip')}
+    <div id="tzone">
+      ${tickets.map((tk, i) => `
+        <div class="ticket" id="tk${i}">
+          <div class="tx">${icon('ticket')}<div><b>${esc(tk.t)}</b><small>${esc(tk.who)}</small></div></div>
+          <div class="choices">
+            ${tk.opts.map((op, j) => `<button class="choice" id="tk${i}o${j}" onclick="L.solve(${i},${j},event)">${esc(op.o)}</button>`).join('')}
+          </div>
+          <div class="verdict" id="tk${i}v"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+function solve(i, j, e){
+  const tk = tickets[i], card = $('#tk' + i); if (!card || card.classList.contains('done')) return;
+  const b = $('#tk' + i + 'o' + j); if (!b) return;
+  if (tk.opts[j].ok) {
+    card.classList.add('done');
+    tk.opts.forEach((op, k) => { const x = $('#tk' + i + 'o' + k); if (!x) return; x.disabled = true; if (k === j) x.classList.add('good'); });
+    scoreAt(firstTry[i] === undefined ? 10 : 5, e);
+    Lab.patch('#tk' + i + 'v', say('solved', tk.ex, 'tip'));
+    const v = $('#tk' + i + 'v'); if (v) v.classList.add('show');
+    tdone++;
+    if (tdone === tickets.length) later(() => Lab.finale({ heading: 'The door holds.', into: '#finale' }), 400);
+  } else {
+    firstTry[i] = false; b.classList.add('bad'); b.disabled = true;
+    later(() => b.classList.remove('bad'), 450);
+  }
+}
+
+/* expose handlers used by inline onclick="" */
+window.L = { goto: Lab.goto, signal, pick: pickOpt, pickTool, policy, verdict, call, autoDoor, flip, enfNext, solve };
+
+Lab.init({
+  title: 'The Bouncer Protocol',
+  codename: 'operation: bouncer-protocol',
+  levels: [
+    { icon: 'play',         name: 'Start' },
+    { icon: 'radar',        name: 'Signals' },
+    { icon: 'map',          name: 'Decide' },
+    { icon: 'list-check',   name: 'Baseline' },
+    { icon: 'badge',        name: 'Verdicts' },
+    { icon: 'bolt',         name: 'Rush hour' },
+    { icon: 'moon',         name: 'Enforce' },
+    { icon: 'check-circle', name: 'Tune' }
+  ],
+  render: [L0, L1, L2, L3, L4, L5, L6, L7],
+  maxScore: 410,
+  ranks: [
+    { min: 370, title: 'Zero Trust Legend', icon: 'trophy', msg: 'Flawless. You can run the identity workshop yourself.' },
+    { min: 300, title: 'Policy Architect',  icon: 'medal',  msg: 'Sharp. You know exactly how a rollout survives its users.' },
+    { min: 220, title: 'Gatekeeper',        icon: 'key',    msg: 'Solid. Another run and you will nail every verdict.' },
+    { min: 0,   title: 'Door Greeter',      icon: 'star',   msg: 'You survived the door. Replay and hunt for more points.' }
+  ],
+  summary: 'The bouncer protocol, in one breath: <b>1)</b> the cloud has no walls, every sign-in meets a decision. <b>2)</b> Six signals: who, where, what device, which client, how risky, opening what. <b>3)</b> Five baseline rules do 95%: MFA for all, block legacy auth, healthy devices, strict admins, geography. <b>4)</b> Report-only first, fix the fallout, then enforce. <b>5)</b> Break-glass: two accounts, tested, sealed. <b>6)</b> Tune, do not cave: precise dated exceptions, never deleted baselines. <b>7)</b> Quarterly reviews and one weekly glance at risky sign-ins. The best door is the one nobody notices, until 3:12 AM.',
+  scene
+});
+})();
+</script>
+</body>
+</html>

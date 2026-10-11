@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<!-- © 2026 shautech. All rights reserved. shautech labs — interactive workshop simulators. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Revolving Door — shautech labs</title>
+<meta name="description" content="An interactive Entra ID identity-lifecycle simulator: hunt ghost accounts, onboard a joiner properly, move someone between departments, run an access review, survive redundancy day and automate the door so nobody keeps a key after handing back the badge.">
+<meta name="theme-color" content="#0A0B0D">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.shautech.com/labs/identity-lifecycle.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="shautech labs">
+<meta property="og:title" content="The Revolving Door — shautech labs">
+<meta property="og:description" content="An interactive Entra ID identity-lifecycle simulator: hunt ghost accounts, onboard a joiner properly, move someone between departments, run an access review, survive redundancy day and automate the door so nobody keeps a key after handing back the badge.">
+<meta property="og:url" content="https://www.shautech.com/labs/identity-lifecycle.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='34' fill='%230A0B0D'/%3E%3Crect x='30' y='30' width='120' height='120' rx='26' fill='none' stroke='%234D9FFF' stroke-width='10'/%3E%3Ctext x='90' y='122' font-family='ui-monospace,monospace' font-size='98' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="../assets/css/labs.css">
+<style>
+  /* lab-specific styles only (shared components live in labs.css) */
+  button.tile{width:100%;font-family:inherit}
+  .tile .avatar{margin:2px 0}
+  .board button.card-sm{width:100%;text-align:left;font-family:inherit;font-size:13px}
+  .board .card-sm.bad{cursor:default}
+  .board .card-sm.bad:hover{transform:none}
+  .board .card-sm .tick{margin-left:auto;color:var(--mint);flex:none}
+  .board .card-sm.bad .tick{color:var(--red)}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+  .board .card-sm.shake{animation:shake .4s}
+  /* review rows */
+  .review-row .tx small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-top:3px}
+  /* arcade: people cards */
+  .item.who{width:auto;height:auto;min-width:48px;min-height:48px;padding:8px 11px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-family:var(--mono);font-size:10.5px;line-height:1.3;text-align:center;color:var(--ink);white-space:nowrap}
+  .item.who .ic{width:22px;height:22px;color:var(--accent2)}
+  .item.who small{font-size:9.5px;color:var(--ink3);font-weight:500}
+  .item.who.bad .ic,.item.who.bad small{color:var(--red)}
+  .item.who.good .ic,.item.who.good small{color:var(--mint)}
+  .item.who.warn .ic,.item.who.warn small{color:var(--amber)}
+  .item.who.ghosted{box-shadow:0 0 18px rgba(255,92,122,.3);animation:flicker 1.1s ease-in-out infinite}
+  @keyframes flicker{0%,100%{opacity:1}50%{opacity:.5}}
+  .item.who.proc{pointer-events:none;text-align:left;align-items:flex-start}
+  .item.who.proc:not(.fly):not(.pop){animation:none}
+  .item.who.dim{opacity:.25;pointer-events:none}
+  .arena .clock{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:6;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--amber);
+    background:rgba(10,11,13,.7);border:1px solid var(--line2);padding:4px 12px;border-radius:999px;display:inline-flex;align-items:center;gap:6px}
+  /* automation toggle, larger */
+  .toggle--big{font-size:14px;gap:16px;padding:14px 18px;border:1px solid var(--line2);border-radius:14px;background:var(--panel)}
+  .toggle--big .track{width:92px;height:44px}
+  .toggle--big .track::after{width:36px;height:36px}
+  .toggle--big.on .track::after{left:51px}
+  .toggle--big:hover{border-color:var(--accent)}
+  .toggle--big.on{border-color:rgba(124,242,196,.5)}
+  .done-list{font-family:var(--mono);font-size:12px;color:var(--mint);display:grid;gap:5px;margin-bottom:12px}
+  .done-list span{display:inline-flex;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+
+<canvas id="labbg" aria-hidden="true"></canvas>
+
+<header class="topbar" id="topbar">
+  <a class="logo" href="../index.html" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span><span class="logo__lab">/ labs</span></a>
+  <span class="sim-name" id="simName"></span>
+  <nav class="lvlmap" id="lvlmap" aria-label="Levels"></nav>
+  <div class="hud">
+    <div class="pill" id="scorePill" title="Points"><b id="score">0</b></div>
+    <a class="exit" href="index.html" title="All labs"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>all labs</span></a>
+  </div>
+</header>
+
+<main class="stage" id="stage"><div class="screen" id="screen" aria-live="polite"></div></main>
+
+<div class="nojs" id="nojs"><div class="box"><p class="badge">shautech labs</p><h2>This simulator needs JavaScript.</h2><p class="muted">It runs entirely in your browser, nothing is sent anywhere. Enable JavaScript, or <a href="index.html" style="color:var(--accent2)">go back to all labs</a>.</p></div></div>
+
+<script src="../assets/js/lab-engine.js"></script>
+<script>
+/* © 2026 shautech. The Revolving Door — game logic. */
+(function(){
+'use strict';
+const { icon, say, btn, avatar, sev, scoreAt, addScore, show, goto, toast, mood, util } = Lab;
+const { esc, pick, shuffle, clamp } = util;
+const D = Lab.draw, C = Lab.colors, rgba = Lab.rgba;
+const $ = id => document.getElementById(id);
+
+/* ---------------- timers (cleared on every level change) ---------------- */
+let timers = [];
+const later = (fn, ms) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
+const every = (fn, ms) => { const id = setInterval(fn, ms); timers.push(id); return id; };
+const clearAll = () => { timers.forEach(id => { clearTimeout(id); clearInterval(id); }); timers = []; };
+const sc = (k, v) => { if (Lab.scene) Lab.scene.set(k, v); };
+const sget = k => Lab.scene ? Lab.scene.state[k] : undefined;
+
+/* ---------------- ambient scene: the identity conveyor ---------------- */
+const RACKS = [
+  { f: .36, label: 'SALES',   col: C.amber },
+  { f: .52, label: 'FINANCE', col: C.accent },
+  { f: .68, label: 'IT',      col: C.mint }
+];
+const LANES = 5;
+const laneY = (s, i) => s.g.dy + s.g.dh * (.12 + .76 * i / (LANES - 1));
+const rackT = (s, ri) => (s.W * RACKS[ri].f - s.g.ax) / (s.g.bx - s.g.ax);
+const posOf = (s, p, t) => { const tt = t === undefined ? p.t : t; return [s.g.ax + (s.g.bx - s.g.ax) * tt, laneY(s, p.lane) + Math.sin(tt * 7.5 + p.ph) * 5]; };
+const staleChance = s => s.automated ? 0 : ((s.reviewed || s.level >= 4) ? .1 : .3);
+function newPart(s) {
+  return { t: 0, v: .045 + Math.random() * .06, lane: Math.floor(Math.random() * LANES), ph: Math.random() * 6.28,
+    s: 1.3 + Math.random() * 1.3, dept: Math.floor(Math.random() * RACKS.length), rings: [], got: [false, false, false],
+    stale: Math.random() < staleChance(s) };
+}
+const ghostPos = (s, i) => [s.g.xR - 26 - (i % 3) * 26, s.g.dy + s.g.dh - 18 - Math.floor(i / 3) * 28];
+
+const scene = {
+  state: { level: 0, mood: '', ghosts: 4, automated: false, reviewed: false },
+  init(s, W, H) {
+    s.W = W; s.H = H;
+    const dw = 42, dh = Math.min(H * .5, 360), dy = (H - dh) / 2;
+    s.g = { dw, dh, dy, xL: 12, xR: W - 12 - dw, ax: 12 + dw + 6, bx: W - 12 - dw - 6 };
+    const n = clamp(Math.round(W / 44), 14, 32);
+    s.parts = [];
+    for (let i = 0; i < n; i++) {
+      const p = newPart(s); p.t = Math.random();
+      RACKS.forEach((r, ri) => { if (p.t >= rackT(s, ri)) { p.got[ri] = true; if (ri === p.dept) p.rings.push(r.col); } });
+      s.parts.push(p);
+    }
+    s.pulses = []; s.lastSweep = 0; s.dash = 0;
+  },
+  draw(ctx, s, W, H, t, dt) {
+    if (!s.g || s.W !== W) this.init(s, W, H);
+    const g = s.g;
+    s.dash -= 10 * dt;
+    const base = s.automated ? C.mint : (s.mood === 'night' ? C.violet : C.accent2);
+
+    /* lanes */
+    ctx.save(); ctx.strokeStyle = rgba(C.accent2, .06); ctx.lineWidth = 1; ctx.setLineDash([2, 7]); ctx.lineDashOffset = s.dash;
+    for (let i = 0; i < LANES; i++) { const y = laneY(s, i); ctx.beginPath(); ctx.moveTo(g.ax, y); ctx.lineTo(g.bx, y); ctx.stroke(); }
+    ctx.restore();
+
+    /* department racks */
+    RACKS.forEach((r, ri) => {
+      const x = W * r.f;
+      ctx.save(); ctx.strokeStyle = rgba(r.col, .12); ctx.setLineDash([2, 6]); ctx.beginPath(); ctx.moveTo(x, g.dy); ctx.lineTo(x, g.dy + g.dh + 30); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.globalAlpha = .4;
+      D.rack(ctx, x - 20, g.dy + g.dh + 30, 40, 46, { label: r.label, color: rgba(r.col, .55), slots: 2, led: i => rgba(r.col, .35 + .35 * (Math.sin(t * 1.8 + i * 1.7 + ri * 3) * .5 + .5)) });
+      ctx.restore();
+    });
+
+    /* doors */
+    const rightCol = s.automated ? C.mint : (s.reviewed ? C.amber : (s.ghosts > 0 ? C.red : C.accent2));
+    [{ x: g.xL, label: 'J O I N E R S', col: C.mint, right: false }, { x: g.xR, label: 'L E A V E R S', col: rightCol, right: true }].forEach(d => {
+      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.fillStyle = 'rgba(16,19,23,.55)';
+      D.rr(ctx, d.x, g.dy, g.dw, g.dh, 10); ctx.fill(); ctx.stroke();
+      for (let i = 0; i < 4; i++) {
+        const ph = (t * .35 + i / 4) % 1, bx = d.x + 5 + ph * (g.dw - 14);
+        ctx.fillStyle = rgba(d.col, .08 + .24 * Math.sin(ph * Math.PI)); ctx.fillRect(bx, g.dy + 10, 4, g.dh - 20);
+      }
+      ctx.translate(d.right ? d.x - 8 : d.x + g.dw + 14, g.dy + g.dh / 2); ctx.rotate(-Math.PI / 2);
+      D.text(ctx, d.label, 0, 0, { color: rgba(d.col, .55), size: 9, baseline: 'middle' });
+      ctx.restore();
+    });
+
+    /* ghosts piling up at the exit */
+    for (let i = 0; i < Math.min(s.ghosts, 9); i++) {
+      const [gx, gy] = ghostPos(s, i), a = .35 + .22 * Math.sin(t * 2.6 + i * 1.7);
+      D.glyph(ctx, 'user', gx, gy, 5, rgba(C.red, Math.max(a, .1)));
+    }
+    /* the sweep: review and automation remove ghosts, one by one */
+    if ((s.automated || s.reviewed) && s.ghosts > 0 && t - s.lastSweep > (s.automated ? .8 : 1.6)) {
+      s.lastSweep = t; s.ghosts--;
+      const [gx, gy] = ghostPos(s, s.ghosts); s.pulses.push({ x: gx, y: gy, r: 2, a: .4, col: C.mint });
+    }
+
+    /* accounts flowing through */
+    for (const p of s.parts) {
+      p.t += p.v * dt;
+      for (let ri = 0; ri < RACKS.length; ri++) {
+        if (p.got[ri] || p.t < rackT(s, ri)) continue;
+        p.got[ri] = true;
+        if (ri === p.dept || p.stale) { p.rings.push(RACKS[ri].col); const [px, py] = posOf(s, p); s.pulses.push({ x: px, y: py, r: 2, a: .28, col: RACKS[ri].col }); }
+      }
+      if (p.stale && p.t >= .86) {
+        if (!s.automated && !s.reviewed && s.ghosts < 9) s.ghosts++;
+        const [px, py] = posOf(s, p); s.pulses.push({ x: px, y: py, r: 3, a: .4, col: C.red });
+        Object.assign(p, newPart(s)); continue;
+      }
+      if (p.t >= 1) { const [px, py] = posOf(s, p); s.pulses.push({ x: px, y: py, r: 2, a: .3, col: base }); Object.assign(p, newPart(s)); continue; }
+      const col = (p.stale && p.t > .65) ? C.red : base;
+      const [px, py] = posOf(s, p);
+      for (let k = 4; k >= 1; k--) {
+        const [qx, qy] = posOf(s, p, Math.max(p.t - k * .012, 0));
+        ctx.beginPath(); ctx.arc(qx, qy, Math.max(p.s * .6 * (1 - k * .15), .2), 0, 7); ctx.fillStyle = rgba(col, .14 * (1 - k / 5)); ctx.fill();
+      }
+      ctx.save(); ctx.lineWidth = 1;
+      p.rings.forEach((rc, i) => { ctx.beginPath(); ctx.arc(px, py, p.s * 2.3 + i * 2.6, 0, 7); ctx.strokeStyle = rgba(rc, .45); ctx.stroke(); });
+      ctx.restore();
+      D.glyph(ctx, 'user', px, py, p.s * 1.6, rgba(col, .8));
+    }
+
+    /* pulses */
+    s.pulses = s.pulses.filter(p => p.a > .01);
+    ctx.save(); ctx.lineWidth = 1;
+    for (const p of s.pulses) { p.r += 34 * dt; p.a -= .5 * dt; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.strokeStyle = rgba(p.col, Math.max(p.a, 0)); ctx.stroke(); }
+    ctx.restore();
+  }
+};
+
+/* ---------------- L0 : briefing ---------------- */
+function L0(){
+  mood('');
+  show(`
+    ${Lab.badge('Level 0 · the door that never closes','play')}
+    <h1>People come. People go.<br>Their <em>accounts</em> stay.</h1>
+    ${say('the boss', `Odd one for you. Accounting just received an out-of-office reply from <b>Dan</b>. Dan left the company <b>eight months ago</b>. Why does Dan still have email? And the sign-in log says he <b>signed in on Tuesday</b>.`)}
+    ${say('your guide', `Meet the <b>ghost account</b>. Every company has them. Every person who joins, changes jobs or leaves spins the same revolving door; identity people call it <b>Joiner – Mover – Leaver</b>. When the door works, access appears on day one, changes when the job changes, and ends the day the badge is handed back. When it does not, you get Dan.<br><br>Look at the background: accounts enter at <b>JOINERS</b>, pick up coloured access rings at the department racks, and should dissolve at <b>LEAVERS</b>. The red ones piling up at the exit are ghosts. Let us go hunting.`, 'tip')}
+    <div class="spacer"></div>
+    <button class="btn blue" onclick="L.goto(1)">${icon('arrow-right')}Show me the ghosts</button>
+  `);
+}
+
+/* ---------------- L1 : the ghost hunt ---------------- */
+const objects = [
+  { ic: avatar('DA', 350, 'ghost'), nm: "Dan's account", found: "Left 8 months ago. Status: <b>Active</b>. Password: still works. Mailbox, files, VPN: all reachable. Nobody told IT, and the door never closed. This is the single most common finding in any identity audit." },
+  { ic: icon('file-text'), nm: 'Sticky note', found: "The shared-mailbox password for office@, on paper, known by everyone who ever worked here, including the people who left. A shared password never leaves with the person. Shared mailboxes should not have a password people type at all; access is granted to each person's own account." },
+  { ic: avatar('CM', 20, 'ghost'), nm: 'consultant-mike', found: "The contractor finished his project last spring and is still an <b>Owner</b> on three SharePoint sites. External accounts need an expiry date set on day one, not a memory of one." },
+  { ic: icon('robot'), nm: 'svc-backup (2018)', found: "A service account with <b>Global Admin</b> and a password nobody dares change because «something might break». Highest privilege, oldest password, no owner: the jackpot for an attacker." },
+  { ic: icon('phone'), nm: "Dan's old phone", found: "Dan's number is still registered as his second factor, and Dan still has the phone. MFA approval codes going to an ex-employee's pocket. Offboarding must clean up sign-in methods too, not just the password." },
+  { ic: icon('users'), nm: '23 group memberships', found: "Dan is still in Finance-Approvers, VPN-Users and 21 more. Groups grant access: disable the account but keep the groups, and a single re-enable brings everything back at once." }
+];
+let foundCount = 0;
+function L1(){
+  mood(''); foundCount = 0;
+  show(`
+    ${Lab.badge('Level 1 · the ghost hunt','search')}
+    <h2>Six things hiding in your own admin centre</h2>
+    ${say('your guide', `This is a mock-up of your admin console. Six problems, hiding in plain sight. Click each one to expose it; every ghost teaches a rule. (+10 each)`, 'tip')}
+    <div class="grid grid--auto">
+      ${objects.map((o, i) => `
+        <button class="tile" id="obj${i}" onclick="L.discover(${i},event)">${o.ic}<span class="nm">${o.nm}</span></button>`).join('')}
+    </div>
+    <div class="inv" id="inv">${icon('search')} <b>Ghosts found: 0/6</b> — click to inspect.</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l1next" style="display:none" onclick="L.goto(2)">${icon('arrow-right')}Ghosts logged. Now do joiners right</button>
+  `);
+}
+function discover(i, e){
+  const el = $('obj' + i); if (!el || el.classList.contains('found')) return;
+  el.classList.add('found'); el.insertAdjacentHTML('beforeend', `<span class="ok-mark">${icon('check')}</span>`);
+  foundCount++; scoreAt(10, e);
+  Lab.patch('#inv', `${icon('search')} <b>Ghost ${foundCount}/${objects.length}:</b> ${objects[i].found}`);
+  if (foundCount === objects.length) {
+    Lab.patch('#inv', `${icon('check-circle')} <b>All six found.</b> Notice that none of these were «hacks». They were all simply nobody's job. The fix is not another security tool; it is a <b>lifecycle</b>: every account gets a beginning, a middle and a guaranteed end. Next stop: the beginning.`);
+    const n = $('l1next'); if (n) n.style.display = 'inline-flex';
+  }
+}
+
+/* ---------------- L2 : joiner day ---------------- */
+const decisions = [
+  { q: "How does Maria's account get created?", opts: [
+    { t: 'Provisioned from the HR record', s: 'HR enters Maria once; Entra creates the account automatically, with a start date.', v: 'good', pts: 10,
+      fb: 'HR-driven provisioning: the HR system is the single source of truth. The account exists before day one, name spelled right, department set, and the same wire later handles her move and, one day, her exit. One entry, whole lifecycle. (+10)' },
+    { t: 'IT creates it by hand from the welcome email', s: 'Works every time. Well, most times.', v: 'meh', pts: 5,
+      fb: "Works for 10 people. Then someone is on holiday, a surname gets a typo, and a new starter spends day one watching other people work. Manual means «someone must remember», and Level 1 showed you what remembering looks like. (+5)" },
+    { t: "She can share Bogdan's login the first week", s: 'Team players share, right?', v: 'bad', pts: 0,
+      fb: 'Shared logins destroy accountability forever: every action is now «Bogdan, or Maria, or whoever». And that password is known by two people for the rest of time. Auditors have a special face for this one. (0)' }
+  ]},
+  { q: 'What access does Maria get?', opts: [
+    { t: 'The «Sales starter pack»: role-based groups', s: 'What a salesperson needs, defined once, granted in one move.', v: 'good', pts: 10,
+      fb: 'Role-based access: decide what the role needs once, put it in groups, and every joiner, mover and leaver becomes a clean group operation. Auditable, repeatable, boring: the good kind of boring. (+10)' },
+    { t: 'Copy whatever her colleague Radu has', s: 'He does the same job, so, same access?', v: 'bad', pts: 0,
+      fb: 'Radu has six years of accumulated crust: a project from 2021, an admin right «for that one migration», two mystery groups. Copy-the-last-person duplicates every mistake ever made; it is the number one way access sprawl breeds. (0)' },
+    { t: 'Grant broadly now, trim it later', s: 'Better too much than a ticket, no?', v: 'meh', pts: 5,
+      fb: '«Later» is doing a lot of work in that sentence. Access is easy to grant and painful to remove; nobody ever files a ticket saying «I have too much access». Start minimal; adding is the cheap direction. (+5)' }
+  ]},
+  { q: 'How does she get her Microsoft 365 licence?', opts: [
+    { t: 'The Sales group carries the licence', s: 'Join the group, get the licence. Leave it, give it back.', v: 'good', pts: 10,
+      fb: 'Group-based licensing: joiners get licensed the second they land in the group, and leavers hand the seat back automatically when they are removed. No spreadsheet, no paying for ghosts. (+10)' },
+    { t: 'Assign it manually, track it in a spreadsheet', s: 'The spreadsheet is very colour-coded.', v: 'meh', pts: 5,
+      fb: 'The spreadsheet starts lying within a month, and every ghost from Level 1 was probably still holding a paid licence. Manual licensing is how you pay monthly rent for people who left. (+5)' },
+    { t: 'Buy the biggest licence for everyone', s: 'Simplest possible policy.', v: 'bad', pts: 0,
+      fb: 'Simple, yes, and you are now paying premium per month for warehouse staff who need email and one Teams channel. Licence right-sizing usually funds the entire identity project by itself. (0)' }
+  ]},
+  { q: 'MFA: when does Maria set it up?', opts: [
+    { t: 'Day one, at the welcome desk, with a Temporary Access Pass', s: 'A short-lived pass to register her authenticator before lunch.', v: 'good', pts: 10,
+      fb: 'A Temporary Access Pass is a time-limited code that lets Maria enrol her authenticator app on day one: no password-only window, no «I will do it later». The account is born protected. (+10)' },
+    { t: 'Email her the instructions; she will register when prompted', s: 'People read onboarding emails. Eventually.', v: 'meh', pts: 5,
+      fb: 'That leaves a password-only account for days or weeks, and attackers specifically hunt the gap between «account created» and «MFA registered». Fresh accounts are the soft ones. (+5)' },
+    { t: 'Skip MFA the first month; less friction for the newcomer', s: 'Let her settle in first.', v: 'bad', pts: 0,
+      fb: 'Backwards: a brand-new account with a just-issued password is at its most vulnerable in week one. Day one is not too early for MFA; it is the last safe moment. (0)' }
+  ]},
+  { q: 'And the basics: email lists, intranet, the right Teams?', opts: [
+    { t: 'Automatic: «department = Sales» sorts her in by itself', s: 'Dynamic groups read her profile and do the rest.', v: 'good', pts: 10,
+      fb: 'Dynamic groups run on rules over attributes: department, country, job title. HR set «Sales», so the Sales groups claim her automatically. And when that attribute ever changes, the access follows. Remember this one. (+10)' },
+    { t: 'A checklist of 14 groups the admin adds by hand', s: 'The checklist has never failed. Yet.', v: 'meh', pts: 5,
+      fb: 'A checklist works until the day it does not, and 14 manual adds today are 14 manual removes someday. Guess which half ever happens. (+5)' },
+    { t: 'She can request each access when she hits a wall', s: 'Builds initiative.', v: 'bad', pts: 0,
+      fb: 'Death by a thousand tickets: week one spent asking for doors, helpdesk drowning, and her manager approving things he does not understand. Birthright access should be a birthright. (0)' }
+  ]}
+];
+let di = 0;
+function L2(){
+  mood(''); di = 0;
+  show(`
+    ${Lab.badge('Level 2 · joiner day','user-plus')}
+    <h2>HR says: «Maria starts Monday»</h2>
+    ${say('your guide', `The best time to prevent a ghost is the day the account is born. Five calls to make before Monday; the strong answer pays best. (+10)`, 'tip')}
+    <div id="dzone"></div>
+  `);
+  renderDecision();
+}
+function renderDecision(){
+  const d = decisions[di];
+  Lab.patch('#dzone', `
+    <h3 style="margin-top:14px">Decision ${di + 1}/${decisions.length}: ${d.q}</h3>
+    <div class="choices">
+      ${d.opts.map((o, i) => `<button class="choice" id="ch${i}" onclick="L.pick(${i},event)"><b>${o.t}</b><small>${o.s}</small></button>`).join('')}
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="dnext" style="display:none"></button>
+  `);
+}
+function pickOpt(i, e){
+  const d = decisions[di], o = d.opts[i];
+  d.opts.forEach((x, j) => { const el = $('ch' + j); if (!el) return; el.disabled = true; if (j === i) el.classList.add(o.v); });
+  if (o.pts > 0) scoreAt(o.pts, e);
+  const v = $('verdict'); if (v) { v.innerHTML = say(o.v === 'good' ? 'nice' : 'hmm', o.fb, o.v === 'good' ? 'tip' : 'warn'); v.classList.add('show'); }
+  const b = $('dnext'); if (!b) return;
+  b.style.display = 'inline-flex';
+  if (di < decisions.length - 1) { b.innerHTML = icon('arrow-right') + 'Next decision'; b.onclick = () => { di++; renderDecision(); }; }
+  else { b.innerHTML = icon('arrow-right') + 'Maria is live. Six months later…'; b.onclick = () => goto(3); }
+}
+
+/* ---------------- L3 : the mover board ---------------- */
+const moves = [
+  { col: 's', ic: 'users',   t: 'Remove the Sales starter-pack group', d: 'CRM, pipeline site, sales mailbox: out with the group.', ok: true,
+    ex: 'Group out means CRM, pipeline site and the sales mailbox out, all in one move. This is exactly why the starter pack was a group and not 14 hand-picked permissions.' },
+  { col: 's', ic: 'license', t: 'Reclaim the Sales CRM licence', d: 'She will never open it again, and it bills monthly.', ok: true,
+    ex: 'Seats cost money every month. With group-based licensing this happens by itself the second she leaves the Sales group; the licence follows the group.' },
+  { col: 's', ic: 'mail',    t: 'Remove her from the Sales-Deals shared mailbox', d: 'Live negotiations are not Finance reading material.', ok: true,
+    ex: 'A Finance employee reading live sales negotiations is a compliance incident waiting for an auditor to find it. Old-team mailboxes go first.' },
+  { col: 's', ic: 'pin',     t: 'Keep her Sales access too, just in case', d: 'She might help the old team sometimes?', ok: false,
+    ex: '<b>Access creep.</b> This is exactly how six-year veterans end up able to open half the company: every move keeps a little «just in case» pile, and nobody ever asks «why does she still have that?» until an audit, or an attacker, finds the pile. If she truly must cover for Sales: a separate grant, with an expiry date, reviewed.' },
+  { col: 'f', ic: 'user',    t: 'Update her profile: department = Finance', d: 'New department, new manager, in the directory.', ok: true,
+    ex: 'The attribute is the steering wheel: dynamic groups read «Finance» and re-home her automatically. In a mature setup, this one field change does most of the other steps for you.' },
+  { col: 'f', ic: 'users',   t: 'Add the Finance starter-pack group', d: 'ERP, reports folder, the Finance Teams channel.', ok: true,
+    ex: "The Finance role's needs, defined once, granted in one move: the same trick as her joiner day, pointed at the new job." },
+  { col: 'f', ic: 'license', t: 'Assign the Finance apps licence', d: 'The tools of the new trade.', ok: true,
+    ex: 'In a group-based setup this rides along with the Finance group automatically. Join the group, the licence follows; nothing to remember.' },
+  { col: 'f', ic: 'user-x',  t: 'Delete the account, make a fresh Finance one', d: 'Clean slate. What could be cleaner?', ok: false,
+    ex: 'She would lose her mailbox, OneDrive, Teams history and every «remember me» on the planet, and IT gains a day of rework. Movers <b>keep</b> their identity; only the <b>access</b> moves. One person, one account, for their whole journey.' }
+];
+let moveDone = 0;
+const colCard = (m, i) => `<button class="card-sm" id="mv${i}" onclick="L.act(${i},event)">${icon(m.ic)}<span><b>${m.t}</b><small>${m.d}</small></span></button>`;
+function L3(){
+  mood(''); moveDone = 0;
+  show(`
+    ${Lab.badge('Level 3 · the mover','route')}
+    <h2>Maria moves: Sales <em>→</em> Finance</h2>
+    ${say('your guide', `Promotions and transfers are where access silently piles up. Build Maria's move: <b>remove</b> the three things Sales gave her, <b>add</b> the three things Finance needs, and dodge the two classics on the board. (+10 each)`, 'tip')}
+    <div class="board">
+      <div class="col"><h4>Sales · what she has <span id="cntS">0/3 removed</span></h4>${moves.map((m, i) => m.col === 's' ? colCard(m, i) : '').join('')}</div>
+      <div class="col"><h4>Finance · what she needs <span id="cntF">0/3 added</span></h4>${moves.map((m, i) => m.col === 'f' ? colCard(m, i) : '').join('')}</div>
+    </div>
+    <div class="inv" id="mvLog">${icon('route')} <b>The move: 0/6</b> — what goes, what comes?</div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l3next" style="display:none" onclick="L.goto(4)">${icon('arrow-right')}Clean move. Time for the quarterly review</button>
+  `);
+}
+let cntS = 0, cntF = 0;
+function act(i, e){
+  const m = moves[i], el = $('mv' + i);
+  if (!el || el.classList.contains('done') || el.disabled) return;
+  if (m.ok) {
+    el.classList.add('done'); el.disabled = true; el.insertAdjacentHTML('beforeend', `<span class="tick">${icon('check')}</span>`);
+    moveDone++; scoreAt(10, e);
+    if (m.col === 's') { cntS++; Lab.patch('#cntS', `${cntS}/3 removed`); } else { cntF++; Lab.patch('#cntF', `${cntF}/3 added`); }
+    Lab.patch('#mvLog', `${icon('route')} <b>The move: ${moveDone}/6</b> — ${m.ex}`);
+    if (moveDone === 6) {
+      Lab.patch('#mvLog', `${icon('check-circle')} <b>Clean move.</b> Old access gone, new access via groups, profile updated so automation can follow her. In real audits, movers, not leavers, are where the scariest permissions hide: the leaver at least leaves; the mover stays and accumulates.`);
+      const n = $('l3next'); if (n) n.style.display = 'inline-flex';
+    }
+  } else {
+    el.classList.add('bad', 'shake'); el.disabled = true; el.insertAdjacentHTML('beforeend', `<span class="tick">${icon('x')}</span>`);
+    Lab.patch('#mvLog', `${icon('alert')} <b>The move: ${moveDone}/6</b> — ${m.ex}`);
+    later(() => el.classList.remove('shake'), 500);
+  }
+}
+
+/* ---------------- L4 : access review verdicts ---------------- */
+const scen = [
+  { t: 'intern-2024 · Helpdesk Admin role · internship ended 2 years ago', who: 'Row 1 · the forgotten intern', ans: 2,
+    why: "Nobody reviewed it because nobody was ever asked to; that is the whole disease. An access review puts this row in front of a human («does intern-2024 still need Helpdesk Admin?»), and in Entra the review can auto-remove access on a «deny», or when nobody answers at all. Two years late beats never." },
+  { t: 'The CFO · member of Finance-Approvers · approves payments weekly', who: 'Row 2 · the obvious one', ans: 1,
+    why: 'Reviews are not purges: the CFO approving payments is the system working. A good review confirms the obvious rows fast, so human attention is spent where it belongs: on the odd ones.' },
+  { t: 'guest: k.miller#EXT# · member of «Project Falcon (M&A)» Teams site · nobody recognises the name', who: 'Row 3 · the mystery guest', ans: 3,
+    why: 'Unknown guest plus your most sensitive site means investigate before touching. Who invited them? When? Is the partnership still live? Entra guest access reviews ask the resource owner exactly this on a schedule, and auto-remove guests nobody vouches for.' },
+  { t: 'Maria · still in Sales-EU group · moved to Finance 6 months ago', who: 'Row 4 · sound familiar?', ans: 2,
+    why: "Level 3's lesson, spotted in the wild: her move left residue. This is why reviews exist even when the mover process is good; they are the safety net that catches whatever the process missed." },
+  { t: 'Vlad (IT) · Global Administrator · one of two named admins, activates the role just-in-time via PIM', who: 'Row 5 · the model citizen', ans: 1,
+    why: 'Two named admins, role activated only when needed and only for a few hours (that is PIM, Privileged Identity Management): this is the textbook setup. Keep it, and use it as the bar every other privileged account gets measured against.' },
+  { t: 'svc-scanner service account · member of VPN-Users · no owner listed, no one knows why', who: 'Row 6 · the orphan robot', ans: 3,
+    why: '«No owner, nobody knows why» is never a keep, and it is dangerous to blind-revoke (what if payroll printing dies at month-end?). Flag it: find an owner, document what it does, then decide. Every account needs a human who answers for it.' }
+];
+const VERDICTS = [null, { l: 'Keep', ic: 'check' }, { l: 'Revoke', ic: 'x' }, { l: 'Flag', ic: 'flag' }];
+let scDone = 0, scFirst = {};
+function L4(){
+  mood(''); scDone = 0; scFirst = {};
+  show(`
+    ${Lab.badge('Level 4 · the access review','list-check')}
+    <h2>Quarterly review: you are the reviewer</h2>
+    ${say('your guide', `An access review is a beautifully simple ritual: a human looks at a row of access and answers «still needed?». Six rows landed on your desk this quarter. Call <b>KEEP</b>, <b>REVOKE</b> or <b>FLAG</b> on each. (+10 first try, +5 on a retry)`, 'tip')}
+    ${scen.map((s, i) => `
+      <div class="ticket review-row" id="sc${i}">
+        <div class="tx">${icon('file-text')}<div><b>${s.t}</b><small>${s.who}</small></div></div>
+        <div class="verdict-btns">
+          ${[1, 2, 3].map(v => `<button class="btn small" id="sc${i}v${v}" onclick="L.verdict(${i},${v},event)">${icon(VERDICTS[v].ic)}${VERDICTS[v].l}</button>`).join('')}
+        </div>
+        <div class="verdict" id="sc${i}x"></div>
+      </div>`).join('')}
+    <div class="oknote" id="l4note" style="display:none"></div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l4next" style="display:none" onclick="L.goto(5)">${icon('arrow-right')}Review filed. Brace for redundancy day</button>
+  `);
+}
+function verdict(i, v, e){
+  const s = scen[i], card = $('sc' + i), b = $('sc' + i + 'v' + v);
+  if (!card || !b || card.classList.contains('done')) return;
+  if (v === s.ans) {
+    card.classList.add('done');
+    [1, 2, 3].forEach(k => { const x = $('sc' + i + 'v' + k); if (!x) return; x.disabled = true; if (k === v) x.classList.add('green'); });
+    scoreAt(scFirst[i] === undefined ? 10 : 5, e);
+    const x = $('sc' + i + 'x'); if (x) { x.innerHTML = say('verdict', s.why, 'tip'); x.classList.add('show'); }
+    scDone++;
+    if (scDone === scen.length) {
+      sc('reviewed', true);
+      const note = $('l4note'); if (note) { note.style.display = 'block'; note.innerHTML = `<b>Review complete, decisions applied.</b> Look at the background: the ghost pile at the LEAVERS door is being swept away, one by one. That is «auto-apply results»: a review decision becomes an actual removal, automatically, with no follow-up ticket.`; }
+      const n = $('l4next'); if (n) n.style.display = 'inline-flex';
+    }
+  } else {
+    scFirst[i] = false; b.classList.add('red'); b.disabled = true;
+    toast('Not that one. Think about who answers for this access.', 'x');
+    later(() => b.classList.remove('red'), 450);
+  }
+}
+
+/* ---------------- L5 : leaver rush arcade ---------------- */
+const LEAVERS = [
+  ['AN', 'Andrei', 'Warehouse'], ['IO', 'Ioana', 'Support'], ['RA', 'Radu', 'Sales'], ['EL', 'Elena', 'Finance'],
+  ['MI', 'Mihai', 'IT'], ['AA', 'Ana', 'Marketing'], ['DR', 'Dragos', 'Logistics'], ['CR', 'Cristina', 'HR'],
+  ['PA', 'Paul', 'Support'], ['DI', 'Diana', 'Legal'], ['ST', 'Stefan', 'Sales'], ['LA', 'Laura', 'Ops']
+];
+const STAYERS = [['MA', 'Maria', 'Finance (moved)'], ['VL', 'Vlad', 'IT'], ['BO', 'Bogdan', 'Sales'], ['CO', 'Corina', 'Support']];
+const RUSH_TARGET = 12;
+let offboarded = 0, rushEventFired = false, rushLive = false, rcSeq = 0, clockMin = 0, leaverIdx = 0;
+const GHOST_MS = Lab.reduced ? 9500 : 6500;
+function L5(){
+  mood('alert'); offboarded = 0; rushEventFired = false; rushLive = true; rcSeq = 0; clockMin = 0; leaverIdx = 0;
+  show(`
+    ${Lab.badge('Level 5 · leaver rush','door-open')}
+    <h2>Redundancy day. <em>12 people</em> leave at 17:00.</h2>
+    ${say('your guide', `The hard part of leavers is not knowing what to do; it is doing it for <b>everyone, the same evening, with zero misses</b>. Click each <b>leaver</b> to run the offboarding checklist (+5). Leave one waiting too long and it turns into a red <b>ghost</b>; you can still catch it late (+2). And do not offboard the people who are staying.`, 'tip')}
+    <div class="arena" id="arena">
+      <div class="house house--l">${icon('list-check')}HR LIST<small>12 last days today</small></div>
+      <div class="house house--r">${icon('door-open')}THE EXIT<small>clean and final</small></div>
+      <div class="clock" id="rushClock">${icon('clock')}<span>17:00</span></div>
+      <div class="event-banner" id="eventBanner"></div>
+      <div class="bigbar"><i id="bigFill"></i><span id="bigLabel">0 / ${RUSH_TARGET} offboarded</span></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn blue" id="l5next" style="display:none" onclick="L.goto(6)">${icon('arrow-right')}Queue cleared. Never again by hand</button>
+  `);
+  every(tickRush, 1000);
+  spawnCard(); spawnCard();
+}
+function tickRush(){
+  const arena = $('arena'); if (!arena || !arena.isConnected) { clearAll(); return; }
+  clockMin++;
+  const el = $('rushClock'); if (el) el.querySelector('span').textContent = (17 + Math.floor(clockMin / 60)) + ':' + String(clockMin % 60).padStart(2, '0');
+  spawnCard();
+}
+function spawnCard(){
+  if (!rushLive) return;
+  const arena = $('arena'); if (!arena) return;
+  if (arena.querySelectorAll('.item.who:not(.proc):not(.pop)').length >= 3) return;
+  const needLeavers = leaverIdx < RUSH_TARGET;
+  const isLeaver = needLeavers && Math.random() < .75;
+  if (!isLeaver && !needLeavers && Math.random() < .6) return;
+  const who = isLeaver ? LEAVERS[leaverIdx++ % LEAVERS.length] : pick(STAYERS);
+  const card = document.createElement('button');
+  card.className = 'item who'; card.id = 'rc' + (rcSeq++);
+  card.setAttribute('aria-label', (isLeaver ? 'Leaver: ' : 'Employee: ') + who[1] + ', ' + who[2]);
+  card.innerHTML = isLeaver
+    ? `${icon('user-x')}<span>${who[1]} · ${who[2]}</span><small>last day: today 17:00</small>`
+    : `${icon('user-check')}<span>${who[1]} · ${who[2]}</span><small>contract: active</small>`;
+  card.style.left = (26 + Math.random() * 36) + '%';
+  card.style.top = (14 + Math.random() * 50) + '%';
+  card.onclick = e => {
+    if (!rushLive || card.dataset.done) return;
+    card.dataset.done = '1';
+    if (isLeaver) {
+      const late = card.classList.contains('ghosted');
+      if (late) sc('ghosts', Math.max(0, (sget('ghosts') || 0) - 1));
+      card.classList.remove('ghosted', 'bad'); card.classList.add('good', 'proc');
+      card.innerHTML = `<small>offboarding ${who[1]}…</small><span>${icon('shield-off')} sign-in blocked</span><span>${icon('key')} sessions revoked</span><span>${icon('mail')} mailbox → shared</span><span>${icon('license')} licence reclaimed</span>`;
+      scoreAt(late ? 2 : 5, e);
+      offboarded++; updateRushBar();
+      later(() => { card.classList.add('fly'); later(() => card.remove(), 720); }, 800);
+      if (!rushEventFired && offboarded === 6) later(rushEvent, 900);
+      if (offboarded >= RUSH_TARGET) later(endRush, 950);
+    } else {
+      card.classList.add('warn', 'proc');
+      card.innerHTML = `${icon('alert')}<span>${who[1]} is still employed</span><small>check the list before pulling the plug</small>`;
+      later(() => { card.classList.add('pop'); later(() => card.remove(), 400); }, 1400);
+    }
+  };
+  arena.appendChild(card);
+  if (isLeaver) {
+    later(() => {
+      if (card.isConnected && !card.dataset.done && !card.classList.contains('ghosted')) {
+        card.classList.add('ghosted', 'bad');
+        card.innerHTML = `${icon('user-x')}<span>GHOST · ${who[1]}</span><small>still has working keys. Late beats never: click</small>`;
+        sc('ghosts', Math.min(9, (sget('ghosts') || 0) + 1));
+      }
+    }, GHOST_MS);
+  } else {
+    later(() => { if (card.isConnected && !card.dataset.done) { card.classList.add('sink'); later(() => card.remove(), 520); } }, 5600);
+  }
+}
+function updateRushBar(){
+  const p = Math.min(100, Math.round(offboarded / RUSH_TARGET * 100));
+  const f = $('bigFill'), l = $('bigLabel');
+  if (f) f.style.width = p + '%';
+  if (l) l.textContent = `${offboarded} / ${RUSH_TARGET} offboarded`;
+}
+function rushEvent(){
+  rushEventFired = true; rushLive = false;
+  document.querySelectorAll('#arena .item.who').forEach(c => c.classList.add('dim'));
+  const b = $('eventBanner'); if (!b) return;
+  b.classList.remove('ok'); b.classList.add('show');
+  b.innerHTML = `Six down, and that was the easy half.<small>Real offboarding is around 20 steps per person: devices, badges, SaaS apps, door codes, keys. On a 40-leaver day, checklists break. Humans miss. Ghosts spawn.</small><button class="btn small" onclick="L.better(event)">${icon('bolt')}There has to be a better way</button>`;
+}
+function better(e){
+  scoreAt(10, e);
+  const b = $('eventBanner'); if (!b) return;
+  b.classList.add('ok');
+  b.innerHTML = `${icon('check')} There is, and you switch it on in the next level. First, clear this queue. Every miss becomes a ghost.`;
+  later(() => { b.classList.remove('show', 'ok'); rushLive = true; document.querySelectorAll('#arena .item.who').forEach(c => c.classList.remove('dim')); }, 2200);
+}
+function endRush(){
+  rushLive = false; clearAll();
+  document.querySelectorAll('#arena .item.who').forEach(c => c.remove());
+  const l = $('bigLabel'); if (l) l.textContent = 'queue cleared';
+  const n = $('l5next'); if (n) n.style.display = 'inline-flex';
+  toast('Queue cleared. Every leaver handled the same evening.', 'check-circle');
+}
+
+/* ---------------- L6 : the automation night ---------------- */
+let autoOn = false, autoIdx = 0;
+const autoSteps = [
+  { ic: 'user-plus', t: 'Joiner: the account builds itself', d: "HR enters a start date; days before day one, a lifecycle workflow creates the account, drops the new hire into their role groups, and issues a Temporary Access Pass for the welcome desk. Maria's onboarding, replayed by a machine.",
+    w: 'The workflow trigger is HR data: the hire date on the record. If HR is sloppy with dates, the automation is sloppy with accounts. Garbage in, ghosts out.' },
+  { ic: 'license', t: 'Birthright and licences: the groups do the work', d: 'Dynamic groups read the profile attributes; group-based licensing rides along. Nobody «gives» access any more: the data grants it, the same way, every single time.',
+    w: 'Test a dynamic-group rule before trusting it: one wrong expression and 40 strangers join Finance-Approvers at 2 AM. Always preview the membership first.' },
+  { ic: 'route', t: 'Mover: the department field is the steering wheel', d: "HR flips Maria's department; the dynamic groups swap her starter packs, licences follow, old access drains away. Level 3, performed while she sleeps.",
+    w: 'Watch the overlap window: for a few hours a mover can hold both packs. For sensitive roles (finance, admin) make the old-access removal immediate, not «overnight».' },
+  { ic: 'moon', t: 'Leaver: midnight, guaranteed', d: 'On the last day, the leaver workflow fires: block sign-in, revoke every active session, strip the group memberships. Days later: reclaim the licence, convert the mailbox to shared so the team keeps the mail. No memory required. No Dans.',
+    w: 'Blocking sign-in does not kill sessions that are already open; the revoke-sessions step is the one that slams the doors already ajar. It is the step humans forget; the workflow cannot.' },
+  { ic: 'key', t: 'Guardrails on the machine', d: 'Every workflow run is logged, failures alert a human, and the break-glass emergency accounts are excluded from anything that disables anything. The machine is powerful, so it gets a fence.',
+    w: 'An automation that disables accounts is also an outage with good intentions. Scope it tight, log everything, and review the run history weekly until you trust it.' }
+];
+function L6(){
+  mood('night'); autoOn = false; autoIdx = 0;
+  show(`
+    ${Lab.badge('Level 6 · the automation night','settings')}
+    <h2>Friday, 11 PM. The last manual offboarding, <em>ever</em>.</h2>
+    <p class="muted">Everything you did by hand this week (creating, moving, disabling) Entra can do from HR data, on schedule, every time. The feature family is called <b>lifecycle workflows</b>. Time to stop being the checklist. Flip it.</p>
+    <div class="switch-zone">
+      <button class="toggle toggle--big" id="autoToggle" onclick="L.flip()" aria-label="Switch the lifecycle from manual to automated"><span class="track"></span><span id="toggleLbl">Lifecycle: manual</span></button>
+      <div class="dns-line" id="autoLine">Every step is someone's memory. Flip it.</div>
+    </div>
+    <div id="autoZone" style="max-width:700px;margin:20px auto 0"></div>
+    <div class="spacer"></div>
+    <div class="center"><button class="btn green" id="l6next" style="display:none" onclick="L.goto(7)">${icon('arrow-right')}Automated and calm. Last stop: governance</button></div>
+  `);
+}
+function flip(){
+  if (autoOn) return;
+  autoOn = true;
+  const sw = $('autoToggle'); if (sw) sw.classList.add('on');
+  Lab.patch('#toggleLbl', 'Lifecycle: automated');
+  sc('automated', true);
+  addScore(20, innerWidth / 2, innerHeight / 2);
+  const l = $('autoLine'); if (l) l.textContent = 'Watch the background: the flow runs green, ghosts dissolve at the door, nothing piles up. Now see what the machine actually does.';
+  renderAuto(0);
+}
+function renderAuto(i){
+  autoIdx = i;
+  const s = autoSteps[i];
+  const done = autoSteps.slice(0, i).map(x => `<span>${icon('check')}${x.t}</span>`).join('');
+  Lab.patch('#autoZone', `
+    ${done ? `<div class="done-list">${done}</div>` : ''}
+    <div class="say" data-who="workflow ${i + 1} / ${autoSteps.length}">
+      <b style="font-size:16px;display:flex;gap:10px;align-items:center">${icon(s.ic)}${s.t}</b>
+      <p style="margin-top:6px;font-size:14.5px">${s.d}</p>
+      <div class="warnnote"><b>Pay attention:</b> ${s.w}</div>
+      ${i < autoSteps.length - 1 ? `<div style="margin-top:12px"><button class="btn small blue" onclick="L.autoNext(event)">${icon('arrow-right')}Next workflow</button></div>` : ''}
+    </div>`);
+  if (i === autoSteps.length - 1) { const n = $('l6next'); if (n) n.style.display = 'inline-flex'; }
+}
+function autoNext(e){ scoreAt(5, e); renderAuto(autoIdx + 1); }
+
+/* ---------------- L7 : governance tickets + finale ---------------- */
+const tickets = [
+  { t: '«We have 214 guest accounts. Marius, from an agency we dropped in 2023, can still open our files»', who: 'Security review, slide 4',
+    opts: [
+      { o: 'Delete every guest tonight. Partners will understand', ok: false },
+      { o: 'Guest access reviews with auto-removal: resource owners confirm their guests on a schedule; nobody vouches, access goes, automatically', ok: true },
+      { o: 'Guests are harmless, they are external anyway', ok: false }
+    ],
+    ex: 'Guests never expire on their own: someone invited them once, and the invitation outlived the relationship. Entra access reviews can ask each site or team owner «still yours?» periodically and automatically remove guests who are denied, or whose owner never answers. Set once, cleans forever.' },
+  { t: '«svc-invoice runs the invoicing job. Its password is from 2019 and it is pasted in three scripts»', who: 'The audit finding',
+    opts: [
+      { o: 'Rotate it to a new password and paste that into the scripts', ok: false },
+      { o: 'Move it to a managed identity: the workload proves who it is by itself; there is no password to steal, leak or forget', ok: true },
+      { o: 'It has worked since 2019; that is five years of proof it is fine', ok: false }
+    ],
+    ex: 'Passwords in scripts get copied, committed to repositories and forgotten. A managed identity means the Azure workload authenticates as itself: nothing to rotate, nothing to paste, nothing for an attacker to find. Where a managed identity cannot reach, the fallback is a vaulted secret with automatic rotation, never a string in a script.' },
+  { t: "«We have 340 Teams. 'Project Phoenix 2021' has 9 owners and its last message is from 2022»", who: 'The Teams jungle',
+    opts: [
+      { o: 'Mass-delete everything that looks old', ok: false },
+      { o: 'Group expiration policy: unused groups email their owners for renewal; nobody claims them, they expire (with a 30-day restore window)', ok: true },
+      { o: 'Storage is cheap, let them pile up', ok: false }
+    ],
+    ex: 'Every dead Team is a pile of files with forgotten members and nine absentee owners. The expiration policy makes each group justify its existence to its own owners on a schedule: active teams renew automatically based on use; abandoned ones evaporate, recoverable for 30 days if someone objects.' },
+  { t: "«The new cleanup workflow disables inactive accounts… and the break-glass account has been 'inactive' for 90 days»", who: 'Near miss of the month',
+    opts: [
+      { o: 'The automation knows best; if it gets disabled, it was unused anyway', ok: false },
+      { o: 'Exclude the break-glass accounts explicitly from every disable or cleanup workflow, and alert loudly if anything ever touches them', ok: true },
+      { o: 'Log into break-glass weekly so it looks active', ok: false }
+    ],
+    ex: 'The emergency account is supposed to look inactive; that is its job. An eager cleanup almost disabled the exact account you would need in a disaster. Rule: automations that disable things get explicit exclusion lists for emergency access, and any activity on break-glass fires an alarm. (And no: using emergency credentials weekly to game a filter is how they leak.)' },
+  { t: '«These quarterly access reviews… managers just click approve-all to make the email go away»', who: 'Review fatigue, month 6',
+    opts: [
+      { o: 'Cancel the reviews, they are theatre anyway', ok: false },
+      { o: 'Shrink and assist: small scoped reviews (admins, guests, sensitive groups) plus machine-assisted recommendations that pre-mark inactive users as «suggest deny»', ok: true },
+      { o: 'Make them monthly so people take them seriously', ok: false }
+    ],
+    ex: "Approve-all fatigue is real: a 400-row review is theatre. The fix is smaller and smarter: review only the access that matters (privileged roles, guests, finance groups), and let Entra's recommendations pre-mark users with no sign-in in 30 days. A 10-row review with suggestions gets honest answers in five minutes." }
+];
+let tdone = 0, firstTry = {};
+function L7(){
+  mood(''); tdone = 0; firstTry = {};
+  show(`
+    ${Lab.badge('Level 7 · governance','check-circle')}
+    <h2>Keeping the door honest</h2>
+    ${say('your guide', `Automation handles the flow; <b>governance</b> handles the leftovers: guests, robots, dead Teams and the automation itself. Five tickets from month two; each has a lazy answer, a brutal answer and a right answer. (+10 first try, +5 on a retry)`, 'tip')}
+    <div id="tzone">
+      ${tickets.map((tk, i) => `
+        <div class="ticket" id="tk${i}">
+          <div class="tx">${icon('ticket')}<div><b>${tk.t}</b><small>${tk.who}</small></div></div>
+          <div class="choices">
+            ${tk.opts.map((op, j) => `<button class="choice" id="tk${i}o${j}" onclick="L.solve(${i},${j},event)">${op.o}</button>`).join('')}
+          </div>
+          <div class="verdict" id="tk${i}v"></div>
+        </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    <div id="finale"></div>
+  `);
+}
+function solve(i, j, e){
+  const tk = tickets[i], card = $('tk' + i), b = $('tk' + i + 'o' + j);
+  if (!card || !b || card.classList.contains('done')) return;
+  if (tk.opts[j].ok) {
+    card.classList.add('done');
+    tk.opts.forEach((op, k) => { const x = $('tk' + i + 'o' + k); if (!x) return; x.disabled = true; if (k === j) x.classList.add('good'); });
+    scoreAt(firstTry[i] === undefined ? 10 : 5, e);
+    const v = $('tk' + i + 'v'); if (v) { v.innerHTML = say('solved', tk.ex, 'tip'); v.classList.add('show'); }
+    tdone++;
+    if (tdone === tickets.length) later(() => Lab.finale({ into: '#finale', heading: 'The door revolves, and closes.' }), 400);
+  } else {
+    firstTry[i] = false; b.classList.add('bad'); b.disabled = true;
+    later(() => b.classList.remove('bad'), 450);
+  }
+}
+
+/* expose handlers used by inline onclick="" */
+window.L = { goto: n => { clearAll(); goto(n); }, discover, pick: pickOpt, act, verdict, better, flip, autoNext, solve };
+
+Lab.init({
+  title: 'The Revolving Door',
+  codename: 'operation: revolving-door',
+  levels: [
+    { icon: 'play',         name: 'Start' },
+    { icon: 'search',       name: 'Ghosts' },
+    { icon: 'user-plus',    name: 'Joiner' },
+    { icon: 'route',        name: 'Mover' },
+    { icon: 'list-check',   name: 'Review' },
+    { icon: 'door-open',    name: 'Leavers' },
+    { icon: 'settings',     name: 'Automate' },
+    { icon: 'check-circle', name: 'Govern' }
+  ],
+  render: [L0, L1, L2, L3, L4, L5, L6, L7].map(fn => () => { clearAll(); fn(); }),
+  maxScore: 390,
+  ranks: [
+    { min: 350, title: 'Lifecycle Legend',   icon: 'trophy', msg: 'Flawless. You could run the identity-lifecycle workshop yourself.' },
+    { min: 285, title: 'Identity Architect', icon: 'medal',  msg: 'Sharp. You know exactly where ghosts come from, and how to stop the spawner.' },
+    { min: 210, title: 'Ghost Hunter',       icon: 'key',    msg: 'Solid. One more run and you will clear the leaver rush without a single ghost.' },
+    { min: 0,   title: 'Ghost Bait',         icon: 'star',   msg: 'The door still spins. Replay and hunt for more points.' }
+  ],
+  summary: `The revolving door, in one breath:
+    <b>1)</b> every account needs a beginning, a middle and a guaranteed end: joiner, mover, leaver.
+    <b>2)</b> Joiners: HR is the source of truth, access lives in role groups, groups carry the licences, MFA on day one.
+    <b>3)</b> Movers: change the attribute, let dynamic groups swap the packs, and always remove the old.
+    <b>4)</b> Leavers: block sign-in, revoke sessions, reclaim, convert the mailbox; at midnight, by workflow, not by memory.
+    <b>5)</b> Access reviews are the safety net: small, scoped, machine-assisted, auto-applied.
+    <b>6)</b> Guests expire, groups expire, service accounts become managed identities.
+    <b>7)</b> Break-glass stays outside every automation's reach.
+    A ghost is not spooky; it is just a leaver nobody finished.`,
+  scene
+});
+})();
+</script>
+</body>
+</html>

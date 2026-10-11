@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
-
+Disallow: /dev/
 Sitemap: https://www.shautech.com/sitemap.xml
