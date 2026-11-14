@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<!-- © 2026 shautech. All rights reserved. -->
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>shautech pulse — demo report</title>
+<meta name="description" content="A hands-on demo of shautech pulse, our in-house audit engine for Microsoft 365. Open the findings, apply the fixes and watch the tenant compliance score climb from 82 to 100.">
+<meta name="theme-color" content="#0A0B0D">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.shautech.com/pulse/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="shautech">
+<meta property="og:title" content="shautech pulse — demo report">
+<meta property="og:description" content="Our audit engine, hands-on: open realistic findings, apply the fixes, watch the compliance score climb from 82 to 100.">
+<meta property="og:url" content="https://www.shautech.com/pulse/">
+<meta property="og:image" content="https://www.shautech.com/assets/img/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="shautech — IT consultancy and managed services">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.shautech.com/assets/img/og-image.png">
+<meta name="twitter:title" content="shautech pulse — demo report">
+<meta name="twitter:description" content="Our audit engine, hands-on: open realistic findings, apply the fixes, watch the compliance score climb from 82 to 100.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A0B0D'/%3E%3Crect x='5' y='5' width='22' height='22' rx='5' fill='none' stroke='%234D9FFF' stroke-width='2'/%3E%3Ctext x='16' y='22' font-family='ui-monospace,monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='34' fill='%230A0B0D'/%3E%3Crect x='30' y='30' width='120' height='120' rx='26' fill='none' stroke='%234D9FFF' stroke-width='10'/%3E%3Ctext x='90' y='122' font-family='ui-monospace,monospace' font-size='98' font-weight='700' text-anchor='middle' fill='%234D9FFF'%3E%E2%80%BA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+<style>
+  /* ---------- pulse page ---------- */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+            mask-image:radial-gradient(120% 90% at 70% -10%,#000 0%,transparent 60%);
+    opacity:.45;
+  }
+  body::after{
+    content:"";position:fixed;top:-20%;right:-10%;width:60vw;height:60vw;z-index:0;pointer-events:none;border-radius:50%;
+    background:radial-gradient(circle,rgba(77,159,255,.22) 0%,transparent 60%);filter:blur(40px);opacity:.6;
+  }
+  main{position:relative;z-index:1}
+  .footer{position:relative;z-index:1}
+  html.no-js [data-reveal]{opacity:1;transform:none}
+  html.no-js .nav{background:rgba(10,11,13,.85);border-color:var(--line)}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+
+  .pulse-hero{padding:calc(72px + clamp(56px,9vw,112px)) 0 clamp(36px,5vw,56px)}
+  .pulse-hero .eyebrow{margin-bottom:16px}
+  .pulse-hero__title{font-size:clamp(36px,5.6vw,68px);line-height:1.02;letter-spacing:-.03em;font-weight:700;margin-bottom:20px;max-width:18ch}
+  .pulse-hero__title em{font-style:normal;color:var(--accent)}
+  .pulse-hero .lede{max-width:680px}
+  .pulse-hero .lede strong{color:var(--ink);font-weight:500}
+  .pulse-hero__hint{display:flex;align-items:center;gap:10px;margin-top:22px;font-family:var(--mono);font-size:12px;color:var(--ink3);letter-spacing:.02em}
+  .pulse-hero__hint svg{width:14px;height:14px;flex:none;color:var(--amber)}
+  .pulse-hero__hint b{color:var(--amber);font-weight:500}
+
+  /* ---------- report console ---------- */
+  .pulse-report{padding:0 0 clamp(72px,9vw,120px)}
+  .console__title strong{color:var(--ink2);font-weight:500}
+  .report{padding:clamp(18px,3vw,28px) clamp(16px,3vw,26px) 20px;font-family:var(--sans);color:var(--ink)}
+  .report__nojs{margin:0 0 18px;padding:12px 14px;border:1px solid rgba(255,184,77,.35);background:rgba(255,184,77,.08);border-radius:10px;font-size:14px;color:var(--ink2)}
+  .report__nojs b{color:var(--amber);font-weight:500}
+
+  .score{display:flex;gap:26px;align-items:center;flex-wrap:wrap;margin-bottom:22px}
+  .score__num{font-size:clamp(56px,7vw,80px);font-weight:700;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums;min-width:3.4ch;transition:color .5s;display:flex;align-items:baseline;gap:4px}
+  .score__num small{font-size:.32em;color:var(--ink3);font-weight:500;letter-spacing:-.01em}
+  .score__num.good{color:var(--mint)}
+  .score__meta{flex:1;min-width:220px}
+  .score__lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+  .score__bar{height:8px;border-radius:6px;background:var(--bg3);border:1px solid var(--line);overflow:hidden;margin-bottom:12px}
+  .score__bar i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .9s var(--ease),background .5s}
+  .score__bar i.good{background:linear-gradient(90deg,#3fcf9a,var(--mint))}
+  .score__counts{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:12.5px;color:var(--ink2)}
+  .score__counts b{font-weight:700}
+  .cnt--crit b{color:var(--red)}.cnt--warn b{color:var(--amber)}.cnt--pass b{color:var(--mint)}
+
+  .clear{display:none;align-items:center;gap:14px;background:rgba(124,242,196,.07);border:1px solid rgba(124,242,196,.35);border-radius:12px;padding:14px 16px;margin-bottom:18px;font-size:15px;color:var(--ink)}
+  .clear.show{display:flex}
+  .clear svg{width:28px;height:28px;flex:none;color:var(--mint)}
+  .clear b{color:var(--mint);font-weight:600}
+  .clear p{margin:0;color:var(--ink2)}
+
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{font-family:var(--mono);font-size:12px;color:var(--ink2);background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer;transition:border-color .3s,color .3s,background .3s;display:inline-flex;align-items:center;gap:7px}
+  .tab:hover{border-color:var(--line2);color:var(--ink)}
+  .tab[aria-pressed="true"]{background:rgba(77,159,255,.12);border-color:var(--accent);color:var(--accent2)}
+  .tab__n{color:var(--ink3);font-size:11px}
+  .tab[aria-pressed="true"] .tab__n{color:var(--accent2)}
+  .tab:focus-visible,.finding__head:focus-visible,.fixbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .findings{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;list-style:none;padding:0}
+  .finding{background:var(--bg2);border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:border-color .3s}
+  .finding.open{border-color:var(--line2)}
+  .finding.is-hidden{display:none}
+  .finding__head{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background .3s}
+  .finding__head:hover{background:rgba(255,255,255,.025)}
+  .finding__head[disabled]{cursor:default}
+  .finding__head[disabled]:hover{background:none}
+  .sev{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;border-radius:6px;padding:4px 7px;min-width:48px;text-align:center;flex:none}
+  .sev--crit{background:rgba(255,92,122,.12);color:var(--red);border:1px solid rgba(255,92,122,.35)}
+  .sev--warn{background:rgba(255,184,77,.12);color:var(--amber);border:1px solid rgba(255,184,77,.35)}
+  .sev--pass{background:rgba(124,242,196,.1);color:var(--mint);border:1px solid rgba(124,242,196,.35)}
+  .finding__title{flex:1;min-width:0;font-size:15px;line-height:1.4;color:var(--ink2)}
+  .finding__title strong{color:var(--ink);font-weight:600}
+  .finding.fixed .finding__title,.finding.fixed .finding__title strong{color:var(--ink3)}
+  .finding__caret{width:14px;height:14px;flex:none;color:var(--ink3);transition:transform .35s var(--ease)}
+  .finding.open .finding__caret{transform:rotate(90deg)}
+  .finding__body{display:none;padding:2px 14px 16px;border-top:1px dashed var(--line)}
+  .finding.open .finding__body{display:block}
+  html.no-js .finding__body{display:block}
+  html.no-js .fixbtn,html.no-js .finding__caret{display:none}
+  .finding__grid{display:grid;grid-template-columns:120px 1fr;gap:10px 16px;padding-top:14px;font-size:14.5px}
+  .finding__grid dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);padding-top:3px}
+  .finding__grid dd{margin:0;color:var(--ink2);line-height:1.55}
+  .finding__grid dd.evi{color:var(--ink)}
+  .finding__grid code{font-family:var(--mono);font-size:.8em;color:var(--accent2);background:rgba(77,159,255,.08);border:1px solid rgba(77,159,255,.22);border-radius:5px;padding:1px 6px;white-space:nowrap}
+  .cis{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;color:var(--ink2);border:1px solid var(--line2);border-radius:999px;padding:4px 10px}
+  .cis i{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
+  .fixbtn{margin-top:16px;display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);font-weight:500;font-size:14px;background:var(--accent);color:#04101f;border:1px solid var(--accent);cursor:pointer;border-radius:999px;padding:10px 18px;transition:transform .4s var(--ease),box-shadow .3s,background .3s,color .3s}
+  .fixbtn:hover{transform:translateY(-1px);box-shadow:0 10px 30px -10px rgba(77,159,255,.7)}
+  .fixbtn svg{width:14px;height:14px;flex:none}
+  .fixbtn[disabled]{background:rgba(124,242,196,.08);color:var(--mint);border-color:rgba(124,242,196,.35);cursor:default;transform:none;box-shadow:none}
+  @keyframes flashfix{0%{box-shadow:0 0 0 0 rgba(124,242,196,.55)}100%{box-shadow:0 0 0 16px rgba(124,242,196,0)}}
+  .finding.justfixed{animation:flashfix .7s var(--ease)}
+
+  .report__foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px;font-family:var(--mono);font-size:11.5px;color:var(--ink3)}
+  .report__foot b{color:var(--ink2);font-weight:500}
+
+  /* ---------- how it works ---------- */
+  .pulse-how{padding:0 0 clamp(72px,9vw,120px)}
+  .how{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .how__cell{border:1px solid var(--line);border-radius:var(--r);background:linear-gradient(160deg,#121620,#0C0E12);padding:28px;transition:border-color .4s,transform .6s var(--ease)}
+  .how__cell:hover{border-color:rgba(77,159,255,.4);transform:translateY(-4px)}
+  .how__kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+  .how__title{font-size:clamp(20px,1.8vw,24px);letter-spacing:-.02em;line-height:1.15;margin-bottom:10px}
+  .how__text{color:var(--ink2);font-size:15px}
+  @media (max-width:860px){ .how{grid-template-columns:1fr} }
+
+  /* ---------- cta ---------- */
+  .pulse-cta{padding:clamp(96px,12vw,160px) 0}
+  .pulse-cta .h2{margin-inline:auto;max-width:18ch}
+  .pulse-cta__note{display:block;margin-top:0;font-family:var(--mono);font-size:12px;color:var(--ink3);letter-spacing:.02em}
+
+  @media (max-width:560px){
+    .finding__grid{grid-template-columns:1fr;gap:4px 0}
+    .finding__grid dt{padding-top:10px}
+    .finding__grid dd:first-of-type{padding-top:0}
+    .score{gap:18px}
+    .report{padding:18px 14px 16px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .finding.justfixed{animation:none}
+    .score__bar i,.fixbtn,.finding__caret{transition:none}
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#top">Skip to content</a>
+
+<!-- ===== NAV ===== -->
+<header class="nav" id="nav">
+  <div class="nav__progress"><i id="navProgress"></i></div>
+  <div class="nav__inner">
+    <a href="../index.html" class="logo" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span></a>
+    <nav class="nav__links" id="navLinks" aria-label="Site">
+      <a href="../index.html#services">Services</a>
+      <a href="../index.html#pulse" class="active">Pulse</a>
+      <a href="../labs/index.html">Labs</a>
+      <a href="../index.html#team">Team</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+    <div class="nav__right">
+      <span class="status" data-booking><i></i>Now booking</span>
+      <a href="../index.html#contact" class="btn btn--sm"><span>Book a free call</span></a>
+      <button class="burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><i></i><i></i></button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ===== HERO ===== -->
+  <section class="pulse-hero">
+    <div class="wrap">
+      <p class="eyebrow" data-reveal><span class="eyebrow__slash">//</span> shautech pulse · interactive demo · fictional tenant</p>
+      <h1 class="pulse-hero__title" data-reveal style="--i:1">Poke the report. <em>Fix the tenant.</em></h1>
+      <p class="lede" data-reveal style="--i:2">A hands-on demo of <strong>shautech pulse</strong>, our in-house audit engine: 200+ automated checks across identity, mail, endpoints and data, each mapped to the CIS Microsoft 365 Benchmark or a Microsoft security baseline. The tenant below is fictional; the findings are the ones we see in real audits every month.</p>
+      <p class="pulse-hero__hint" data-reveal style="--i:3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+        <span>Open a finding to see the evidence, then <b>apply the fix</b> and watch the score climb.</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== REPORT ===== -->
+  <section class="pulse-report" id="report" aria-labelledby="reportTitle">
+    <div class="wrap">
+      <div class="console" data-reveal>
+        <div class="console__bar">
+          <div class="console__dots" aria-hidden="true"><i></i><i></i><i></i></div>
+          <span class="console__title" id="reportTitle">shautech pulse · report — <strong>demo.onmicrosoft.com</strong></span>
+          <span class="console__live"><i></i><span id="liveTxt">scan complete</span></span>
+        </div>
+
+        <div class="report" id="report-body">
+          <noscript><p class="report__nojs"><b>The interactive demo needs JavaScript.</b> The findings below are fully readable without it; enable JavaScript to apply fixes and watch the score change.</p></noscript>
+
+          <!-- score -->
+          <div class="score">
+            <p class="score__num" id="scoreNum" aria-live="polite" aria-atomic="true"><span id="scoreVal">82</span><small>/100</small></p>
+            <div class="score__meta">
+              <p class="score__lbl">tenant compliance score</p>
+              <div class="score__bar" role="progressbar" aria-label="Tenant compliance score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="82" id="scoreBar"><i id="scoreFill" style="width:82%"></i></div>
+              <div class="score__counts">
+                <span class="cnt--crit"><b id="nCrit">3</b> critical</span>
+                <span class="cnt--warn"><b id="nWarn">7</b> warnings</span>
+                <span class="cnt--pass"><b id="nPass">204</b> passed</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- all clear -->
+          <div class="clear" id="clearBanner" role="status">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="13" r="8"/><path d="m7.5 13 2.5 2.5 4.5-5"/><path d="M19 2v3M17.5 3.5h3M21 8v2M20 9h2"/></svg>
+            <p><b>100/100 — tenant clean.</b> That took you about a minute. On a real tenant this becomes a prioritised fix plan, and we do the heavy lifting with you.</p>
+          </div>
+
+          <!-- tabs -->
+          <div class="tabs" id="tabs" role="group" aria-label="Filter findings by category">
+            <button class="tab" type="button" data-tab="all" aria-pressed="true">all <span class="tab__n" data-count="all">10</span></button>
+            <button class="tab" type="button" data-tab="identity" aria-pressed="false">identity <span class="tab__n" data-count="identity">3</span></button>
+            <button class="tab" type="button" data-tab="mail" aria-pressed="false">mail <span class="tab__n" data-count="mail">3</span></button>
+            <button class="tab" type="button" data-tab="endpoints" aria-pressed="false">endpoints <span class="tab__n" data-count="endpoints">2</span></button>
+            <button class="tab" type="button" data-tab="data" aria-pressed="false">data <span class="tab__n" data-count="data">2</span></button>
+          </div>
+
+          <!-- findings -->
+          <ul class="findings" id="findings">
+
+            <li class="finding" data-i="0" data-cat="identity" data-sev="crit" data-pts="3">
+              <button class="finding__head" type="button" data-action="toggle" aria-expanded="false" aria-controls="fb-0">
+                <span class="sev sev--crit" data-sev-chip>CRIT</span>
+                <span class="finding__title"><strong>Legacy authentication</strong> still enabled for 4 accounts</span>
+                <svg class="finding__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="finding__body" id="fb-0">
+                <dl class="finding__grid">
+                  <dt>what we saw</dt><dd class="evi">Sign-in logs show <code>IMAP</code> and <code>SMTP AUTH</code> successes for 4 accounts in the last 30 days. These protocols bypass MFA entirely.</dd>
+                  <dt>why it matters</dt><dd>Legacy protocols do not support MFA. Attackers use them to password-spray tenants: the front door has a lock, but this window is left open.</dd>
+                  <dt>the fix</dt><dd>Block legacy authentication with a Conditional Access policy; migrate the 2 printers that still use SMTP AUTH to a relay.</dd>
+                  <dt>mapped to</dt><dd><span class="cis"><i></i>CIS M365 · identity — legacy authentication</span></dd>
+                </dl>
+                <button class="fixbtn" type="button" data-action="fix">apply fix (+3)</button>
+              </div>
+            </li>
+
+            <li class="finding" data-i="1" data-cat="identity" data-sev="crit" data-pts="3">
+              <button class="finding__head" type="button" data-action="toggle" aria-expanded="false" aria-controls="fb-1">
+                <span class="sev sev--crit" data-sev-chip>CRIT</span>
+                <span class="finding__title"><strong>2 admin accounts</strong> excluded from the MFA policy</span>
+                <svg class="finding__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="finding__body" id="fb-1">
+                <dl class="finding__grid">
+                  <dt>what we saw</dt><dd class="evi"><code>adm-backup@</code> and <code>adm-old-it@</code> sit in the exclusion group of the "Require MFA — admins" policy. One has not signed in for 97 days.</dd>
+                  <dt>why it matters</dt><dd>Admin accounts are the highest-value targets in the tenant. A temporary exclusion from 2023 is exactly what an attacker hopes to find.</dd>
+                  <dt>the fix</dt><dd>Remove both accounts from the exclusion group; disable the dormant account; keep exactly one documented, monitored break-glass account.</dd>
+                  <dt>mapped to</dt><dd><span class="cis"><i></i>CIS M365 · identity — admin MFA</span></dd>
+                </dl>
+                <button class="fixbtn" type="button" data-action="fix">apply fix (+3)</button>
+              </div>
+            </li>
+
+            <li class="finding" data-i="2" data-cat="identity" data-sev="warn" data-pts="1">
+              <button class="finding__head" type="button" data-action="toggle" aria-expanded="false" aria-controls="fb-2">
+                <span class="sev sev--warn" data-sev-chip>WARN</span>
+                <span class="finding__title"><strong>Self-service password reset</strong> not enabled for users</span>
+                <svg class="finding__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="finding__body" id="fb-2">
+                <dl class="finding__grid">
+                  <dt>what we saw</dt><dd class="evi">SSPR is set to <code>None</code>. Every forgotten password becomes a helpdesk ticket and a social-engineering opportunity.</dd>
+                  <dt>why it matters</dt><dd>Password resets over the phone are how attackers impersonate employees. SSPR with MFA verification is both safer and cheaper.</dd>
+                  <dt>the fix</dt><dd>Enable SSPR for all users with two verification methods; pair it with password writeback for hybrid accounts.</dd>
+                  <dt>mapped to</dt><dd><span class="cis"><i></i>Microsoft baseline · identity — SSPR</span></dd>
+                </dl>
+                <button class="fixbtn" type="button" data-action="fix">apply fix (+1)</button>
+              </div>
+            </li>
+
+            <li class="finding" data-i="3" data-cat="mail" data-sev="crit" data-pts="3">
+              <button class="finding__head" type="button" data-action="toggle" aria-expanded="false" aria-controls="fb-3">
+                <span class="sev sev--crit" data-sev-chip>CRIT</span>
+                <span class="finding__title"><strong>DMARC</strong> not published for the primary domain</span>
+                <svg class="finding__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="finding__body" id="fb-3">
+                <dl class="finding__grid">
+                  <dt>what we saw</dt><dd class="evi">DNS lookup for <code>_dmarc.demo-client.com</code> returns no record. SPF exists; DKIM signs only the onmicrosoft domain.</dd>
+                  <dt>why it matters</dt><dd>Without DMARC, anyone can send mail as your domain: to your customers, your suppliers and your own finance team.</dd>
+                  <dt>the fix</dt><dd>Enable DKIM for the custom domain, publish DMARC at <code>p=none</code>, review reports for 2 weeks, then move to <code>p=quarantine</code>.</dd>
+                  <dt>mapped to</dt><dd><span class="cis"><i></i>CIS M365 · mail — DMARC / DKIM / SPF</span></dd>
+                </dl>
+                <button class="fixbtn" type="button" data-action="fix">apply fix (+3)</button>
+              </div>
+            </li>
+
+            <li class="finding" data-i="4" data-cat="mail" data-sev="warn" data-pts="1">
+              <button class="finding__head" type="button" data-action="toggle" aria-expanded="false" aria-controls="fb-4">
+                <span class="sev sev--warn" data-sev-chip>WARN</span>
+                <span class="finding__title"><strong>Mailbox auditing</strong> disabled on 12 mailboxes</span>
+                <svg class="finding__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="finding__body" id="fb-4">
+                <dl class="finding__grid">
+                  <dt>what we saw</dt><dd class="evi">12 shared mailboxes created before 2019 have <code>AuditEnabled: false</code>. Actions on them leave no trail.</dd>
+                  <dt>why it matters</dt><dd>When something goes wrong in a mailbox nobody audits, the investigation ends without answers. Auditing is free; hindsight is not.</dd>
+                  <dt>the fix</dt><dd>Re-enable auditing on all 12 mailboxes and confirm the organisation-wide auditing default is on.</dd>
+                  <dt>mapped to</dt><dd><span class="cis"><i></i>CIS M365 · mail — mailbox auditing</span></dd>
+                </dl>
+                <button class="fixbtn" type="button" data-action="fix">apply fix (+1)</button>
+              </div>
+            </li>
+
+            <li class="finding" data-i="5" data-cat="mail" data-sev="warn" data-pts="2">
+              <button class="finding__head" type="button" data-action="toggle" aria-expanded="false" aria-controls="fb-5">
+                <span class="sev sev--warn" data-sev-chip>WARN</span>
+                <span class="finding__title"><strong>External forwarding</strong> allowed tenant-wide</span>
+                <svg class="finding__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="finding__body" id="fb-5">
+                <dl class="finding__grid">
+                  <dt>what we saw</dt><dd class="evi">The outbound spam policy allows automatic forwarding; 3 mailboxes currently forward to personal <code>gmail.com</code> addresses.</dd>
+                  <dt>why it matters</dt><dd>Auto-forwarding to private mailboxes is the quietest data leak there is, and the first thing attackers configure after a takeover.</dd>
+                  <dt>the fix</dt><dd>Set automatic forwarding to <code>Off</code> in the outbound spam policy; approve legitimate cases per mailbox.</dd>
+                  <dt>mapped to</dt><dd><span class="cis"><i></i>CIS M365 · mail — external forwarding</span></dd>
+                </dl>
+                <button class="fixbtn" type="button" data-action="fix">apply fix (+2)</button>
+              </div>
+            </li>
+
+            <li class="finding" data-i="6" data-cat="endpoints" data-sev="warn" data-pts="1">
+              <button class="finding__head" type="button" data-action="toggle" aria-expanded="false" aria-controls="fb-6">
+                <span class="sev sev--warn" data-sev-chip>WARN</span>
+                <span class="finding__title"><strong>34 stale devices</strong> still registered in Entra</span>
+                <svg class="finding__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="finding__body" id="fb-6">
+                <dl class="finding__grid">
+                  <dt>what we saw</dt><dd class="evi">34 devices have not checked in for 90+ days, including 6 marked compliant that no longer exist.</dd>
+                  <dt>why it matters</dt><dd>Stale devices distort Conditional Access decisions and licensing counts, and a "compliant" ghost laptop is a blind spot.</dd>
+                  <dt>the fix</dt><dd>Run a device clean-up: disable at 90 days of inactivity, delete at 180, and automate it on a schedule.</dd>
+                  <dt>mapped to</dt><dd><span class="cis"><i></i>Microsoft baseline · endpoints — device hygiene</span></dd>
+                </dl>
+                <button class="fixbtn" type="button" data-action="fix">apply fix (+1)</button>
+              </div>
+            </li>
+
+            <li class="finding" data-i="7" data-cat="endpoints" data-sev="warn" data-pts="2">
+              <button class="finding__head" type="button" data-action="toggle" aria-expanded="false" aria-controls="fb-7">
+                <span class="sev sev--warn" data-sev-chip>WARN</span>
+                <span class="finding__title"><strong>Local admin rights</strong> for all users on 40% of devices</span>
+                <svg class="finding__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="finding__body" id="fb-7">
+                <dl class="finding__grid">
+                  <dt>what we saw</dt><dd class="evi">Intune reports 61 of 152 devices where the primary user is a member of the local <code>Administrators</code> group.</dd>
+                  <dt>why it matters</dt><dd>Malware runs with the rights of the user who clicked it. Local admin everywhere turns one bad click into a device rebuild.</dd>
+                  <dt>the fix</dt><dd>Remove standing local admin via Intune policy; use LAPS for the break-glass local account and elevate on demand.</dd>
+                  <dt>mapped to</dt><dd><span class="cis"><i></i>CIS M365 · endpoints — least privilege</span></dd>
+                </dl>
+                <button class="fixbtn" type="button" data-action="fix">apply fix (+2)</button>
+              </div>
+            </li>
+
+            <li class="finding" data-i="8" data-cat="data" data-sev="warn" data-pts="1">
+              <button class="finding__head" type="button" data-action="toggle" aria-expanded="false" aria-controls="fb-8">
+                <span class="sev sev--warn" data-sev-chip>WARN</span>
+                <span class="finding__title"><strong>Guest access</strong> unrestricted in 3 Teams</span>
+                <svg class="finding__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="finding__body" id="fb-8">
+                <dl class="finding__grid">
+                  <dt>what we saw</dt><dd class="evi">3 Teams, including <code>FIN-budget</code>, allow guests with no expiry and no review. 9 guest accounts have never signed in.</dd>
+                  <dt>why it matters</dt><dd>Guests invited for one project in 2022 still read everything today, and nobody remembers who they are.</dd>
+                  <dt>the fix</dt><dd>Enable guest access reviews with automatic removal on denial, and set guest expiry on the sensitive Teams.</dd>
+                  <dt>mapped to</dt><dd><span class="cis"><i></i>CIS M365 · data — guest access</span></dd>
+                </dl>
+                <button class="fixbtn" type="button" data-action="fix">apply fix (+1)</button>
+              </div>
+            </li>
+
+            <li class="finding" data-i="9" data-cat="data" data-sev="warn" data-pts="1">
+              <button class="finding__head" type="button" data-action="toggle" aria-expanded="false" aria-controls="fb-9">
+                <span class="sev sev--warn" data-sev-chip>WARN</span>
+                <span class="finding__title"><strong>"Anyone" sharing links</strong> enabled tenant-wide</span>
+                <svg class="finding__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="finding__body" id="fb-9">
+                <dl class="finding__grid">
+                  <dt>what we saw</dt><dd class="evi">SharePoint sharing is set to <code>Anyone</code>; 214 active anonymous links exist, 17 of them to spreadsheets in the finance site.</dd>
+                  <dt>why it matters</dt><dd>An "Anyone" link does not care who holds it. Forwarded once, it is public, and it never shows up as a breach.</dd>
+                  <dt>the fix</dt><dd>Lower the tenant default to <code>New and existing guests</code>, expire existing anonymous links, and allow exceptions per site.</dd>
+                  <dt>mapped to</dt><dd><span class="cis"><i></i>CIS M365 · data — sharing links</span></dd>
+                </dl>
+                <button class="fixbtn" type="button" data-action="fix">apply fix (+1)</button>
+              </div>
+            </li>
+
+            <!-- passes -->
+            <li class="finding finding--pass" data-cat="endpoints">
+              <div class="finding__head" tabindex="-1" aria-disabled="true" style="cursor:default">
+                <span class="sev sev--pass">PASS</span>
+                <span class="finding__title"><strong>BitLocker</strong> enforced on all managed endpoints</span>
+              </div>
+            </li>
+            <li class="finding finding--pass" data-cat="identity">
+              <div class="finding__head" tabindex="-1" aria-disabled="true" style="cursor:default">
+                <span class="sev sev--pass">PASS</span>
+                <span class="finding__title"><strong>Security defaults / CA baseline</strong> — MFA required for users</span>
+              </div>
+            </li>
+            <li class="finding finding--pass" data-cat="data">
+              <div class="finding__head" tabindex="-1" aria-disabled="true" style="cursor:default">
+                <span class="sev sev--pass">PASS</span>
+                <span class="finding__title"><strong>Versioning</strong> enabled on all SharePoint sites</span>
+              </div>
+            </li>
+            <li class="finding finding--pass" data-cat="mail">
+              <div class="finding__head" tabindex="-1" aria-disabled="true" style="cursor:default">
+                <span class="sev sev--pass">PASS</span>
+                <span class="finding__title"><strong>Safe Attachments</strong> policy active for all mailboxes</span>
+              </div>
+            </li>
+          </ul>
+
+          <div class="report__foot">
+            <span><b>214 checks</b> · CIS M365 benchmark · 4m 12s</span>
+            <span>next scan → <b>scheduled monthly</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <section class="pulse-how" id="how" aria-labelledby="howTitle">
+    <div class="wrap">
+      <h2 id="howTitle" class="sr">How shautech pulse works</h2>
+      <div class="how">
+        <article class="how__cell" data-reveal>
+          <p class="how__kicker">01 · scan — consistent</p>
+          <h3 class="how__title">200+ checks, zero opinions.</h3>
+          <p class="how__text">pulse reads the actual configuration of your tenant — identity, mail, endpoints, data — and maps every check to a CIS Benchmark or Microsoft baseline control.</p>
+        </article>
+        <article class="how__cell" data-reveal style="--i:1">
+          <p class="how__kicker">02 · fix — evidence-backed</p>
+          <h3 class="how__title">Findings come with fixes.</h3>
+          <p class="how__text">Every finding links to the exact setting we saw and the exact change that closes it — prioritised, so you fix what attackers try first.</p>
+        </article>
+        <article class="how__cell" data-reveal style="--i:2">
+          <p class="how__kicker">03 · re-scan — re-runnable</p>
+          <h3 class="how__title">The score keeps you honest.</h3>
+          <p class="how__text">pulse re-runs monthly and alerts on drift. One number your whole business understands, tracked quarter over quarter.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section class="section cta pulse-cta" id="contact">
+    <div class="cta__aurora" aria-hidden="true"></div>
+    <div class="wrap cta__wrap">
+      <p class="eyebrow" data-reveal><span class="eyebrow__slash">//</span> first scan free · no agents installed · read-only access</p>
+      <h2 class="h2" data-reveal style="--i:1">Now imagine this on <em>your</em> tenant.</h2>
+      <p class="lede lede--center" data-reveal style="--i:2">The demo tenant is fictional; yours is not. The first scan is free with the discovery call, and you keep the report either way.</p>
+      <div class="cta__actions" data-reveal style="--i:3">
+        <a href="../index.html#contact" class="btn btn--primary btn--lg"><span>Get your tenant scored <i>→</i></span></a>
+        <a href="mailto:contact@shautech.com?subject=shautech%20pulse%20%E2%80%94%20score%20my%20tenant" class="cta__mail link">contact@shautech.com</a>
+        <span class="pulse-cta__note">Read-only access · nothing installed · report is yours to keep</span>
+      </div>
+      <div class="cta__orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="wrap footer__grid">
+    <div class="footer__brand">
+      <a href="../index.html" class="logo" aria-label="shautech home"><span class="mark" aria-hidden="true"></span>shau<span class="tech">tech</span></a>
+      <p>IT consultancy &amp; managed services — built in Romania, delivered across Europe. For businesses that can't afford downtime.</p>
+    </div>
+    <div class="footer__col"><h4 aria-level="2">Services</h4><a href="../index.html#services">Microsoft 365 &amp; Azure</a><a href="../index.html#services">Infrastructure</a><a href="../index.html#services">Security</a><a href="../index.html#services">Automation</a></div>
+    <div class="footer__col"><h4 aria-level="2">Company</h4><a href="../index.html#pulse">shautech pulse</a><a href="../pulse/">Demo report</a><a href="../labs/index.html">Labs</a><a href="../index.html#team">Team</a><a href="../index.html#contact">Book a call</a></div>
+    <div class="footer__col"><h4 aria-level="2">Contact</h4><a href="mailto:contact@shautech.com">contact@shautech.com</a><span>Bucharest · remote &amp; on-site</span><span>Delivered across Europe</span></div>
+  </div>
+  <div class="wrap footer__bottom">
+    <span>© <span data-year>2026</span> shautech. All rights reserved.</span>
+    <a href="../legal.html">Legal &amp; privacy</a>
+    <span class="status"><i></i>All systems nominal</span>
+  </div>
+</footer>
+
+<script>
+/* © 2026 shautech. pulse demo report — interactive logic. Vanilla JS, no globals. */
+(function () {
+  'use strict';
+  var $ = function (s, c) { return (c || document).querySelector(s); };
+  var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var root = $('#report-body');
+  if (!root) return;
+
+  var BASE_SCORE = 82;
+  var BASE_PASS = 204;               /* 200 unlisted passes + 4 listed = 214 checks total */
+  var items = $$('.finding[data-i]', root);
+  var tabsEl = $('#tabs', root);
+  var scoreVal = $('#scoreVal', root), scoreNum = $('#scoreNum', root), scoreBar = $('#scoreBar', root), fill = $('#scoreFill', root);
+  var nCrit = $('#nCrit', root), nWarn = $('#nWarn', root), nPass = $('#nPass', root);
+  var banner = $('#clearBanner', root), liveTxt = $('#liveTxt');
+  var state = { fixed: {}, tab: 'all' };
+
+  var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>';
+
+  function fixedCount() { return Object.keys(state.fixed).length; }
+  function score() {
+    var s = BASE_SCORE;
+    items.forEach(function (el) { if (state.fixed[el.dataset.i]) s += parseInt(el.dataset.pts, 10) || 0; });
+    return Math.min(100, s);
+  }
+  function counts() {
+    var c = { crit: 0, warn: 0, pass: BASE_PASS };
+    items.forEach(function (el) {
+      if (state.fixed[el.dataset.i]) c.pass++;
+      else if (el.dataset.sev === 'crit') c.crit++;
+      else c.warn++;
+    });
+    return c;
+  }
+  function remaining(cat) {
+    return items.filter(function (el) { return !state.fixed[el.dataset.i] && (cat === 'all' || el.dataset.cat === cat); }).length;
+  }
+
+  /* tabs */
+  function renderTabs() {
+    if (!tabsEl) return;
+    $$('.tab', tabsEl).forEach(function (b) {
+      var cat = b.dataset.tab;
+      b.setAttribute('aria-pressed', String(state.tab === cat));
+      var n = $('[data-count]', b); if (n) n.textContent = remaining(cat);
+    });
+  }
+  function applyFilter() {
+    $$('.finding', root).forEach(function (el) {
+      el.classList.toggle('is-hidden', state.tab !== 'all' && el.dataset.cat !== state.tab);
+    });
+  }
+
+  /* score display */
+  var shown = 0, raf = 0;
+  function paint() {
+    if (scoreVal) scoreVal.textContent = shown;
+    if (fill) fill.style.width = shown + '%';
+    if (scoreBar) scoreBar.setAttribute('aria-valuenow', shown);
+    var good = shown >= 95;
+    if (scoreNum) scoreNum.classList.toggle('good', good);
+    if (fill) fill.classList.toggle('good', good);
+  }
+  function paintCounts() {
+    var c = counts();
+    if (nCrit) nCrit.textContent = c.crit;
+    if (nWarn) nWarn.textContent = c.warn;
+    if (nPass) nPass.textContent = c.pass;
+    var clean = fixedCount() === items.length;
+    if (banner) banner.classList.toggle('show', clean);
+    if (liveTxt && clean) liveTxt.textContent = 'tenant clean';
+  }
+  function animateTo(target) {
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    if (reduce) { shown = target; paint(); return; }
+    var from = shown, start = 0, dur = Math.min(1100, 260 + Math.abs(target - from) * 12);
+    var step = function (ts) {
+      if (!start) start = ts;
+      var p = Math.min(1, (ts - start) / dur);
+      var e = 1 - Math.pow(1 - p, 3);                 /* ease-out cubic */
+      shown = Math.round(from + (target - from) * e);
+      paint();
+      if (p < 1) raf = requestAnimationFrame(step); else { shown = target; paint(); raf = 0; }
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  /* actions */
+  function toggle(card, head) {
+    var open = card.classList.toggle('open');
+    head.setAttribute('aria-expanded', String(open));
+  }
+  function applyFix(card, btn) {
+    var i = card.dataset.i;
+    if (state.fixed[i]) return;
+    state.fixed[i] = true;
+    var pts = parseInt(card.dataset.pts, 10) || 0;
+    btn.disabled = true;
+    btn.innerHTML = CHECK + '<span>fixed · score +' + pts + '</span>';
+    card.classList.add('fixed', 'justfixed');
+    var chip = $('[data-sev-chip]', card);
+    if (chip) { chip.className = 'sev sev--pass'; chip.textContent = 'PASS'; }
+    setTimeout(function () {
+      card.classList.remove('justfixed');
+      renderTabs(); paintCounts(); animateTo(score());
+    }, 350);
+  }
+
+  root.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!(t instanceof Element)) return;
+    var tab = t.closest('.tab[data-tab]');
+    if (tab && tabsEl && tabsEl.contains(tab)) { state.tab = tab.dataset.tab; renderTabs(); applyFilter(); return; }
+    var act = t.closest('[data-action]');
+    if (!act) return;
+    var card = act.closest('.finding');
+    if (!card) return;
+    if (act.dataset.action === 'toggle') toggle(card, act);
+    else if (act.dataset.action === 'fix') applyFix(card, act);
+  });
+
+  /* boot */
+  shown = 0; paint();
+  renderTabs(); applyFilter(); paintCounts();
+  animateTo(score());
+})();
+</script>
+<script src="../assets/js/page.js"></script>
+</body>
+</html>
