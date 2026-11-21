@@ -30,6 +30,8 @@ ul{list-style:none}
 .h2 em,.cta__title em{font-style:normal;color:var(--accent);position:relative}
 .lede{font-size:clamp(17px,1.35vw,20px);color:var(--ink2);max-width:640px}
 .lede--center{margin-inline:auto}
+.partner-note{display:flex;align-items:center;gap:8px;margin-top:18px;font-family:var(--mono);font-size:12px;letter-spacing:.02em;color:var(--ink3)}
+.partner-note i{flex:none;width:5px;height:5px;border-radius:50%;background:var(--accent)}
 
 /* ---------- buttons ---------- */
 .btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 24px;border-radius:999px;font-weight:500;font-size:15px;border:1px solid var(--line2);background:rgba(255,255,255,.03);color:var(--ink);transition:transform .5s var(--ease),background .3s,border-color .3s,box-shadow .3s;will-change:transform;overflow:hidden;isolation:isolate}
@@ -134,6 +136,7 @@ body.has-cursor .cursor{opacity:1}
 .hero__proof{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 26px;font-family:var(--mono);font-size:12px;color:var(--ink3);letter-spacing:.02em}
 .hero__proof li{display:flex;align-items:center;gap:8px}
 .hero__proof i{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.hero__proof li.hero__proof-partner{flex-basis:100%}
 .hero__hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:10px;opacity:0;transition:opacity .8s;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--ink2);text-transform:uppercase;text-align:center}
 .hero__hint.show{opacity:1}
 .hero__hint-pointer{width:12px;height:12px;border:1.5px solid var(--accent);border-radius:50%;position:relative;animation:hintmove 2.6s var(--ease2) infinite}
@@ -153,6 +156,7 @@ body.has-cursor .cursor{opacity:1}
   .hero__cta{justify-self:start}
   .hero__scroll,.hero__order{display:none}
   .hero__proof{gap:6px 16px}
+  .hero__hint{top:calc(50% - 26px)}
 }
 
 /* split text */
@@ -181,6 +185,12 @@ body.has-cursor .cursor{opacity:1}
 
 /* ---------- compare ---------- */
 .difference{background:linear-gradient(180deg,var(--bg),var(--bg2))}
+@media (min-width:981px){
+  .difference .section__head{max-width:none;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);column-gap:56px;align-items:end}
+  .difference .section__head .eyebrow{grid-column:1/-1}
+  .difference .section__head .h2{margin-bottom:0}
+  .difference .section__head .lede{max-width:none;padding-bottom:8px}
+}
 .compare{position:relative;aspect-ratio:16/9.6;border-radius:var(--r);border:1px solid var(--line2);overflow:hidden;background:#0B0D11;--pos:50%;user-select:none;touch-action:pan-y;box-shadow:0 40px 120px -40px rgba(0,0,0,.8)}
 .compare__layer{position:absolute;inset:0}
 .compare__layer svg{width:100%;height:100%;display:block}
@@ -315,7 +325,15 @@ body.has-cursor .cursor{opacity:1}
 .bento__card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:var(--r);background:linear-gradient(160deg,#121620,#0C0E12);padding:30px;min-height:280px;display:flex;flex-direction:column;transition:border-color .4s,transform .6s var(--ease)}
 .bento__card:hover{border-color:rgba(77,159,255,.4);transform:translateY(-4px)}
 .bento__card--wide{grid-column:span 2}
-.bento__card--quote{grid-column:span 2;background:linear-gradient(160deg,#0F1A2B,#0C0E12)}
+.bento__card--span{grid-column:span 2}
+.bento__card--span .bento__title{max-width:none}
+.bento__card--quote{grid-column:1/-1;min-height:0;background:linear-gradient(160deg,#0F1A2B,#0C0E12)}
+@media (min-width:981px){
+  .bento__card--quote{display:grid;grid-template-columns:1fr auto;column-gap:48px;align-items:end;padding:36px 40px}
+  .bento__card--quote .bento__kicker{grid-column:1/-1}
+  .bento__card--quote .quote{margin-bottom:0;max-width:68ch}
+  .bento__card--quote .quote__who{margin-top:0}
+}
 .bento__kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
 .bento__title{font-size:clamp(22px,2vw,28px);letter-spacing:-.025em;line-height:1.1;margin-bottom:12px;max-width:22ch}
 .bento__text{color:var(--ink2);font-size:15px;max-width:48ch}
@@ -343,8 +361,8 @@ body.has-cursor .cursor{opacity:1}
 .quote__avatars{display:flex}
 .quote__avatars i{width:38px;height:38px;border-radius:50%;background:#0E141E;border:1px solid var(--accent);display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-style:normal;color:var(--accent2)}
 .quote__avatars i+i{margin-left:-10px;border-color:var(--mint);color:var(--mint)}
-@media (max-width:980px){ .bento{grid-template-columns:1fr 1fr} .bento__card--wide,.bento__card--quote{grid-column:span 2} }
-@media (max-width:620px){ .bento{grid-template-columns:1fr} .bento__card--wide,.bento__card--quote{grid-column:span 1} .bento__card--wide{padding-bottom:150px} .docanim{width:230px;right:-30px;bottom:-70px;opacity:.85} }
+@media (max-width:980px){ .bento{grid-template-columns:1fr 1fr} .bento__card--wide,.bento__card--span,.bento__card--quote{grid-column:span 2} }
+@media (max-width:620px){ .bento{grid-template-columns:1fr} .bento__card--wide,.bento__card--span,.bento__card--quote{grid-column:span 1} .bento__card--wide{padding-bottom:150px} .docanim{width:230px;right:-30px;bottom:-70px;opacity:.85} }
 
 /* ---------- results ---------- */
 .results{background:linear-gradient(180deg,var(--bg2),var(--bg))}
@@ -381,6 +399,7 @@ body.has-cursor .cursor{opacity:1}
 .footer{border-top:1px solid var(--line);padding:64px 0 28px;background:var(--bg)}
 .footer__grid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px}
 .footer__brand p{color:var(--ink3);font-size:14px;max-width:34ch;margin-top:18px}
+.footer__brand .partner-note{font-size:12px;max-width:none}
 .footer__col{display:flex;flex-direction:column;gap:10px;font-size:14px;color:var(--ink2)}
 .footer__col h4{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
 .footer__col a{transition:color .3s}.footer__col a:hover{color:var(--accent2)}
