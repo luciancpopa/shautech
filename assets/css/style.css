@@ -94,7 +94,7 @@ body.has-cursor .cursor{opacity:1}
 /* original shautech logo — the › terminal mark + shau/tech in JetBrains Mono (do not restyle) */
 .logo{font-family:var(--mono);font-weight:700;font-size:1.15rem;letter-spacing:-.01em;display:inline-flex;align-items:center;gap:.05em;white-space:nowrap}
 .logo .mark{display:inline-grid;place-items:center;width:1.5em;height:1.5em;margin-right:.5em;border:1.5px solid var(--accent);border-radius:6px;color:var(--accent);font-size:.82em;position:relative}
-.logo .mark::before{content:"›"}
+.logo .mark::before{content:"";width:.32em;height:.48em;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 480'%3E%3Cpath d='M4 480 189 241 0 0h134l186 240-186 240z'/%3E%3C/svg%3E") center/100% 100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 480'%3E%3Cpath d='M4 480 189 241 0 0h134l186 240-186 240z'/%3E%3C/svg%3E") center/100% 100% no-repeat}
 .logo .tech{color:var(--accent)}
 .nav__links{display:flex;gap:28px}
 .nav__links a{font-size:14px;color:var(--ink2);position:relative;transition:color .3s}
